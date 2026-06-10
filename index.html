@@ -1,25 +1,549 @@
-// Owner-only prompt viewer.
-// Usage: https://buyrworld.com/api/logs?key=YOUR_ADMIN_KEY            (today)
-//        https://buyrworld.com/api/logs?key=YOUR_ADMIN_KEY&day=2026-06-15
-// Requires env vars in Vercel: ADMIN_KEY, UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BuyrWorld — The Home of Modern Procurement</title>
+<meta name="description" content="AI-powered sourcing, supplier management, negotiation support and procurement intelligence for modern businesses.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0C0C0C;--panel:#141414;--panel2:#1A1A1A;--line:#262626;--text:#EDEDED;--muted:#8F8F8F;--lime:#D6FF00;}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.02em}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.eyebrow{font-family:'Space Grotesk';font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--lime)}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:'Space Grotesk';font-weight:600;font-size:15px;border-radius:10px;padding:13px 22px;cursor:pointer;border:1px solid transparent;transition:transform .15s,background .15s,border-color .15s;text-decoration:none}
+.btn:active{transform:scale(.98)}
+.btn-lime{background:var(--lime);color:#0C0C0C}.btn-lime:hover{background:#E4FF4D}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--line)}.btn-ghost:hover{border-color:var(--lime);color:var(--lime)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;transition:border-color .2s,transform .2s}
+.card:hover{border-color:#3a3a3a;transform:translateY(-2px)}
+.tag{font-size:11px;font-family:'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.tag-lime{color:#0c0c0c;background:var(--lime);border-color:var(--lime)}
+.navlink{background:none;border:none;color:var(--muted);font-family:'Space Grotesk';font-size:14px;font-weight:500;cursor:pointer;padding:8px 12px;border-radius:8px}
+.navlink:hover{color:var(--text)}.navlink.on{color:var(--lime)}
+.chip{background:var(--panel2);border:1px solid var(--line);color:var(--text);font-size:13px;border-radius:999px;padding:8px 14px;cursor:pointer;font-family:'Inter'}
+.chip:hover{border-color:var(--lime);color:var(--lime)}
+input.bwin{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px 14px;font-family:'Inter';font-size:14px;width:100%;outline:none}
+input.bwin:focus{border-color:var(--lime)}
+.ticker{display:flex;gap:36px;white-space:nowrap;animation:slide 28s linear infinite;color:var(--muted);font-family:'Space Grotesk';font-size:13px;letter-spacing:.1em}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+section.sec{padding:72px 0}
+.fade{animation:fadeUp .5s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.fade,.ticker{animation:none}.ticker{flex-wrap:wrap;white-space:normal}}
+header{position:sticky;top:0;z-index:50;background:rgba(12,12,12,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;height:60px;gap:8px}
+.desk-only{display:flex;align-items:center;margin-left:auto}.mob-only{display:none;margin-left:auto}
+#mobmenu{display:none;border-top:1px solid var(--line);padding:12px;flex-direction:column}
+#mobmenu .navlink{text-align:left;padding:12px}
+.hero{padding:84px 0 60px;border-bottom:1px solid var(--line);background:radial-gradient(800px 400px at 80% -10%,rgba(214,255,0,.07),transparent)}
+.hero-flex{display:flex;gap:48px;align-items:center}
+.hero-h{font-size:58px;font-weight:700;line-height:1.04}
+.chatbox{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;width:100%}
+.chat-head{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.chat-log{height:300px;overflow-y:auto;padding:16px;font-size:14px;line-height:1.55;color:#CFCFCF}
+.chat-log::-webkit-scrollbar{width:6px}.chat-log::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.chat-foot{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+.msg{margin:10px 0;display:flex}
+.msg.user{justify-content:flex-end}
+.bub{max-width:85%;border-radius:12px;padding:10px 14px;white-space:pre-wrap}
+.msg.user .bub{background:var(--lime);color:#0C0C0C;font-family:'Space Grotesk';font-weight:500}
+.msg.ai .bub{background:var(--panel2);border:1px solid var(--line)}
+.bub b{color:var(--lime);font-family:'Space Grotesk'}
+.check{display:flex;gap:10px;padding:7px 0;font-size:14.5px}
+.check span{color:var(--lime)}
+.page{display:none}.page.on{display:block}
+footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
+@media (max-width:860px){.grid3,.grid2{grid-template-columns:1fr}.hero-h{font-size:42px}.hero-flex{flex-direction:column}}
+@media (max-width:760px){.desk-only{display:none}.mob-only{display:block}}
+</style>
+</head>
+<body>
 
-export default async function handler(req, res) {
-  if (!process.env.ADMIN_KEY || req.query.key !== process.env.ADMIN_KEY) {
-    return res.status(404).send("Not found"); // looks like nothing exists without the key
-  }
-  const U = process.env.UPSTASH_REDIS_REST_URL, T = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!U || !T) {
-    return res.status(200).json({
-      note: "Permanent storage not configured yet. Prompts are still visible live in Vercel → your project → Logs (filter for PROMPT_LOG). To store them per-day, create a free database at upstash.com and add UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in Vercel → Settings → Environment Variables, then redeploy."
-    });
-  }
-  const day = (req.query.day || new Date().toISOString().slice(0, 10)).slice(0, 10);
-  try {
-    const r = await fetch(`${U}/lrange/prompts:${day}/0/-1`, { headers: { Authorization: `Bearer ${T}` } });
-    const d = await r.json();
-    const prompts = (d.result || []).map(x => { try { return JSON.parse(x); } catch { return { raw: x }; } });
-    return res.status(200).json({ day, count: prompts.length, prompts });
-  } catch (e) {
-    return res.status(500).json({ error: "Could not read logs" });
-  }
+<header>
+  <div class="wrap nav-in">
+    <button class="navlink" style="padding:0" onclick="go('home')">
+      <span style="font-family:'Space Grotesk';font-weight:700;font-size:20px;color:var(--text);letter-spacing:-.03em">BUYR</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:20px;color:var(--lime);letter-spacing:-.03em">WORLD</span>
+    </button>
+    <nav class="desk-only" id="desknav"></nav>
+    <button class="navlink mob-only" style="font-size:20px" onclick="toggleMenu()">☰</button>
+  </div>
+  <div id="mobmenu"></div>
+</header>
+
+<!-- ============ HOME ============ -->
+<div class="page on" id="page-home">
+  <section class="hero">
+    <div class="wrap hero-flex">
+      <div class="fade" style="flex:1;min-width:0">
+        <div class="eyebrow" style="margin-bottom:14px">The home of modern procurement</div>
+        <h1 class="hero-h">Procurement,<br><span style="color:var(--lime)">Reimagined.</span></h1>
+        <p style="color:var(--muted);font-size:17px;line-height:1.6;margin:20px 0 28px;max-width:480px">AI-powered sourcing, supplier management, negotiation support and procurement intelligence for modern businesses.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-lime" onclick="go('ai')">Start using Buyr AI →</button>
+          <button class="btn btn-ghost" onclick="go('templates')">Explore templates</button>
+        </div>
+        <div style="display:flex;gap:24px;margin-top:32px;color:var(--muted);font-size:13px">
+          <span><b style="color:var(--text);font-family:'Space Grotesk'">12+</b> yrs supply chain &amp; sourcing behind it</span>
+          <span><b style="color:var(--text);font-family:'Space Grotesk'">CIPS</b>-qualified design</span>
+        </div>
+      </div>
+      <div class="fade" style="flex:1;min-width:0;width:100%"><div class="chatbox" data-chat="hero"></div></div>
+    </div>
+  </section>
+
+  <div style="border-bottom:1px solid var(--line);padding:18px 0;overflow:hidden">
+    <div class="ticker" id="ticker"></div>
+  </div>
+
+  <section class="sec"><div class="wrap">
+    <div class="eyebrow" style="margin-bottom:10px">Platform</div>
+    <h2 style="font-size:34px;margin-bottom:10px">Everything procurement, in one place</h2>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">One login for the work buyers actually do: sourcing, suppliers, negotiation, spend and skills.</p>
+    <div class="grid3" id="features"></div>
+  </div></section>
+
+  <section class="sec" style="padding-top:0"><div class="wrap">
+    <div class="eyebrow" style="margin-bottom:10px">Marketplace</div>
+    <h2 style="font-size:34px;margin-bottom:10px">Templates that have run real sourcing events</h2>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Skip the blank page. Every template was built and used in live procurement, not written for a blog.</p>
+    <div class="grid3" id="tpl-preview"></div>
+    <button class="btn btn-ghost" style="margin-top:24px" onclick="go('templates')">Browse all 8 templates →</button>
+  </div></section>
+
+  <section class="sec" style="padding-top:0"><div class="wrap">
+    <div class="eyebrow" style="margin-bottom:10px">Membership</div>
+    <h2 style="font-size:34px;margin-bottom:32px">BuyrWorld Pro</h2>
+    <div class="grid2" style="align-items:stretch">
+      <div class="card" style="border-color:var(--lime)">
+        <span class="tag tag-lime">Launching soon</span>
+        <div style="font-size:44px;font-family:'Space Grotesk';font-weight:700;margin:14px 0 2px">£9.99<span style="font-size:16px;color:var(--muted);font-weight:400">/month</span></div>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:16px">Founding members get their first month free.</p>
+        <div class="check"><span>✓</span>Unlimited template access</div>
+        <div class="check"><span>✓</span>Monthly Buyr AI credits</div>
+        <div class="check"><span>✓</span>Exclusive resources &amp; playbooks</div>
+        <div class="check"><span>✓</span>Private community access</div>
+        <div class="check"><span>✓</span>Weekly procurement insights</div>
+        <button class="btn btn-lime" style="margin-top:18px;width:100%;justify-content:center" onclick="go('community')">Join the Pro waitlist</button>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;justify-content:center">
+        <div class="eyebrow" style="margin-bottom:10px">About the founder</div>
+        <h3 style="font-size:22px;margin-bottom:12px">Built by a buyer, not a SaaS tourist.</h3>
+        <p style="color:var(--muted);font-size:14.5px;line-height:1.65">BuyrWorld was founded by Josh Frost, a CIPS-qualified Senior Procurement Manager with 12+ years across supply chain, aerospace and manufacturing — negotiating real contracts, managing real supplier risk and chasing real savings. Every template, pathway and AI workflow comes from that practice, refit for teams who believe procurement deserves better tools.</p>
+        <button class="btn btn-ghost" style="margin-top:18px;align-self:flex-start" onclick="go('about')">Read the story</button>
+      </div>
+    </div>
+  </div></section>
+</div>
+
+<!-- ============ BUYR AI ============ -->
+<div class="page" id="page-ai">
+  <section class="sec"><div class="wrap">
+    <div class="eyebrow" style="margin-bottom:10px">Buyr AI</div>
+    <h2 style="font-size:34px;margin-bottom:10px">Your AI procurement assistant</h2>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Trained on the work of sourcing: RFQs, scorecards, category strategies, risk reviews and negotiation plans. Ask it like you'd brief a strong analyst.</p>
+    <div class="chatbox" data-chat="full"></div>
+    <div class="grid3" style="margin-top:28px">
+      <div class="card"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">RFQ Generator</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">From a one-line need to a send-ready RFQ with specs, Incoterms and evaluation criteria.</p></div>
+      <div class="card"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">Supplier Risk Agent</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">Surface single-source exposure, financial flags and concentration risk before they bite.</p></div>
+      <div class="card"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">Negotiation Agent</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">Walk in with targets, a concessions ladder and counters to their favourite tactics.</p></div>
+    </div>
+  </div></section>
+</div>
+
+<!-- ============ TEMPLATES ============ -->
+<div class="page" id="page-templates">
+  <section class="sec"><div class="wrap">
+    <div class="eyebrow" style="margin-bottom:10px">Marketplace</div>
+    <h2 style="font-size:34px;margin-bottom:10px">Procurement templates</h2>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Preview, buy once, use forever — or go Pro for unlimited access.</p>
+    <div class="grid3" id="tpl-all"></div>
+  </div></section>
+</div>
+
+<!-- ============ ACADEMY ============ -->
+<div class="page" id="page-academy">
+  <section class="sec"><div class="wrap">
+    <div class="eyebrow" style="margin-bottom:10px">Academy</div>
+    <h2 style="font-size:34px;margin-bottom:10px">Learn procurement properly</h2>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Structured pathways written by a practitioner — from your first PO to category leadership and CIPS.</p>
+    <div class="grid3" id="pathways"></div>
+    <div id="pathway-detail" style="display:none;max-width:760px">
+      <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="closePathway()">← All pathways</button>
+      <div id="pathway-body"></div>
+    </div>
+  </div></section>
+</div>
+
+<!-- ============ PRICING ============ -->
+<div class="page" id="page-pricing">
+  <section class="sec"><div class="wrap">
+    <div class="eyebrow" style="margin-bottom:10px">Pricing</div>
+    <h2 style="font-size:34px;margin-bottom:10px">Simple, buyer-friendly pricing</h2>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">No procurement-grade negotiation required.</p>
+    <div class="grid3" id="plans"></div>
+  </div></section>
+</div>
+
+<!-- ============ ABOUT ============ -->
+<div class="page" id="page-about">
+  <section class="sec"><div class="wrap">
+    <div class="eyebrow" style="margin-bottom:10px">About</div>
+    <h2 style="font-size:34px;margin-bottom:32px">The home of modern procurement</h2>
+    <div class="grid2">
+      <div>
+        <p style="font-size:16.5px;line-height:1.7;color:#CFCFCF;margin-bottom:18px">BuyrWorld exists because procurement tooling has been stuck for a decade: clunky suites built for auditors, or generic AI that's never seen an RFQ. We're building the platform buyers deserve — modern, fast and genuinely useful on a Tuesday afternoon when three quotes land at once.</p>
+        <p style="font-size:15px;line-height:1.7;color:var(--muted)">Founder Josh Frost is a CIPS-qualified Senior Procurement Manager with 12+ years across supply chain, aerospace and manufacturing: supplier development on flight-critical parts, multi-year negotiations, category strategies and risk reviews that had to survive real scrutiny. BuyrWorld packages that experience — then multiplies it with AI.</p>
+      </div>
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:14px">What we believe</div>
+        <div class="check"><span>→</span>Procurement is a growth function, not a cost centre.</div>
+        <div class="check"><span>→</span>AI should remove admin, not judgement.</div>
+        <div class="check"><span>→</span>Good templates beat good intentions.</div>
+        <div class="check"><span>→</span>Every buyer deserves world-class training.</div>
+      </div>
+    </div>
+  </div></section>
+</div>
+
+<!-- ============ BLOG ============ -->
+<div class="page" id="page-blog">
+  <section class="sec"><div class="wrap">
+    <div class="eyebrow" style="margin-bottom:10px">Blog</div>
+    <h2 style="font-size:34px;margin-bottom:10px">The Modern Buyer</h2>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Practical procurement, written by a practitioner. New articles weekly.</p>
+    <div id="blog-list" class="grid3"></div>
+    <div id="blog-article" style="display:none;max-width:720px">
+      <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="closeArticle()">← All articles</button>
+      <div id="blog-body" style="font-size:16px;line-height:1.75;color:#CFCFCF"></div>
+    </div>
+  </div></section>
+</div>
+
+<!-- ============ COMMUNITY ============ -->
+<div class="page" id="page-community">
+  <section class="sec"><div class="wrap" style="max-width:680px">
+    <div class="eyebrow" style="margin-bottom:10px">Community</div>
+    <h2 style="font-size:34px;margin-bottom:10px">Where modern buyers compare notes</h2>
+    <p style="color:var(--muted);margin-bottom:28px;line-height:1.6">A private space for sourcing managers, buyers and supply chain people: deal clinics, template swaps, salary threads, CIPS study groups and honest talk about suppliers. Opens with BuyrWorld Pro at launch.</p>
+    <div class="card">
+      <h3 style="font-size:17px;margin-bottom:8px">Join the waitlist</h3>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:16px">Founding members get their first month of Pro free.</p>
+      <form action="https://formspree.io/f/YOUR_FORM_ID" method="POST" style="display:flex;gap:8px;flex-wrap:wrap">
+        <input class="bwin" type="email" name="email" required placeholder="you@company.com" style="flex:1;min-width:220px">
+        <button class="btn btn-lime" type="submit">Join waitlist</button>
+      </form>
+    </div>
+  </div></section>
+</div>
+
+<!-- ============ CONTACT ============ -->
+<div class="page" id="page-contact">
+  <section class="sec"><div class="wrap">
+    <div class="eyebrow" style="margin-bottom:10px">Contact</div>
+    <h2 style="font-size:34px;margin-bottom:32px">Talk to Josh Frost</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3 style="font-size:17px;margin-bottom:8px;color:var(--lime)">Advisory &amp; consulting</h3>
+        <p style="color:var(--muted);font-size:14.5px;line-height:1.6;margin-bottom:16px">Sourcing events, category strategies, supplier negotiations or building your procurement function from scratch — work directly with Josh Frost, a CIPS-qualified Senior Procurement Manager with 12+ years across supply chain, aerospace and manufacturing. Day rates and fixed-scope projects available.</p>
+        <a class="btn btn-lime" href="mailto:Joshua.Frost.1992@gmail.com?subject=Advisory%20enquiry%20%E2%80%94%20BuyrWorld">Enquire about advisory</a>
+      </div>
+      <div class="card">
+        <h3 style="font-size:17px;margin-bottom:8px;color:var(--lime)">Support &amp; everything else</h3>
+        <p style="color:var(--muted);font-size:14.5px;line-height:1.6;margin-bottom:16px">Questions about templates, Pro membership, the Academy or press? Email Josh — replies within one working day.</p>
+        <a class="btn btn-ghost" href="mailto:Joshua.Frost.1992@gmail.com?subject=BuyrWorld%20enquiry">Joshua.Frost.1992@gmail.com</a>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <h3 style="font-size:17px;margin-bottom:8px">Community</h3>
+      <p style="color:var(--muted);font-size:14.5px;margin-bottom:14px">Want in early? The BuyrWorld community opens to Pro members at launch.</p>
+      <button class="btn btn-ghost" onclick="go('community')">Join the waitlist →</button>
+    </div>
+  </div></section>
+</div>
+
+<footer>
+  <div class="wrap" style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between">
+    <span style="font-family:'Space Grotesk';font-weight:700;font-size:18px">BUYR<span style="color:var(--lime)">WORLD</span></span>
+    <span style="color:var(--muted);font-size:13px">The home of modern procurement · © 2026 BuyrWorld<br><span style="font-size:11px">Conversations with Buyr AI may be stored to improve the service. Contact: Joshua.Frost.1992@gmail.com</span></span>
+  </div>
+</footer>
+
+<script>
+// ---------- Stripe Payment Links (paste your links from stripe.com between the quotes) ----------
+const PAYMENT_LINKS={
+ "RFQ Template":"", "Supplier Scorecard":"", "Negotiation Planner":"", "Category Strategy Pack":"",
+ "Supplier Risk Matrix":"", "Contract Review Checklist":"", "Cost Saving Tracker":"", "Procurement Policy Template":"",
+ "Pro Membership":""
+};
+function buy(name){const url=PAYMENT_LINKS[name];if(url){window.open(url,"_blank")}else{alert("Checkout for \""+name+"\" is coming soon — add your Stripe Payment Link in the PAYMENT_LINKS section of index.html.")}}
+
+// ---------- Navigation ----------
+const LINKS=[["home","Home"],["ai","Buyr AI"],["templates","Templates"],["academy","Academy"],["pricing","Pricing"],["blog","Blog"],["about","About"],["contact","Contact"]];
+let page="home";
+function go(p){page=p;document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";renderNav();window.scrollTo({top:0});}
+function toggleMenu(){const m=document.getElementById("mobmenu");m.style.display=m.style.display==="flex"?"none":"flex";}
+function renderNav(){
+  document.getElementById("desknav").innerHTML=LINKS.map(([k,l])=>`<button class="navlink ${page===k?"on":""}" onclick="go('${k}')">${l}</button>`).join("")+`<button class="btn btn-lime" style="padding:8px 16px;font-size:13px;margin-left:8px" onclick="go('ai')">Start free</button>`;
+  document.getElementById("mobmenu").innerHTML=LINKS.map(([k,l])=>`<button class="navlink ${page===k?"on":""}" onclick="go('${k}')">${l}</button>`).join("");
 }
+renderNav();
+
+// ---------- Content data ----------
+const FEATURES=[["Buyr AI","Draft RFQs, compare quotes, summarise contracts and build strategies in seconds — with a procurement-trained assistant."],["Templates","Battle-tested RFQs, scorecards, planners and policies. Download, edit, send."],["Supplier Intelligence","Risk scoring, financial signals and capability mapping across your supply base."],["Negotiation Toolkit","Planners, tactics libraries, BATNA builders and live AI coaching for your next round."],["Spend Analytics","Upload spend data and get category breakdowns, tail-spend flags and savings targets."],["Procurement Academy","Structured pathways from first PO to CIPS-ready strategic sourcing."]];
+document.getElementById("features").innerHTML=FEATURES.map(([t,d])=>`<div class="card"><div style="width:34px;height:34px;border-radius:9px;background:rgba(214,255,0,.12);border:1px solid rgba(214,255,0,.3);display:flex;align-items:center;justify-content:center;color:var(--lime);font-family:'Space Grotesk';font-weight:700;margin-bottom:14px">${t[0]}</div><h3 style="font-size:17px;margin-bottom:8px">${t}</h3><p style="color:var(--muted);font-size:14px;line-height:1.55">${d}</p></div>`).join("");
+
+const TPL=[["RFQ Template","£12",4.9,"Spec, commercial and evaluation sections used on £10m+ of real sourcing events.","Sourcing"],["Supplier Scorecard","£9",4.8,"Weighted QCDS scoring with traffic-light dashboards and review cadence.","SRM"],["Negotiation Planner","£14",4.9,"Targets, walk-aways, concessions ladder and counterpart analysis on one page.","Negotiation"],["Category Strategy Pack","£29",4.7,"Kraljic positioning, market analysis, levers and a board-ready strategy deck.","Strategy"],["Supplier Risk Matrix","£11",4.8,"Financial, geographic, single-source and ESG risk in one weighted model.","Risk"],["Contract Review Checklist","£9",4.6,"40 clauses buyers miss — liability caps, indexation, exit and IP.","Contracts"],["Cost Saving Tracker","£12",4.8,"Pipeline-to-banked savings tracker your finance team will actually sign off.","Value"],["Procurement Policy Template","£19",4.7,"Thresholds, approvals and ethics policy ready for SME adoption in a day.","Governance"]];
+const tplCard=([t,p,r,d,c])=>`<div class="card"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span class="tag">${c}</span><span style="color:var(--lime);font-family:'Space Grotesk';font-weight:600">${p}</span></div><h3 style="font-size:16px;margin-bottom:6px">${t}</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.5;min-height:60px">${d}</p><div style="font-size:13px;color:var(--muted);margin:10px 0 14px">★ ${r} · instant download</div><div style="display:flex;gap:8px"><button class="btn btn-lime" style="padding:9px 16px;font-size:13px" onclick="buy('${t}')">Buy ${p}</button><button class="btn btn-ghost" style="padding:9px 16px;font-size:13px" onclick="go('contact')">Ask first</button></div></div>`;
+document.getElementById("tpl-preview").innerHTML=TPL.slice(0,3).map(tplCard).join("");
+document.getElementById("tpl-all").innerHTML=TPL.map(tplCard).join("");
+
+const ACADEMY=[
+{t:"Beginner Buyer",lvl:"Foundation",time:"6 modules · ~4 hrs",d:"POs, RFQs, supplier setup and the habits of a credible first-year buyer.",
+out:["Raise clean POs and run a simple RFQ end to end","Set up and onboard a supplier without drama","Earn stakeholder trust in your first 90 days"],
+mods:[
+{m:"The buyer's role & how money actually flows",l:"Where procurement sits in a business, and the purchase-to-pay cycle: requisition → approval → PO → goods receipt → invoice → payment. Why a PO is a legal offer, not admin — and why 'invoice without a PO' is the first habit to kill. You'll map your own organisation's P2P flow and find where value (and risk) leaks: maverick spend, retrospective POs and unapproved suppliers."},
+{m:"Purchase orders done properly",l:"What a defensible PO contains: precise description, quantity, unit price, delivery date, Incoterms, payment terms and the T&Cs it's placed under. The battle of the forms — whose terms apply when supplier order confirmations differ — and the one-line trick that protects you. Plus amendments, part-deliveries and closing out POs so finance stops chasing you."},
+{m:"Your first RFQ",l:"The five sections of an RFQ that gets comparable, honest quotes: scope, specification, commercial terms, weighted evaluation criteria and a timeline you enforce. How many suppliers to invite (three to five for most spend), how to answer questions fairly, and how to normalise quotes that arrive with different currencies, Incoterms and payment terms so you compare landed cost, not list price."},
+{m:"Supplier setup & onboarding",l:"What to collect before the first PO: company details, banking (verified by call-back — invoice fraud is real), insurance, certifications, quality and ESG declarations. Risk-based onboarding: a stationery supplier doesn't need an audit; a single-source machining house does. Build a one-page onboarding checklist you can reuse forever."},
+{m:"Working with stakeholders",l:"Procurement succeeds through other people's budgets. Learn the intake conversation: what do you need, by when, what does good look like, what's the budget? How to say no to a pet supplier without making an enemy — offer the process, not a refusal. And the weekly habits that build credibility: close the loop, deliver small wins fast, never surprise your stakeholder in a meeting."},
+{m:"Ethics, basics of contracts & your 90-day plan",l:"Gifts and hospitality rules, conflicts of interest, and why fair process protects you personally. Contract basics every buyer needs: offer, acceptance, consideration, and what 'signing' a quote actually commits you to. Finish with a 90-day plan template: learn the spend, meet the stakeholders, fix one broken process, bank one visible saving."}]},
+{t:"Strategic Sourcing",lvl:"Intermediate",time:"6 modules · ~5 hrs",d:"Seven-step sourcing, market analysis and award decisions that hold up.",
+out:["Run a full sourcing event from baseline to award","Build a should-cost view suppliers respect","Make award decisions that survive audit and challenge"],
+mods:[
+{m:"The 7-step sourcing process",l:"Profile the category → analyse the supply market → develop the strategy → select the sourcing route → negotiate and select → implement → track benefits. Why most failed sourcing events skipped steps one and two, and how long each step really takes for a £500k category versus a £5m one. You'll pick a live category and carry it through the whole pathway."},
+{m:"Spend & demand analysis",l:"Pull 12–24 months of spend and answer: who do we buy from, what exactly, at what price variance, and is demand stable or lumpy? Pareto your suppliers and SKUs, find specification creep (14 box sizes where 8 will do) and challenge demand itself — the cheapest unit is the one you didn't buy. Output: a one-page category baseline with the three biggest opportunities."},
+{m:"Supply market analysis & should-cost",l:"Porter's five forces in buyer language: how many capable suppliers exist, how badly do they want your volume, what are their input costs doing? Build a simple should-cost model — material + labour + overhead + margin — so you negotiate from evidence, not hope. Where to find data fast: indices, annual reports, trade press, and yes, asking suppliers directly."},
+{m:"Strategy & sourcing routes",l:"Single, dual or multi-source? Tender, negotiate with incumbent, or e-auction? Match the route to the Kraljic position: leverage items reward competition; bottleneck items reward security of supply. Define what you'll trade and what you won't before going to market — switching costs, qualification timelines and tooling ownership decide more deals than price."},
+{m:"Running the event & evaluation",l:"RFP discipline: identical information to every bidder, written Q&A shared with all, deadlines enforced. Score against the weightings you published — adjusting criteria after quotes arrive is how awards get challenged. Normalise to total cost of ownership: price, payment terms value, freight, duty, quality risk and switching cost. Document the decision in a one-page award recommendation."},
+{m:"Implementation & benefits tracking",l:"The deal isn't done at signature. Transition plans, last-time-buys from the loser, first-article approvals from the winner and a risk-managed ramp. Then track savings the way finance will accept: baseline, method, banked vs pipeline, signed off by a budget holder. A saving nobody validates is a story, not a number."}]},
+{t:"Supplier Relationship Management",lvl:"Intermediate",time:"5 modules · ~4 hrs",d:"Segmentation, scorecards, QBRs and turning suppliers into an advantage.",
+out:["Segment your supply base and focus effort where it pays","Run QBRs suppliers actually prepare for","Recover failing suppliers — or exit them cleanly"],
+mods:[
+{m:"Segmentation: you can't manage everyone",l:"Plot suppliers by value and risk/criticality: strategic, leverage, bottleneck, routine. Strategic partners get relationship investment; routine suppliers get automation and self-service. The discipline is saying out loud which suppliers you will NOT spend time on. Output: your top-10 list with a named owner and review cadence for each."},
+{m:"Scorecards that change behaviour",l:"Quality, Cost, Delivery, Service (QCDS) with weights that reflect what actually hurts you. OTIF measured honestly (against first promise date, not the latest reschedule), PPM for quality, responsiveness for service. Traffic-light it, share it with the supplier before the meeting, and trend it — a 94% that's falling is worse than an 88% that's climbing."},
+{m:"Quarterly business reviews",l:"A QBR is not a beating; it's a two-way operating review. Agenda that works: performance vs scorecard, open issues with owners and dates, your forward demand picture (suppliers price uncertainty — share what you can), their market/cost picture, and one improvement initiative each. Forty-five minutes, written actions, no slides over substance."},
+{m:"Development, escalation & exit",l:"When a supplier slips: joint root-cause before threats — capacity, materials, your own forecast chaos? Agree a recovery plan with dates and consequences. Know your escalation ladder (buyer → management → executive sponsor) and use it sparingly. And when it's over: exit checklist — tooling recovery, last-time-buy, open warranty, knowledge transfer — executed while you still have leverage."},
+{m:"From vendor to advantage",l:"The best suppliers bring you cost-downs, innovation and capacity in shortages — but only if there's something in it for them. Longer agreements traded for productivity commitments, early supplier involvement in design, sharing savings from joint projects. Treating your best supplier like a leverage commodity is how you end up at the back of the queue when allocation hits."}]},
+{t:"Negotiation",lvl:"All levels",time:"6 modules · ~5 hrs",d:"Planning, tactics, concessions and keeping the deal after you've won it.",
+out:["Walk in with targets, a BATNA and a concessions ladder","Recognise and counter the ten most common tactics","Defend price increases with evidence, not emotion"],
+mods:[
+{m:"Planning wins negotiations",l:"Eighty percent of the outcome is decided before anyone speaks. Define your target, your realistic, and your walk-away — and your BATNA (what you'll actually do if this fails; a real qualified alternative is worth more than any tactic). Profile the counterpart: their pressures, their alternatives, who really decides. One page, every deal, no exceptions — the BuyrWorld Negotiation Planner is this module as a template."},
+{m:"The concessions ladder",l:"Never concede without getting; never concede in round numbers; never concede first on your most important variable. Build a ladder before the meeting: what you'll give cheaply (it costs you little, they value it), what you'll trade hard, what's untouchable. Trade across variables — payment terms for price, volume commitment for lead time — instead of haggling on one axis."},
+{m:"Openings, anchoring & the room",l:"Who opens, and how high? Anchoring works — an ambitious, justifiable opening shifts the whole range — but indefensible anchors destroy credibility. The power of silence after a number. Summarising as a control technique. And managing your own side: agree roles before you walk in, because the most expensive words in negotiation are a colleague's 'we really need this by Friday'."},
+{m:"Tactics & counters",l:"The classics and their antidotes: good cop/bad cop (negotiate with the room, not the person), the flinch (let it land, restate calmly), limited authority ('then let's meet whoever has it'), the nibble at the end (reopen the whole package), artificial deadlines (test them), and salami slicing (bundle everything before agreeing anything). Naming a tactic, pleasantly, usually kills it."},
+{m:"Defending price increases",l:"The letter says 'unprecedented input costs: +12%'. Your response: decompose it. What share of their cost is the material that moved? If steel is 30% of cost and steel rose 20%, the maths says 6% — and what about the inputs that fell? Ask for the breakdown, counter with index-linking both ways, trade any increase for something (terms, commitment, productivity), and time-box it with a review date."},
+{m:"Closing & keeping the deal",l:"Confirm everything in writing within 24 hours — memories diverge fast. Get the contract to reflect the deal, not the supplier's standard terms. Then protect the relationship you just stretched: implementation kickoff, early performance check, and deliver your side (forecasts, payments on time). A win the supplier resents gets recovered from you in change orders."}]},
+{t:"AI Procurement",lvl:"New",time:"5 modules · ~3.5 hrs",d:"Prompting, agent workflows and where AI actually saves buyers time.",
+out:["Prompt AI like briefing a strong analyst","Build daily AI workflows for documents, analysis and prep","Know exactly what to verify and what never to delegate"],
+mods:[
+{m:"What AI is actually good at (for buyers)",l:"Strip the hype: AI excels at drafting, summarising, comparing and categorising — the slow reading-and-writing layer of procurement. It does not own relationships, accountability or judgement. Map your week: every hour spent on first drafts, contract reading, quote comparison and spend classification is automatable today. That's typically 20–30% of a buyer's week back."},
+{m:"Prompting like a brief",l:"Bad: 'write an RFQ'. Good: role, context, task, format, constraints — 'You're a senior buyer. We need 5,000 A356 aluminium castings/yr to drawing rev C, DAP UK, 60-day terms. Draft an RFQ with weighted evaluation criteria (price 40/quality 25/lead time 20/risk 15) as a structured document.' Iterate like you would with an analyst: 'tighten the spec section, add PPAP Level 3'. Build your own prompt library — five great prompts beat fifty mediocre ones."},
+{m:"Document workflows: RFQs, contracts, plans",l:"The 80/20 pattern: AI produces the structured first draft, you apply judgement and ownership. RFQs from a one-line need. Contract review: extract liability caps, indexation, termination, renewal notice — then verify each flagged clause yourself against the document, because AI misreads occasionally and you sign, not it. Negotiation plans, supplier letters, board summaries: same loop. Never paste confidential data into tools your company hasn't approved."},
+{m:"AI for analysis: spend, quotes & risk",l:"Feed three quotes plus your weightings and get a normalised landed-cost comparison in a minute. Dump the spend tail no one ever categorises and let AI classify it. Ask for risk patterns across your supplier list: concentration, geography, single-source flags. Rule of thumb: AI generates the analysis, you check a sample by hand before any number reaches a decision or a stakeholder."},
+{m:"Agents, governance & your edge",l:"Where it's heading: agent workflows that chain steps — monitor a category, draft the RFQ, chase quotes, prepare the comparison — with you approving the gates. What to keep human forever: the award decision, the relationship, the accountability. Governance basics for your team: approved tools, data rules, verification standards, audit trail. The buyers who thrive aren't replaced by AI; they're the ones running ten times the workload through it."}]},
+{t:"Category Management",lvl:"Advanced",time:"5 modules · ~4.5 hrs",d:"Own a spend area end to end — Kraljic to category plans the board signs off.",
+out:["Position a category and pick levers with evidence","Write a category plan leadership actually funds","Govern and refresh the strategy as markets move"],
+mods:[
+{m:"Thinking in categories, not transactions",l:"A category is a market you manage, not a queue of requisitions. Define the boundary properly (packaging ≠ 'stuff in the warehouse'), baseline the spend, suppliers, contracts, specs and stakeholders. Kraljic honestly: most buyers overrate their leverage and underrate their bottlenecks. Your category's position dictates everything that follows — strategy, levers, even your negotiation posture."},
+{m:"Deep market & cost analysis",l:"Build the supply-market map: capacity, concentration, cost drivers, technology shifts, regulatory pressure. Construct the cost model for your category's typical product and identify which input indices to track. Interview the market — suppliers tell you remarkable things about their competitors and their cost pressures if you ask. This module's output is the evidence pack that makes your strategy credible."},
+{m:"Choosing levers",l:"The full menu, not just 'negotiate harder': consolidation and volume bundling, specification rationalisation, demand management, make-vs-buy, low-cost-country or nearshoring, index-linked pricing, e-auctions, longer agreements traded for productivity, joint process improvement. Score each lever for value, effort and risk in YOUR category — a lever that saved 12% in packaging may be worthless in castings."},
+{m:"Writing the category plan",l:"The board-ready structure: where we are (baseline, risks), where the market is going, where we want to be in 12–36 months, the levers and the plan, the savings and risk-reduction targets, what you need (resource, stakeholder time, mandate). Ten slides maximum. The test: could a sceptical CFO repeat your argument back? Includes the BuyrWorld Category Strategy Pack as your working template."},
+{m:"Execution, governance & refresh",l:"Strategies die in execution. Quarterly governance: progress vs plan, savings banked vs target, risk register movement, market changes that alter the thesis. Know your triggers for refreshing the strategy early — supplier consolidation, input-cost regime change, demand shifts. And manage upwards: a category manager who surprises the business loses the mandate; one who forecasts problems early keeps it."}]},
+{t:"CIPS Support",lvl:"Exam prep",time:"5 modules · ~3 hrs",d:"Study plans, exam technique and applied examples for CIPS levels.",
+out:["Build a realistic study plan around a full-time job","Decode command words and structure answers that score","Turn day-job experience into exam-ready examples"],
+mods:[
+{m:"How CIPS works & choosing your route",l:"The ladder: Level 2 Certificate through Level 6 Professional Diploma, MCIPS and what it signals to employers. Objective-response vs constructed-response exams and how differently they reward preparation. Self-study, employer-funded or study centre — honest pros and cons of each, and how long each level genuinely takes alongside a full-time buying job (hint: the official hours are optimistic)."},
+{m:"The study plan that survives real life",l:"Work backwards from the exam date: syllabus coverage by week, one buffer week per module, past-paper weeks at the end. Forty-five focused minutes daily beats four-hour weekend heroics. Active recall over re-reading: flashcards for definitions, one-page summaries from memory, teach-it-back. Book the exam first — a date in the diary is the best study tool ever invented."},
+{m:"Command words & answer structure",l:"'Describe' ≠ 'evaluate' ≠ 'recommend' — each command word has a scoring pattern, and most failed answers are good content shaped wrongly. The reliable skeleton: define the concept, apply it to the scenario, weigh both sides, conclude with a justified position. Practise planning answers in three minutes before writing — markers reward structure and application, not volume."},
+{m:"Applying theory to the day job (and back)",l:"CIPS loves Kraljic, Porter, Mendelow, the sourcing process and contract law principles — all of which you've met in the other pathways. Build your example bank: for each major theory, one real situation from your own work, anonymised, in three sentences. Scenario questions become easy when you're describing something you actually did rather than reciting a textbook."},
+{m:"Exam week & beyond the badge",l:"The unglamorous practicals: timing per mark, what to do when a question blindsides you (answer the part you know, structurally), and reviewing constructed responses in the final ten minutes. Then the career part: how to talk about MCIPS in interviews, the salary evidence, and why the qualification opens doors but the portfolio of delivered savings and led negotiations walks you through them."}]}
+];
+
+// Practical exercise per module: EX[pathway][module]
+const EX=[
+["Map your own P2P flow on one page and mark where retrospective POs or maverick spend appear.",
+ "Take a recent PO and check it against the checklist: description, price, delivery, Incoterms, payment terms, T&Cs reference. Score it /6.",
+ "Draft an RFQ for something you actually buy using the five sections — then use Buyr AI to critique it.",
+ "Build your one-page onboarding checklist and test it on the last supplier you set up — what did you miss?",
+ "Book three 20-minute intake conversations with stakeholders this week using the four questions.",
+ "Write your own 90-day plan: the spend to learn, the people to meet, the process to fix, the saving to bank."],
+["Pick a live category and write its one-line status against each of the seven steps — where did past events skip steps?",
+ "Pareto your category's last 12 months of spend by supplier and SKU; list the top three opportunities.",
+ "Build a four-line should-cost (material/labour/overhead/margin) for your highest-volume item.",
+ "Write the Kraljic position of your category and the sourcing route it implies — then challenge it with a colleague.",
+ "Score your last sourcing event against the discipline list: identical info, shared Q&A, published weightings, TCO comparison.",
+ "Take one claimed saving from last year and test it: baseline? method? validated by finance? If not, fix the method."],
+["Segment your top 20 suppliers into the four boxes — and name the ones you will deliberately NOT invest time in.",
+ "Build a scorecard for one key supplier with honest OTIF (first promise date) and share it with them before the next review.",
+ "Run one QBR using the five-part agenda; finish with written actions and owners inside 45 minutes.",
+ "Pick your worst performer: joint root-cause this month, recovery plan with dates, escalation ladder agreed.",
+ "Identify your single best supplier and write down what you could trade for a cost-down or innovation commitment."],
+["Complete the planner for a live deal — especially walk-away and BATNA. No meeting until it's done.",
+ "Build a five-rung concessions ladder for that deal: cost to you, value to them, what you want back.",
+ "Script your opening number and its evidence; rehearse saying it followed by silence.",
+ "List the three tactics this counterpart used last time and write your counter for each.",
+ "Take the last price-increase letter you received and decompose it: input share × movement = justified %.",
+ "After your next negotiation: confirm in writing within 24 hours and log one lesson in Section 8."],
+["List your week's tasks and mark which are drafting/summarising/comparing — that's your AI target list.",
+ "Rewrite one lazy prompt using role-context-task-format-constraints and compare the outputs.",
+ "Run a real document through the loop: AI first draft → your judgement pass → final. Time both halves.",
+ "Give Buyr AI three quotes (anonymised) with your weightings and check its comparison against yours.",
+ "Write your personal verification rule: what you always check by hand before an AI number reaches a decision."],
+["Write your category's boundary in one sentence — what's in, what's explicitly out — and get a stakeholder to agree it.",
+ "Build the cost model for your category's typical product and pick the two indices to track monthly.",
+ "Score five levers for value/effort/risk in your category; commit to the best two, park the rest.",
+ "Draft the 10-slide outline for your category using the board deck structure in the Strategy Pack.",
+ "Set your refresh triggers now: which two market events would void this strategy?"],
+["Map the CIPS levels against your experience and pick your entry point — then check the exemption rules.",
+ "Build your week-by-week plan back from the exam date, with one buffer week per module. Book the exam.",
+ "Take one past question and write the four-part skeleton (define, apply, weigh, conclude) in three minutes.",
+ "Create your example bank: one real anonymised situation for each of Kraljic, Porter and the sourcing process.",
+ "Do one timed past paper this month under exam conditions — timing per mark, no notes."]
+];
+
+document.getElementById("pathways").innerHTML=ACADEMY.map((p,i)=>`<div class="card" style="cursor:pointer" onclick="openPathway(${i})"><span class="tag" ${p.lvl==="New"?'style="color:var(--lime);border-color:var(--lime)"':""}>${p.lvl}</span><h3 style="font-size:17px;margin:12px 0 8px">${p.t}</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">${p.d}</p><div style="color:var(--muted);font-size:12px;margin-top:12px">${p.time}</div><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:8px">Start pathway →</div></div>`).join("");
+
+function openPathway(i){
+  const p=ACADEMY[i];
+  document.getElementById("pathways").style.display="none";
+  document.getElementById("pathway-detail").style.display="block";
+  document.getElementById("pathway-body").innerHTML=`
+    <span class="tag" ${p.lvl==="New"?'style="color:var(--lime);border-color:var(--lime)"':""}>${p.lvl}</span>
+    <h3 style="font-size:30px;margin:14px 0 8px">${p.t}</h3>
+    <p style="color:var(--muted);font-size:15px;line-height:1.6;margin-bottom:6px">${p.d}</p>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:22px">${p.time}</p>
+    <div class="card" style="margin-bottom:22px">
+      <div class="eyebrow" style="margin-bottom:10px">What you'll be able to do</div>
+      ${p.out.map(o=>`<div class="check"><span>✓</span>${o}</div>`).join("")}
+    </div>
+    ${p.mods.map((m,j)=>`
+      <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
+        <button onclick="toggleMod(${i},${j})" style="all:unset;display:flex;gap:14px;align-items:center;width:100%;padding:18px 20px;cursor:pointer;box-sizing:border-box">
+          <span style="color:var(--lime);font-family:'Space Grotesk';font-weight:700;min-width:28px">${String(j+1).padStart(2,"0")}</span>
+          <span style="font-family:'Space Grotesk';font-weight:600;font-size:15.5px;flex:1">${m.m}</span>
+          <span id="mod-arrow-${i}-${j}" style="color:var(--muted)">＋</span>
+        </button>
+        <div id="mod-${i}-${j}" style="display:none;padding:0 20px 20px 62px;color:#BDBDBD;font-size:14.5px;line-height:1.7">${m.l}${EX[i]&&EX[i][j]?`<div style="margin-top:12px;padding:12px 14px;background:var(--panel2);border-left:2px solid var(--lime);border-radius:0 8px 8px 0"><b style="color:var(--lime);font-family:'Space Grotesk';font-size:12px;letter-spacing:.06em">PUT IT INTO PRACTICE</b><div style="margin-top:4px">${EX[i][j]}</div></div>`:""}</div>
+      </div>`).join("")}
+    <div class="card" style="border-color:var(--lime);margin-top:22px">
+      <h3 style="font-size:16px;margin-bottom:6px">Pro is launching soon</h3>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:14px">Pro adds the worked examples, downloadable templates for every module and extra Buyr AI credits. Founding members get their first month free.</p>
+      <button class="btn btn-lime" onclick="go('community')">Join the Pro waitlist</button>
+    </div>`;
+  window.scrollTo({top:0});
+}
+function toggleMod(i,j){
+  const el=document.getElementById(`mod-${i}-${j}`), ar=document.getElementById(`mod-arrow-${i}-${j}`);
+  const open=el.style.display==="block";
+  el.style.display=open?"none":"block"; ar.textContent=open?"＋":"—";
+}
+function closePathway(){document.getElementById("pathways").style.display="grid";document.getElementById("pathway-detail").style.display="none";}
+
+const PLANS=[["Today — free for everyone","£0",["Buyr AI — free unlimited during launch","Full Academy pathway content","Blog & weekly insights","Templates available to buy individually"],"Try Buyr AI","free",false],["Pro","£9.99",["Unlimited templates","Monthly AI credits","Full community access","Exclusive playbooks","Founding members: first month free"],"Join the waitlist","wait",true],["Team","£49",["5 seats","Shared template library","Priority AI credits","Advisory call discount","Team analytics"],"Join the waitlist","wait",false]];
+document.getElementById("plans").innerHTML=PLANS.map(([n,p,f,cta,kind,hot])=>`<div class="card" ${hot?'style="border-color:var(--lime)"':""}>${hot?'<span class="tag tag-lime">Launching soon</span>':(kind==="wait"?'<span class="tag">Launching soon</span>':'<span class="tag" style="color:var(--lime);border-color:var(--lime)">Live now</span>')}<h3 style="font-size:18px;margin:12px 0 4px">${n}</h3><div style="font-size:36px;font-family:'Space Grotesk';font-weight:700">${p}<span style="font-size:14px;color:var(--muted);font-weight:400">/mo</span></div><div style="margin:14px 0 18px">${f.map(x=>`<div class="check"><span>✓</span>${x}</div>`).join("")}</div><button class="btn ${hot?"btn-lime":"btn-ghost"}" style="width:100%;justify-content:center" onclick="go('${kind==="wait"?"community":"ai"}')">${cta}</button></div>`).join("");
+
+document.getElementById("ticker").innerHTML=Array(2).fill(["TRUSTED BY MODERN BUYERS","AEROSPACE","MANUFACTURING","STARTUPS","SMEs","SOURCING TEAMS","SUPPLY CHAIN","CIPS STUDENTS"]).flat().map(t=>`<span>${t} <span style="color:var(--lime)">·</span></span>`).join("");
+
+// ---------- Blog ----------
+const ARTICLES=[
+{t:"How to write an RFQ (that gets good quotes back)",cat:"Procurement",mins:5,body:`<h3 style="font-size:26px;margin-bottom:14px">How to write an RFQ (that gets good quotes back)</h3>
+<p style="color:var(--muted);font-size:13px;margin-bottom:20px">Procurement · 5 min read</p>
+<p>Bad RFQs get bad quotes. Vague specs invite padded prices, missing commercial terms invite suppliers to choose their own, and unclear evaluation criteria mean you can't defend the award later. A good RFQ does the supplier's thinking for them.</p><br>
+<p><b>1. Scope in one paragraph.</b> What you're buying, roughly how much per year, and why now. Suppliers price uncertainty — remove it.</p><br>
+<p><b>2. Specification.</b> Drawings or specs with revision numbers, material standards, quality requirements (certs, PPAP, inspection levels) and tolerances that matter. If a tolerance doesn't matter, say so — over-specification is the most expensive habit in procurement.</p><br>
+<p><b>3. Commercial terms.</b> State your Incoterms, payment terms, currency, quote validity and volume tiers up front. Asking for pricing at three volumes (e.g. 1k / 2.5k / 5k) shows you where their cost curve breaks.</p><br>
+<p><b>4. Evaluation criteria — with weightings.</b> Tell suppliers how you'll decide: e.g. price 40%, quality 25%, lead time 20%, risk 15%. It improves the quality of responses and protects you in any audit.</p><br>
+<p><b>5. Timeline.</b> Deadline for questions, deadline for quotes, award date. Then hold them.</p><br>
+<p>Run it through this lens before sending: could a stranger price this accurately without phoning you? If not, it isn't finished. Or skip the blank page — the BuyrWorld RFQ template has all five sections built in, and Buyr AI will draft one from a single sentence.</p>`},
+{t:"Single-source suppliers: when to worry",cat:"Supply chain",mins:4,body:`<h3 style="font-size:26px;margin-bottom:14px">Single-source suppliers: when to worry</h3>
+<p style="color:var(--muted);font-size:13px;margin-bottom:20px">Supply chain · 4 min read</p>
+<p>Every supply base has single-source suppliers. That's not automatically a problem — qualifying a second source costs money, and for low-value parts it's rarely worth it. The skill is knowing which ones can hurt you.</p><br>
+<p><b>Worry when several of these stack up:</b> the part is on your critical path; tooling lives at the supplier and you don't own it; requalification would take months (think certified processes, regulated industries); the supplier's financials are sliding; or you're a big share of their revenue — over about 25% and their problem becomes your problem overnight.</p><br>
+<p><b>The four moves that actually reduce the risk:</b></p><br>
+<p>1. <b>Own your tooling</b> — and put a transfer clause in the contract before you need it.</p>
+<p>2. <b>Buffer stock on A-parts</b> — boring, effective, and cheaper than a line-down.</p>
+<p>3. <b>Qualify a second source on a small allocation</b> — even 10% keeps the option real and the incumbent honest.</p>
+<p>4. <b>Monitor financial health quarterly</b> — credit scores, filing delays, key staff leaving. The signals are usually there a year before the failure.</p><br>
+<p>Score each single-source supplier on dependency, financials, tooling, geography and requalification time, and you'll usually find only a handful genuinely deserve investment. The BuyrWorld Supplier Risk Matrix does the weighting for you — or ask Buyr AI to score one in the chat.</p>`},
+{t:"AI in procurement: 6 uses that actually save time",cat:"AI procurement",mins:5,body:`<h3 style="font-size:26px;margin-bottom:14px">AI in procurement: 6 uses that actually save time</h3>
+<p style="color:var(--muted);font-size:13px;margin-bottom:20px">AI procurement · 5 min read</p>
+<p>Strip away the hype and AI is good at one thing buyers desperately need: turning slow drafting and reading work into minutes. Here's where it genuinely pays today.</p><br>
+<p><b>1. First-draft documents.</b> RFQs, supplier letters, negotiation plans, category strategy outlines. AI gets you to 80% in two minutes; your judgement does the 20% that matters.</p><br>
+<p><b>2. Contract summaries.</b> Paste a 40-page agreement and ask for liability caps, indexation, termination and renewal notice periods. Verify the clauses it flags — but it reads faster than you do.</p><br>
+<p><b>3. Quote comparison.</b> Give it three quotes and your weightings; get a normalised comparison including payment-terms value, not just unit price.</p><br>
+<p><b>4. Spend categorisation.</b> The tail of your spend file — thousands of small lines no one classifies — is exactly the tedious pattern-matching AI eats.</p><br>
+<p><b>5. Market briefings.</b> "What's happening to aluminium prices and why" before a negotiation, in 30 seconds.</p><br>
+<p><b>6. Negotiation prep.</b> Targets, walk-away, a concessions ladder, and the counters to the tactics you know are coming.</p><br>
+<p><b>What it can't do:</b> own the relationship, make the award decision, or take accountability. AI removes admin, not judgement — that's the whole BuyrWorld thesis. Try all six in Buyr AI.</p>`}
+];
+document.getElementById("blog-list").innerHTML=ARTICLES.map((a,i)=>`<div class="card" style="cursor:pointer" onclick="openArticle(${i})"><span class="tag">${a.cat}</span><h3 style="font-size:17px;margin:12px 0 8px">${a.t}</h3><p style="color:var(--muted);font-size:13px">${a.mins} min read</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Read article →</div></div>`).join("");
+function openArticle(i){document.getElementById("blog-list").style.display="none";document.getElementById("blog-article").style.display="block";document.getElementById("blog-body").innerHTML=ARTICLES[i].body;window.scrollTo({top:0});}
+function closeArticle(){document.getElementById("blog-list").style.display="grid";document.getElementById("blog-article").style.display="none";}
+
+// ---------- Buyr AI demo (scripted responses) ----------
+const DEMOS={
+rfq:`<b>RFQ — Aluminium Castings (Draft)</b>\n\n<b>1. Scope</b>\nSupply of A356-T6 aluminium castings to drawing rev. C, est. 5,000 units/yr.\n\n<b>2. Specification</b>\n• Material cert to EN 10204 3.1\n• Surface finish Ra 3.2, critical dims CpK ≥ 1.33\n• PPAP Level 3 prior to first production\n\n<b>3. Commercial</b>\n• Incoterms: DAP (buyer site) · Payment: 60 days EOM\n• Pricing: unit price at 1k / 2.5k / 5k volumes + tooling separately\n• Validity: 90 days\n\n<b>4. Evaluation criteria</b>\nPrice 40% · Quality systems 25% · Lead time 20% · Capacity & risk 15%\n\n<b>5. Timeline</b>\nQuestions: day 7 · Quotes due: day 21 · Award: day 35\n\nWant me to adjust volumes, Incoterms or weightings?`,
+compare:`<b>Supplier comparison</b>\n\nSend me both quotes and I'll score them — for now, here's the framework I use:\n\n• <b>Landed cost</b> — unit price + freight + duty + payment terms value\n• <b>Quality</b> — certs, PPM history, audit results\n• <b>Delivery</b> — quoted lead time vs demonstrated OTIF\n• <b>Risk</b> — financials, single-source exposure, geography\n• <b>Service</b> — responsiveness, engineering support\n\nWeight each, score 1–5, multiply. The cheapest quote wins less often than you'd think.`,
+strategy:`<b>Category strategy — Packaging (outline)</b>\n\n<b>Position:</b> Leverage quadrant (high spend, low complexity) → competition is your friend.\n\n<b>Levers</b>\n• Consolidate 6 suppliers → 2–3 with volume tiers\n• Spec rationalisation: 14 box sizes → 8\n• Index-linked pricing on paper/board to capture market drops\n\n<b>12-month plan</b>\nQ1 baseline & market test · Q2 RFQ event · Q3 transition · Q4 review\n\n<b>Target:</b> 8–12% saving, dual-source on A-lines.\n\nIn the full version I build this from your actual spend data.`,
+risk:`<b>Single-source risk review</b>\n\nKey exposures to check:\n\n• <b>Financial</b> — credit score trend, filing delays, owner concentration\n• <b>Dependency</b> — are you >25% of their revenue? Risk both ways\n• <b>Tooling</b> — who owns it, and is it transferable?\n• <b>Geographic</b> — logistics, FX, regulatory exposure\n• <b>Knowledge</b> — undocumented process know-how\n\n<b>Mitigations:</b> tooling ownership clause, buffer stock on A-parts, qualified second source on a 10% allocation, quarterly financial monitoring.\n\nShare the supplier's details and I'll score them 0–100.`,
+fallback:`Good question. This is the <b>demo version</b> of Buyr AI — the full assistant answers any procurement question, drafts complete documents and works with your own data.\n\nTry one of the sample prompts below, or join the waitlist to get full access at launch.`
+};
+function route(q){q=q.toLowerCase();
+  if(q.includes("rfq")||q.includes("casting")||q.includes("quote request"))return DEMOS.rfq;
+  if(q.includes("compare")||q.includes("supplier")&&q.includes("vs"))return DEMOS.compare;
+  if(q.includes("strategy")||q.includes("category"))return DEMOS.strategy;
+  if(q.includes("risk")||q.includes("single"))return DEMOS.risk;
+  return DEMOS.fallback;}
+
+const CHIPS=["Generate an RFQ for aluminium castings","Compare two fastener suppliers","Create a category strategy for packaging","Identify risks for a single-source supplier"];
+const HIST={};
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function md(s){return esc(s).replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/^#+\s?(.+)$/gm,"<b>$1</b>");}
+
+document.querySelectorAll("[data-chat]").forEach((box,idx)=>{
+  const id="chat"+idx, full=box.dataset.chat==="full";
+  HIST[id]=[];
+  box.innerHTML=`
+    <div class="chat-head"><span style="width:8px;height:8px;border-radius:99px;background:var(--lime)"></span>
+    <span style="font-family:'Space Grotesk';font-weight:600;font-size:14px">Buyr AI</span>
+    <span style="margin-left:auto;font-size:11px;color:var(--muted)">live assistant</span></div>
+    <div class="chat-log" id="${id}-log" style="height:${full?420:300}px">
+      <div style="color:var(--muted);margin-bottom:12px">Ask anything a buyer would. Try:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${CHIPS.map(c=>`<button class="chip" onclick="send('${id}', this.textContent)">${c}</button>`).join("")}</div>
+    </div>
+    <div class="chat-foot"><input class="bwin" id="${id}-in" placeholder="e.g. Draft an RFQ for CNC machined parts…" onkeydown="if(event.key==='Enter')send('${id}')">
+    <button class="btn btn-lime" onclick="send('${id}')">Send</button></div>`;
+});
+
+async function send(id,text){
+  const inp=document.getElementById(id+"-in"), log=document.getElementById(id+"-log");
+  const q=(text||inp.value).trim(); if(!q)return; inp.value="";
+  HIST[id].push({role:"user",content:q});
+  log.insertAdjacentHTML("beforeend",`<div class="msg user"><div class="bub"></div></div>`);
+  log.lastElementChild.querySelector(".bub").textContent=q;
+  log.insertAdjacentHTML("beforeend",`<div class="msg ai" id="${id}-typing"><div class="bub" style="color:var(--lime);font-family:'Space Grotesk';font-size:13px">Buyr AI is drafting…</div></div>`);
+  log.scrollTop=log.scrollHeight;
+  let reply="";
+  try{
+    const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:HIST[id].slice(-12)})});
+    if(!r.ok)throw new Error("api");
+    const d=await r.json();
+    reply=md(d.text||"Sorry — I couldn't draft that. Try again.");
+  }catch(e){
+    reply=route(q); // demo fallback if the AI backend isn't configured yet
+  }
+  HIST[id].push({role:"assistant",content:reply.replace(/<[^>]+>/g,"")});
+  document.getElementById(id+"-typing").remove();
+  log.insertAdjacentHTML("beforeend",`<div class="msg ai"><div class="bub">${reply}</div></div>`);
+  log.scrollTop=log.scrollHeight;
+}
+</script>
+</body>
+</html>
