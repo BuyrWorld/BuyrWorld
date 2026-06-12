@@ -49,6 +49,15 @@ input.bwin:focus, textarea.bwin:focus{border-color:var(--lime)}
 .mi-pill{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:8px 16px;font-family:'Space Grotesk';font-weight:600;font-size:13px;color:var(--text);cursor:pointer;transition:all .15s}
 .mi-pill:hover{border-color:var(--lime)}
 .mi-pill.on{background:var(--lime);color:#111;border-color:var(--lime)}
+.fbtn{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px dashed #4a4a4a;border-radius:10px;padding:10px 16px;font-size:13px;color:var(--text);cursor:pointer;transition:border-color .15s;font-family:'Space Grotesk';font-weight:600}
+.fbtn:hover{border-color:var(--lime)}
+.fbtn input{display:none}
+.fbtn svg{width:16px;height:16px;stroke:var(--lime);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fname{color:var(--muted);font-size:12.5px}
+.sheet-head{display:flex;border:1px solid var(--line);border-bottom:1px solid #3a3a3a;border-radius:12px 12px 0 0;overflow:hidden;font-family:'Space Grotesk';font-weight:600;font-size:11px;letter-spacing:.08em}
+.sheet-head span{flex:1;padding:9px 14px;background:var(--panel2);color:var(--lime);border-right:1px solid #2f2f2f}
+.sheet-head span:last-child{border-right:none}
+.sheet-in{border-radius:0 0 12px 12px!important;border-top:none!important;font-family:ui-monospace,Menlo,Consolas,monospace!important;font-size:12.5px!important;line-height:1.8!important}
 .chip-on{background:var(--lime)!important;color:#111!important;border-color:var(--lime)!important}
 ::-webkit-scrollbar{width:11px;height:11px}
 ::-webkit-scrollbar-track{background:var(--panel)}
@@ -289,7 +298,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <div class="card" id="tool-quotes">
       <h3 style="font-size:20px;margin-bottom:6px">Quote Comparator</h3>
       <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:14px">Drop in 2–4 supplier quotes in any mixture of <b style="color:var(--text)">Excel, PDF, Word or CSV</b>. You'll get a comprehensive review — quote summary, normalised landed-cost comparison with the working shown, weighted scoring, risks and the questions to ask each supplier — downloadable as a BuyrWorld-branded report.</p>
-      <input type="file" id="q-files" multiple accept=".xlsx,.xls,.csv,.pdf,.docx,.txt" style="color:var(--muted);font-size:13px" onchange="addQuoteFiles(this)">
+      <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Add quote files — PDF · Word · Excel · CSV<input type="file" id="q-files" multiple accept=".xlsx,.xls,.csv,.pdf,.docx,.txt" onchange="addQuoteFiles(this)"></label>
       <div id="q-list" style="margin:10px 0;display:flex;flex-wrap:wrap;gap:8px"></div>
       <input class="bwin" id="q-context" placeholder="Optional: weightings & assumptions, e.g. price 40/quality 25/lead time 20/risk 15; 5,000 units/yr; cost of capital 8%">
       <p style="color:var(--muted);font-size:12px;margin-top:8px">Works with text-based PDFs (not scans/photos). Anonymise anything sensitive — file text is sent to Buyr AI for the comparison.</p>
@@ -340,7 +349,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
     <div class="card" style="margin-bottom:18px">
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Upload a contract (<b style="color:var(--text)">PDF, Word or TXT</b> — text-based, not scans) or paste the terms below. T&amp;Cs, MSAs, NDAs, framework and service agreements all work. Anonymise anything sensitive.</p>
-      <input type="file" id="ci-file" accept=".pdf,.docx,.txt" style="color:var(--muted);font-size:13px" onchange="loadContractFile(this)">
+      <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload contract — PDF · Word · TXT<input type="file" id="ci-file" accept=".pdf,.docx,.txt" onchange="loadContractFile(this)"></label>
       <div id="ci-chip" style="margin:10px 0"></div>
       <textarea class="bwin" id="ci-paste" rows="6" placeholder="…or paste the contract text / key clauses here"></textarea>
     </div>
@@ -485,11 +494,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <span class="tag tag-lime">Flagship</span>
         <h3 style="font-size:19px;margin:10px 0 4px">My Commodity Exposure</h3>
         <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Upload or paste your spend (supplier, category, amount). Buyr AI maps each category to its underlying commodity content and shows where your money is really exposed.</p>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-          <input type="file" id="mi-file" accept=".csv,.txt,.xlsx,.xls" style="color:var(--muted);font-size:13px" onchange="miLoadFile(this)">
-          <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="miUseSample()">Load sample data</button>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+          <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload CSV / Excel<input type="file" id="mi-file" accept=".csv,.txt,.xlsx,.xls" onchange="miLoadFile(this);document.getElementById('mi-fname').textContent=this.files[0]?this.files[0].name+' ✓':''"></label>
+          <button class="btn btn-ghost" style="padding:10px 16px;font-size:13px" onclick="miUseSample()">Load sample data</button>
+          <span class="fname" id="mi-fname"></span>
         </div>
-        <textarea class="bwin" id="mi-paste" rows="5" placeholder="supplier,category,amount&#10;Alpha Castings Ltd,Castings,42000&#10;PackRight Ltd,Packaging,12750"></textarea>
+        <div class="sheet-head"><span>SUPPLIER</span><span>CATEGORY</span><span>AMOUNT</span></div>
+        <textarea class="bwin sheet-in" id="mi-paste" rows="5" placeholder="Alpha Castings Ltd, Castings, 42000&#10;PackRight Ltd, Packaging, 12750&#10;&#10;…one line per invoice or PO. Same format as the Spend Analyser."></textarea>
         <button class="btn btn-lime" style="margin-top:12px" onclick="runExposure()">Map my exposure →</button>
         <div id="mi-exp-out" style="margin-top:16px"></div>
       </div>
@@ -622,12 +633,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <h2 style="font-size:34px;margin-bottom:10px">See your spend the way a category manager would</h2>
     <p style="color:var(--muted);max-width:680px;margin-bottom:32px;line-height:1.6">Paste or upload your spend data and get an instant dashboard: Pareto, concentration, tail spend, insights and recommendations. Everything runs in your browser — <b style="color:var(--text)">your data never leaves your device</b> unless you choose to send the summary to Buyr AI.</p>
     <div class="card" style="margin-bottom:24px">
-      <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Format: one line per invoice or PO — <b style="color:var(--text)">supplier, category, amount</b>. A header row is fine; most CSV exports work as-is.</p>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-        <input type="file" id="spend-file" accept=".csv,.txt" style="color:var(--muted);font-size:13px" onchange="loadSpendFile(this)">
-        <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="loadSampleSpend()">Load sample data</button>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+        <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload CSV<input type="file" id="spend-file" accept=".csv,.txt" onchange="loadSpendFile(this);document.getElementById('spend-fname').textContent=this.files[0]?this.files[0].name+' ✓':''"></label>
+        <button class="btn btn-ghost" style="padding:10px 16px;font-size:13px" onclick="loadSampleSpend()">Load sample data</button>
+        <span class="fname" id="spend-fname"></span>
       </div>
-      <textarea class="bwin" id="spend-paste" rows="6" placeholder="supplier,category,amount&#10;Alpha Castings Ltd,Castings,42000&#10;Bravo Fasteners,Fasteners,8100&#10;PackRight Ltd,Packaging,12750"></textarea>
+      <div class="sheet-head"><span>SUPPLIER</span><span>CATEGORY</span><span>AMOUNT</span></div>
+      <textarea class="bwin sheet-in" id="spend-paste" rows="6" placeholder="Alpha Castings Ltd, Castings, 42000&#10;Bravo Fasteners, Fasteners, 8100&#10;PackRight Ltd, Packaging, 12750&#10;&#10;…one line per invoice or PO, separated by commas. A header row is fine — most CSV exports paste straight in."></textarea>
       <button class="btn btn-lime" style="margin-top:12px" onclick="analyseSpend()">Analyse spend →</button>
     </div>
     <div id="spend-out"></div>
