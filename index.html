@@ -168,7 +168,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   <section class="sec"><div class="wrap">
     <div class="eyebrow" style="margin-bottom:10px">AI Tools</div>
     <h2 style="font-size:34px;margin-bottom:10px">The buyer's toolkit</h2>
-    <p style="color:var(--muted);max-width:660px;margin-bottom:36px;line-height:1.6">Free, no signup. Pick a tool — each opens its own workspace.</p>
+    <p style="color:var(--muted);max-width:660px;margin-bottom:30px;line-height:1.6">Free, no signup. Pick a tool — each opens its own workspace.</p>
+    <div class="eyebrow" style="margin-bottom:14px">Procurement tools</div>
     <div class="grid4">
       <button class="tool-tile" onclick="go('tool-defender')">
         <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6l7-3z"/><path d="M9.5 14.5l5-5"/><circle cx="9.7" cy="9.7" r="1"/><circle cx="14.3" cy="14.3" r="1"/></svg>
@@ -194,6 +195,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 12V3.5"/><path d="M12 12l6 6"/></svg>
         Spend Analyser<span class="sub">Instant dashboard · in your browser</span>
       </button>
+    </div>
+    <div class="eyebrow" style="margin:34px 0 14px">AI agents — guided chat workflows</div>
+    <div class="grid4">
       <button class="tool-tile" onclick="go('ai');setTimeout(()=>runAgent('rfq'),200)">
         <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v3h3"/><path d="M12 10.5v6M9 13.5h6"/></svg>
         RFQ Generator<span class="sub">Six questions → send-ready RFQ</span>
@@ -355,12 +359,12 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         </div>
         <div class="tradingview-widget-container">
           <div class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
-          {"colorTheme":"dark","dateRange":"3M","showChart":true,"locale":"en","width":"100%","height":"460","isTransparent":true,"showSymbolLogo":false,"showFloatingTooltip":true,"plotLineColorGrowing":"#D6FF00","plotLineColorFalling":"#FF5C5C","belowLineFillColorGrowing":"rgba(214,255,0,0.06)","belowLineFillColorFalling":"rgba(255,92,92,0.06)","gridLineColor":"rgba(42,42,42,0)","scaleFontColor":"#8F8F8F","tabs":[{"title":"Indices","symbols":[{"s":"FOREXCOM:UKXGBP","d":"UKX · FTSE 100 Index (UK)"},{"s":"FOREXCOM:SPXUSD","d":"SPX · S&P 500 Index (US)"},{"s":"FOREXCOM:NSXUSD","d":"NDX · Nasdaq 100 Index (US)"},{"s":"FOREXCOM:DJI","d":"DJI · Dow Jones Industrial (US)"},{"s":"INDEX:DEU40","d":"DAX · DAX 40 Index (Germany)"},{"s":"INDEX:NKY","d":"NKY · Nikkei 225 Index (Japan)"}]},{"title":"Metals","symbols":[{"s":"CAPITALCOM:COPPER","d":"COPPER · Copper (USD/lb)"},{"s":"CAPITALCOM:NICKEL","d":"NICKEL · Nickel (USD/t)"},{"s":"TVC:GOLD","d":"GOLD · Gold Spot (USD/oz)"},{"s":"TVC:SILVER","d":"SILVER · Silver Spot (USD/oz)"},{"s":"TVC:PLATINUM","d":"PLATINUM · Platinum Spot (USD/oz)"},{"s":"TVC:PALLADIUM","d":"PALLADIUM · Palladium Spot (USD/oz)"}]},{"title":"Energy","symbols":[{"s":"TVC:UKOIL","d":"UKOIL · Brent Crude Oil (USD/bbl)"},{"s":"TVC:USOIL","d":"USOIL · WTI Crude Oil (USD/bbl)"},{"s":"CAPITALCOM:NATURALGAS","d":"NATGAS · Natural Gas (USD/MMBtu)"}]},{"title":"Currencies","symbols":[{"s":"FX:GBPUSD","d":"GBPUSD · British Pound / US Dollar"},{"s":"FX:EURGBP","d":"EURGBP · Euro / British Pound"},{"s":"FX:EURUSD","d":"EURUSD · Euro / US Dollar"},{"s":"FX:USDCNH","d":"USDCNH · US Dollar / Chinese Yuan"},{"s":"FX:USDJPY","d":"USDJPY · US Dollar / Japanese Yen"}]}]}
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+          {"width":"100%","height":"560","symbol":"FOREXCOM:UKXGBP","interval":"D","timezone":"Europe/London","theme":"dark","style":"1","locale":"en","backgroundColor":"rgba(17,17,17,0)","gridColor":"rgba(42,42,42,0.35)","withdateranges":true,"range":"YTD","hide_side_toolbar":false,"allow_symbol_change":true,"watchlist":["FOREXCOM:UKXGBP","FOREXCOM:SPXUSD","FOREXCOM:NSXUSD","FOREXCOM:DJI","INDEX:DEU40","INDEX:NKY","CAPITALCOM:COPPER","CAPITALCOM:NICKEL","TVC:GOLD","TVC:SILVER","TVC:PLATINUM","TVC:PALLADIUM","TVC:UKOIL","TVC:USOIL","CAPITALCOM:NATURALGAS","FX:GBPUSD","FX:EURGBP","FX:EURUSD","FX:USDCNH","FX:USDJPY"],"calendar":false,"support_host":"https://www.tradingview.com"}
           </script>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
-          <p style="color:var(--muted);font-size:11.5px;max-width:560px">Spot/CFD benchmarks via TradingView (may be delayed). LME base metals (aluminium, zinc, tin, lead) and steel indices are licensed data with no free chart feed — use the live AI check instead. Indicative for direction, not contract settlement.</p>
+          <p style="color:var(--muted);font-size:11.5px;max-width:560px">Scroll the watchlist (right) to switch instruments · use the range buttons (bottom) — YTD shows year-to-date in green/red · use the ruler tool in the left toolbar to measure the % change between any two points in time. LME base metals (aluminium, zinc, tin, lead) and steel indices are licensed data with no free feed — use the live AI check instead. Prices may be delayed; indicative, not for contract settlement.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-ghost" style="padding:8px 13px;font-size:12.5px" onclick="miGo('comm');document.getElementById('mi-comm').value='Aluminium'">Aluminium / zinc / steel live read →</button>
             <button class="btn btn-ghost" style="padding:8px 13px;font-size:12.5px" onclick="miGo('news')">Top economy stories →</button>
@@ -375,8 +379,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <p style="color:var(--muted);font-size:13px;margin-bottom:12px">The AI buildout is pulling on copper, power, semiconductors and construction — the same markets your costs live in.</p>
         <div class="tradingview-widget-container">
           <div class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
-          {"colorTheme":"dark","dateRange":"3M","showChart":true,"locale":"en","width":"100%","height":"460","isTransparent":true,"showSymbolLogo":false,"showFloatingTooltip":true,"plotLineColorGrowing":"#D6FF00","plotLineColorFalling":"#FF5C5C","belowLineFillColorGrowing":"rgba(214,255,0,0.06)","belowLineFillColorFalling":"rgba(255,92,92,0.06)","gridLineColor":"rgba(42,42,42,0)","scaleFontColor":"#8F8F8F","tabs":[{"title":"Semiconductors","symbols":[{"s":"NASDAQ:NVDA","d":"NVDA · NVIDIA"},{"s":"NASDAQ:AMD","d":"AMD · Advanced Micro Devices"},{"s":"NASDAQ:AVGO","d":"AVGO · Broadcom"},{"s":"NYSE:TSM","d":"TSM · TSMC"},{"s":"NASDAQ:INTC","d":"INTC · Intel"},{"s":"NASDAQ:MRVL","d":"MRVL · Marvell"}]},{"title":"Neoclouds","symbols":[{"s":"NASDAQ:CRWV","d":"CRWV · CoreWeave"},{"s":"NASDAQ:IREN","d":"IREN · IREN"},{"s":"NASDAQ:NBIS","d":"NBIS · Nebius"},{"s":"NASDAQ:APLD","d":"APLD · Applied Digital"},{"s":"NASDAQ:HUT","d":"HUT · Hut 8"},{"s":"NASDAQ:CLSK","d":"CLSK · CleanSpark"},{"s":"NASDAQ:CORZ","d":"CORZ · Core Scientific"},{"s":"NASDAQ:WULF","d":"WULF · TeraWulf"},{"s":"NASDAQ:CIFR","d":"CIFR · Cipher Mining"},{"s":"NASDAQ:GLXY","d":"GLXY · Galaxy Digital"}]},{"title":"Hyperscalers","symbols":[{"s":"NASDAQ:MSFT","d":"MSFT · Microsoft"},{"s":"NASDAQ:AMZN","d":"AMZN · Amazon"},{"s":"NASDAQ:GOOGL","d":"GOOGL · Alphabet (Google)"},{"s":"NASDAQ:META","d":"META · Meta Platforms"},{"s":"NYSE:ORCL","d":"ORCL · Oracle"}]},{"title":"Power","symbols":[{"s":"NASDAQ:CEG","d":"CEG · Constellation Energy"},{"s":"NYSE:VST","d":"VST · Vistra"},{"s":"NYSE:GEV","d":"GEV · GE Vernova"},{"s":"NYSE:NEE","d":"NEE · NextEra Energy"},{"s":"NYSE:DUK","d":"DUK · Duke Energy"}]},{"title":"Cooling & electrical","symbols":[{"s":"NYSE:VRT","d":"VRT · Vertiv"},{"s":"NYSE:ETN","d":"ETN · Eaton"},{"s":"NYSE:TT","d":"TT · Trane Technologies"},{"s":"NYSE:JCI","d":"JCI · Johnson Controls"},{"s":"NYSE:NVT","d":"NVT · nVent Electric"}]},{"title":"Networking & fibre","symbols":[{"s":"NYSE:ANET","d":"ANET · Arista Networks"},{"s":"NASDAQ:CSCO","d":"CSCO · Cisco"},{"s":"NYSE:CIEN","d":"CIEN · Ciena"},{"s":"NYSE:GLW","d":"GLW · Corning"}]}]}
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+          {"width":"100%","height":"560","symbol":"NASDAQ:NVDA","interval":"D","timezone":"Europe/London","theme":"dark","style":"1","locale":"en","backgroundColor":"rgba(17,17,17,0)","gridColor":"rgba(42,42,42,0.35)","withdateranges":true,"range":"YTD","hide_side_toolbar":false,"allow_symbol_change":true,"watchlist":["NASDAQ:NVDA","NASDAQ:AMD","NASDAQ:AVGO","NYSE:TSM","NASDAQ:INTC","NASDAQ:MRVL","NASDAQ:CRWV","NASDAQ:IREN","NASDAQ:NBIS","NASDAQ:APLD","NASDAQ:HUT","NASDAQ:CLSK","NASDAQ:CORZ","NASDAQ:WULF","NASDAQ:CIFR","NASDAQ:GLXY","NASDAQ:MSFT","NASDAQ:AMZN","NASDAQ:GOOGL","NASDAQ:META","NYSE:ORCL","NASDAQ:CEG","NYSE:VST","NYSE:GEV","NYSE:NEE","NYSE:DUK","NYSE:VRT","NYSE:ETN","NYSE:TT","NYSE:JCI","NYSE:NVT","NYSE:ANET","NASDAQ:CSCO","NYSE:CIEN","NYSE:GLW"],"calendar":false,"support_host":"https://www.tradingview.com"}
           </script>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px">
@@ -389,13 +393,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
     <!-- NEWS -->
     <div class="mi-sec" id="mi-sec-news" style="display:none">
-      <div class="grid2" style="align-items:start">
+      <div>
         <div class="card" style="padding:14px 16px">
           <div class="eyebrow" style="margin-bottom:8px">World &amp; economy</div>
           <div class="tradingview-widget-container">
             <div class="tradingview-widget-container__widget"></div>
             <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
-            {"feedMode":"market","market":"index","colorTheme":"dark","isTransparent":true,"displayMode":"regular","width":"100%","height":"500","locale":"en"}
+            {"feedMode":"market","market":"index","colorTheme":"dark","isTransparent":true,"displayMode":"regular","width":"100%","height":"560","locale":"en"}
             </script>
           </div>
         </div>
@@ -404,7 +408,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           <div class="tradingview-widget-container">
             <div class="tradingview-widget-container__widget"></div>
             <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
-            {"feedMode":"market","market":"stock","colorTheme":"dark","isTransparent":true,"displayMode":"regular","width":"100%","height":"500","locale":"en"}
+            {"feedMode":"market","market":"stock","colorTheme":"dark","isTransparent":true,"displayMode":"regular","width":"100%","height":"560","locale":"en"}
             </script>
           </div>
         </div>
@@ -609,7 +613,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     </div>
     <div class="card" style="margin-top:18px">
       <h3 style="font-size:17px;margin-bottom:8px">Community</h3>
-      <p style="color:var(--muted);font-size:14.5px;margin-bottom:14px">Want in early? The BuyrWorld community opens to Pro members at launch.</p>
+      <p style="color:var(--muted);font-size:14.5px;margin-bottom:14px">Want in early? Join the Pro waitlist — founding members get a 50% off code for their first month when Pro goes live.</p>
       <button class="btn btn-ghost" onclick="go('community')">Join the waitlist →</button>
     </div>
   </div></section>
@@ -850,8 +854,8 @@ function toggleMod(i,j){
 }
 function closePathway(){document.getElementById("pathways").style.display="grid";document.getElementById("pathway-detail").style.display="none";}
 
-const PLANS=[["Today — free for everyone","£0",["Buyr AI — free unlimited during launch","Full Academy pathway content","Blog & weekly insights","Templates available to buy individually"],"Try Buyr AI","free",false],["Pro","£9.99",["Unlimited templates","Monthly AI credits","Full community access","Exclusive playbooks","Founding members: first month free"],"Join the waitlist","wait",true]];
-document.getElementById("plans").innerHTML=PLANS.map(([n,p,f,cta,kind,hot])=>`<div class="card" ${hot?'style="border-color:var(--lime)"':""}>${hot?'<span class="tag tag-lime">Launching soon</span>':(kind==="wait"?'<span class="tag">Launching soon</span>':'<span class="tag" style="color:var(--lime);border-color:var(--lime)">Live now</span>')}<h3 style="font-size:18px;margin:12px 0 4px">${n}</h3><div style="font-size:36px;font-family:'Space Grotesk';font-weight:700">${p}<span style="font-size:14px;color:var(--muted);font-weight:400">/mo</span></div><div style="margin:14px 0 18px">${f.map(x=>`<div class="check"><span>✓</span>${x}</div>`).join("")}</div><button class="btn ${hot?"btn-lime":"btn-ghost"}" style="width:100%;justify-content:center" onclick="go('${kind==="wait"?"community":"ai"}')">${cta}</button></div>`).join("");
+const PLANS=[["Beta — free for everyone","£0",["Everything free for a limited period while we're in Beta","Buyr AI + all 9 AI tools","Market Intelligence terminal","Full Academy & Blog","Templates available to buy individually"],"Start using it now","free",false],["Pro","£9.99",["AI Tools — unlimited","Market Intelligence — briefings, exposure & exports","All templates included","Full Academy & Blog","Private community access","Founding waitlist members: 50% off your first month"],"Join the waitlist","wait",true]];
+document.getElementById("plans").innerHTML=PLANS.map(([n,p,f,cta,kind,hot])=>`<div class="card" ${hot?'style="border-color:var(--lime)"':""}>${hot?'<span class="tag tag-lime">Launching soon</span>':(kind==="wait"?'<span class="tag">Launching soon</span>':'<span class="tag" style="color:var(--lime);border-color:var(--lime)">Beta · live now</span>')}<h3 style="font-size:18px;margin:12px 0 4px">${n}</h3><div style="font-size:36px;font-family:'Space Grotesk';font-weight:700">${p}<span style="font-size:14px;color:var(--muted);font-weight:400">/mo</span></div><div style="margin:14px 0 18px">${f.map(x=>`<div class="check"><span>✓</span>${x}</div>`).join("")}</div><button class="btn ${hot?"btn-lime":"btn-ghost"}" style="width:100%;justify-content:center" onclick="go('${kind==="wait"?"community":"ai"}')">${cta}</button></div>`).join("");
 
 document.getElementById("ticker").innerHTML=Array(2).fill(["TRUSTED BY MODERN BUYERS","MANUFACTURING","STARTUPS","SMEs","SOURCING TEAMS","SUPPLY CHAIN","CIPS STUDENTS"]).flat().map(t=>`<span>${t} <span style="color:var(--lime)">·</span></span>`).join("");
 
