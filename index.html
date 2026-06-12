@@ -158,15 +158,6 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <h2 style="font-size:34px;margin-bottom:10px">Your AI procurement assistant</h2>
     <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Trained on the work of sourcing: RFQs, scorecards, category strategies, risk reviews and negotiation plans. Ask it like you'd brief a strong analyst.</p>
     <div class="chatbox" data-chat="full"></div>
-    <div class="card" style="margin-top:18px;padding:16px 18px">
-      <div class="eyebrow" style="margin-bottom:6px">Download as a branded RFQ (PDF)</div>
-      <p style="color:var(--muted);font-size:13px;margin-bottom:10px">Turn Buyr AI's last answer into a watermarked BuyrWorld PDF — add your company and name so suppliers know it's from you.</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <input class="bwin" id="rfq-co" style="max-width:240px" placeholder="Your company name">
-        <input class="bwin" id="rfq-nm" style="max-width:200px" placeholder="Your name">
-        <button class="btn btn-lime" style="padding:9px 14px;font-size:13px" onclick="downloadRFQpdf()">Download PDF →</button>
-      </div>
-    </div>
     <div class="grid3" style="margin-top:28px">
       <div class="card" style="cursor:pointer" onclick="runAgent('rfq')"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">RFQ Generator</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">From a one-line need to a send-ready RFQ with specs, Incoterms and evaluation criteria.</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Launch agent →</div></div>
       <div class="card" style="cursor:pointer" onclick="runAgent('risk')"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">Supplier Risk Agent</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">Surface single-source exposure, financial flags and concentration risk before they bite.</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Launch agent →</div></div>
@@ -1512,47 +1503,6 @@ async function rfqPDF(){
 }
 
 
-async function downloadRFQpdf(){
-  const hist=HIST[fullId()]||[];
-  const last=[...hist].reverse().find(m=>m.role==="assistant");
-  if(!last){alert("Ask Buyr AI to generate your RFQ first — then download it here.");return;}
-  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({unit:"mm",format:"a4"});
-  const co=document.getElementById("rfq-co").value.trim()||"[Your company]";
-  const nm=document.getElementById("rfq-nm").value.trim();
-  const W=210,M=18,bodyW=W-2*M;
-  const text=ciClean(last.content);
-  const lines=doc.setFont("helvetica","normal").setFontSize(10.5).splitTextToSize(text,bodyW);
-  let y=34,page=1;
-  const header=()=>{
-    doc.setFont("helvetica","bold").setFontSize(15).setTextColor(17,17,17).text("BUYR",M,16);
-    doc.setTextColor(112,134,0).text("WORLD",M+15.5,16);
-    doc.setFontSize(8.5).setFont("helvetica","normal").setTextColor(120).text("Request for Quotation",W-M,12,{align:"right"});
-    doc.text(`Issued by: ${co}${nm?" — "+nm:""}`,W-M,16.5,{align:"right"});
-    doc.text(new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}),W-M,21,{align:"right"});
-    doc.setDrawColor(90,107,0).setLineWidth(0.8).line(M,24,W-M,24);
-  };
-  const footer=()=>{
-    doc.setFontSize(7.5).setTextColor(140).text(`Generated with BuyrWorld — buyrworld.com · Page ${page}`,W/2,290,{align:"center"});
-  };
-  const watermark=()=>{
-    doc.saveGraphicsState();
-    doc.setGState(new doc.GState({opacity:0.07}));
-    doc.setFont("helvetica","bold").setFontSize(58).setTextColor(90,107,0);
-    doc.text("BUYRWORLD",W/2,170,{align:"center",angle:40});
-    doc.setFontSize(12);doc.text("buyrworld.com",W/2,196,{align:"center",angle:40});
-    doc.restoreGraphicsState();
-  };
-  header();watermark();
-  doc.setFont("helvetica","normal").setFontSize(10.5).setTextColor(26,26,26);
-  for(const ln of lines){
-    if(y>275){footer();doc.addPage();page++;header();watermark();doc.setFont("helvetica","normal").setFontSize(10.5).setTextColor(26,26,26);y=34;}
-    doc.text(ln,M,y);y+=5.1;
-  }
-  footer();
-  doc.save("RFQ-"+co.replace(/[^a-z0-9]+/gi,"-")+"-BuyrWorld.pdf");
-}
 // ---------- Market Intelligence ----------
 async function callAIWeb(prompt){
   const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({web:true,messages:[{role:"user",content:prompt}]})});
@@ -1727,6 +1677,7 @@ function miGo(id){
 }
 // ---- AI Economy Watch + Labour benchmarks ----
 const LABOUR=[["Germany",48,55],["Switzerland",55,65],["Norway",52,60],["United States",42,50],["France",43,50],["Netherlands",42,48],["Japan",26,32],["South Korea",27,33],["United Kingdom",30,37],["Italy",32,38],["Spain",26,31],["Taiwan",16,21],["Czechia",15,19],["Poland",13,17],["Romania",11,14],["Brazil",9,13],["Turkey",8,11],["Mexico",5,8],["China (coastal)",8,11],["China (inland)",5,8],["Vietnam",3,4.5],["India",2,3.5]];
+LABOUR.sort((a,b)=>(b[2]-a[2])||(b[1]-a[1]));
 function renderLabour(){
   const max=65;
   const row=(c,lo,hi,i)=>`
