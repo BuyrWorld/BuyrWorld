@@ -333,8 +333,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <button class="mi-pill" data-t="ai" onclick="miGo('ai')">AI Economy</button>
       <button class="mi-pill" data-t="brief" onclick="miGo('brief')">Daily Briefing</button>
       <button class="mi-pill" data-t="comm" onclick="miGo('comm')">Commodity Intel</button>
-      <button class="mi-pill" data-t="exp" onclick="miGo('exp')">My Exposure</button>
-      <button class="mi-pill" data-t="sim" onclick="miGo('sim')">Shock Simulator</button>
+      <button class="mi-pill" data-t="exp" onclick="miGo('exp')">Exposure &amp; Simulator</button>
       <button class="mi-pill" data-t="lab" onclick="miGo('lab')">Labour Costs</button>
     </div>
 
@@ -344,13 +343,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <div class="tradingview-widget-container" style="margin-bottom:12px">
           <div class="tradingview-widget-container__widget"></div>
           <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-          {"symbols":[{"proName":"FOREXCOM:UKXGBP","title":"FTSE 100"},{"proName":"FOREXCOM:SPXUSD","title":"S&P 500"},{"proName":"FOREXCOM:DJI","title":"Dow 30"},{"proName":"TVC:GOLD","title":"Gold"},{"proName":"TVC:SILVER","title":"Silver"},{"proName":"CAPITALCOM:COPPER","title":"Copper"},{"proName":"TVC:UKOIL","title":"Brent Crude"},{"proName":"TVC:USOIL","title":"WTI Crude"},{"proName":"CAPITALCOM:NATURALGAS","title":"Natural Gas"},{"proName":"FX:GBPUSD","title":"GBP/USD"},{"proName":"FX:EURGBP","title":"EUR/GBP"}],"showSymbolLogo":false,"colorTheme":"dark","isTransparent":true,"displayMode":"adaptive","locale":"en"}
+          {"symbols":[{"proName":"FOREXCOM:UKXGBP","title":"FTSE 100 Index"},{"proName":"FOREXCOM:SPXUSD","title":"S&P 500 Index"},{"proName":"FOREXCOM:DJI","title":"Dow Jones Industrial"},{"proName":"TVC:GOLD","title":"Gold Spot"},{"proName":"TVC:SILVER","title":"Silver Spot"},{"proName":"CAPITALCOM:COPPER","title":"Copper"},{"proName":"TVC:UKOIL","title":"Brent Crude"},{"proName":"TVC:USOIL","title":"WTI Crude"},{"proName":"CAPITALCOM:NATURALGAS","title":"Natural Gas"},{"proName":"FX:GBPUSD","title":"Pound / US Dollar"},{"proName":"FX:EURGBP","title":"Euro / Pound"}],"showSymbolLogo":false,"colorTheme":"dark","isTransparent":true,"displayMode":"adaptive","locale":"en"}
           </script>
         </div>
         <div class="tradingview-widget-container">
           <div class="tradingview-widget-container__widget"></div>
           <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
-          {"colorTheme":"dark","dateRange":"3M","showChart":true,"locale":"en","width":"100%","height":"460","isTransparent":true,"showSymbolLogo":false,"showFloatingTooltip":true,"plotLineColorGrowing":"#D6FF00","plotLineColorFalling":"#FF5C5C","belowLineFillColorGrowing":"rgba(214,255,0,0.06)","belowLineFillColorFalling":"rgba(255,92,92,0.06)","gridLineColor":"rgba(42,42,42,0)","scaleFontColor":"#8F8F8F","tabs":[{"title":"Indices","symbols":[{"s":"FOREXCOM:UKXGBP","d":"FTSE 100"},{"s":"FOREXCOM:SPXUSD","d":"S&P 500"},{"s":"FOREXCOM:NSXUSD","d":"US 100"},{"s":"FOREXCOM:DJI","d":"Dow 30"},{"s":"INDEX:DEU40","d":"DAX"},{"s":"INDEX:NKY","d":"Nikkei 225"}]},{"title":"Metals","symbols":[{"s":"CAPITALCOM:COPPER","d":"Copper"},{"s":"CAPITALCOM:ALUMINIUM","d":"Aluminium"},{"s":"CAPITALCOM:ZINC","d":"Zinc"},{"s":"CAPITALCOM:NICKEL","d":"Nickel"},{"s":"TVC:GOLD","d":"Gold"},{"s":"TVC:SILVER","d":"Silver"},{"s":"TVC:PLATINUM","d":"Platinum"},{"s":"TVC:PALLADIUM","d":"Palladium"}]},{"title":"Energy","symbols":[{"s":"TVC:UKOIL","d":"Brent Crude"},{"s":"TVC:USOIL","d":"WTI Crude"},{"s":"CAPITALCOM:NATURALGAS","d":"Natural Gas"}]},{"title":"Currencies","symbols":[{"s":"FX:GBPUSD","d":"GBP/USD"},{"s":"FX:EURGBP","d":"EUR/GBP"},{"s":"FX:EURUSD","d":"EUR/USD"},{"s":"FX:USDCNH","d":"USD/CNH"},{"s":"FX:USDJPY","d":"USD/JPY"}]}]}
+          {"colorTheme":"dark","dateRange":"3M","showChart":true,"locale":"en","width":"100%","height":"460","isTransparent":true,"showSymbolLogo":false,"showFloatingTooltip":true,"plotLineColorGrowing":"#D6FF00","plotLineColorFalling":"#FF5C5C","belowLineFillColorGrowing":"rgba(214,255,0,0.06)","belowLineFillColorFalling":"rgba(255,92,92,0.06)","gridLineColor":"rgba(42,42,42,0)","scaleFontColor":"#8F8F8F","tabs":[{"title":"Indices","symbols":[{"s":"FOREXCOM:UKXGBP","d":"UKX · FTSE 100 Index (UK)"},{"s":"FOREXCOM:SPXUSD","d":"SPX · S&P 500 Index (US)"},{"s":"FOREXCOM:NSXUSD","d":"NDX · Nasdaq 100 Index (US)"},{"s":"FOREXCOM:DJI","d":"DJI · Dow Jones Industrial (US)"},{"s":"INDEX:DEU40","d":"DAX · DAX 40 Index (Germany)"},{"s":"INDEX:NKY","d":"NKY · Nikkei 225 Index (Japan)"}]},{"title":"Metals","symbols":[{"s":"CAPITALCOM:COPPER","d":"COPPER · Copper (USD/lb)"},{"s":"CAPITALCOM:ALUMINIUM","d":"ALUMINIUM · Aluminium (USD/t)"},{"s":"CAPITALCOM:ZINC","d":"ZINC · Zinc (USD/t)"},{"s":"CAPITALCOM:NICKEL","d":"NICKEL · Nickel (USD/t)"},{"s":"TVC:GOLD","d":"GOLD · Gold Spot (USD/oz)"},{"s":"TVC:SILVER","d":"SILVER · Silver Spot (USD/oz)"},{"s":"TVC:PLATINUM","d":"PLATINUM · Platinum Spot (USD/oz)"},{"s":"TVC:PALLADIUM","d":"PALLADIUM · Palladium Spot (USD/oz)"}]},{"title":"Energy","symbols":[{"s":"TVC:UKOIL","d":"UKOIL · Brent Crude Oil (USD/bbl)"},{"s":"TVC:USOIL","d":"USOIL · WTI Crude Oil (USD/bbl)"},{"s":"CAPITALCOM:NATURALGAS","d":"NATGAS · Natural Gas (USD/MMBtu)"}]},{"title":"Currencies","symbols":[{"s":"FX:GBPUSD","d":"GBPUSD · British Pound / US Dollar"},{"s":"FX:EURGBP","d":"EURGBP · Euro / British Pound"},{"s":"FX:EURUSD","d":"EURUSD · Euro / US Dollar"},{"s":"FX:USDCNH","d":"USDCNH · US Dollar / Chinese Yuan"},{"s":"FX:USDJPY","d":"USDJPY · US Dollar / Japanese Yen"}]}]}
           </script>
         </div>
         <p style="color:var(--muted);font-size:11.5px;margin-top:10px">Spot/CFD benchmarks and indices via TradingView (may be delayed). Aluminium, zinc and nickel stream via CFD providers; LME official settlements and steel indices (HRC/CRU) are licensed data with no free feed — use Commodity Intel for the AI-searched steel picture. Indicative for direction, not contract settlement.</p>
@@ -364,11 +363,20 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <div class="tradingview-widget-container">
           <div class="tradingview-widget-container__widget"></div>
           <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
-          {"colorTheme":"dark","dateRange":"3M","showChart":true,"locale":"en","width":"100%","height":"460","isTransparent":true,"showSymbolLogo":false,"showFloatingTooltip":true,"plotLineColorGrowing":"#D6FF00","plotLineColorFalling":"#FF5C5C","belowLineFillColorGrowing":"rgba(214,255,0,0.06)","belowLineFillColorFalling":"rgba(255,92,92,0.06)","gridLineColor":"rgba(42,42,42,0)","scaleFontColor":"#8F8F8F","tabs":[{"title":"Semiconductors","symbols":[{"s":"NASDAQ:NVDA","d":"NVIDIA"},{"s":"NASDAQ:AMD","d":"AMD"},{"s":"NASDAQ:AVGO","d":"Broadcom"},{"s":"NYSE:TSM","d":"TSMC"},{"s":"NASDAQ:INTC","d":"Intel"},{"s":"NASDAQ:MRVL","d":"Marvell"}]},{"title":"Neoclouds","symbols":[{"s":"NASDAQ:CRWV","d":"CoreWeave"},{"s":"NASDAQ:IREN","d":"IREN"},{"s":"NASDAQ:NBIS","d":"Nebius"},{"s":"NASDAQ:APLD","d":"Applied Digital"},{"s":"NASDAQ:HUT","d":"Hut 8"}]},{"title":"Hyperscalers","symbols":[{"s":"NASDAQ:MSFT","d":"Microsoft"},{"s":"NASDAQ:AMZN","d":"Amazon"},{"s":"NASDAQ:GOOGL","d":"Alphabet"},{"s":"NASDAQ:META","d":"Meta"},{"s":"NYSE:ORCL","d":"Oracle"}]},{"title":"Power","symbols":[{"s":"NASDAQ:CEG","d":"Constellation"},{"s":"NYSE:VST","d":"Vistra"},{"s":"NYSE:GEV","d":"GE Vernova"},{"s":"NYSE:NEE","d":"NextEra"},{"s":"NYSE:DUK","d":"Duke Energy"}]},{"title":"Cooling","symbols":[{"s":"NYSE:VRT","d":"Vertiv"},{"s":"EPA:SU","d":"Schneider Electric"},{"s":"NYSE:TT","d":"Trane"},{"s":"NYSE:JCI","d":"Johnson Controls"}]},{"title":"Networking & fibre","symbols":[{"s":"NYSE:ANET","d":"Arista"},{"s":"NASDAQ:CSCO","d":"Cisco"},{"s":"NYSE:CIEN","d":"Ciena"},{"s":"NYSE:GLW","d":"Corning"}]}]}
+          {"colorTheme":"dark","dateRange":"3M","showChart":true,"locale":"en","width":"100%","height":"460","isTransparent":true,"showSymbolLogo":false,"showFloatingTooltip":true,"plotLineColorGrowing":"#D6FF00","plotLineColorFalling":"#FF5C5C","belowLineFillColorGrowing":"rgba(214,255,0,0.06)","belowLineFillColorFalling":"rgba(255,92,92,0.06)","gridLineColor":"rgba(42,42,42,0)","scaleFontColor":"#8F8F8F","tabs":[{"title":"Semiconductors","symbols":[{"s":"NASDAQ:NVDA","d":"NVDA · NVIDIA"},{"s":"NASDAQ:AMD","d":"AMD · Advanced Micro Devices"},{"s":"NASDAQ:AVGO","d":"AVGO · Broadcom"},{"s":"NYSE:TSM","d":"TSM · TSMC"},{"s":"NASDAQ:INTC","d":"INTC · Intel"},{"s":"NASDAQ:MRVL","d":"MRVL · Marvell"}]},{"title":"Neoclouds","symbols":[{"s":"NASDAQ:CRWV","d":"CRWV · CoreWeave"},{"s":"NASDAQ:IREN","d":"IREN · IREN"},{"s":"NASDAQ:NBIS","d":"NBIS · Nebius"},{"s":"NASDAQ:APLD","d":"APLD · Applied Digital"},{"s":"NASDAQ:HUT","d":"HUT · Hut 8"},{"s":"NASDAQ:CLSK","d":"CLSK · CleanSpark"},{"s":"NASDAQ:CORZ","d":"CORZ · Core Scientific"},{"s":"NASDAQ:WULF","d":"WULF · TeraWulf"},{"s":"NASDAQ:CIFR","d":"CIFR · Cipher Mining"},{"s":"NASDAQ:GLXY","d":"GLXY · Galaxy Digital"}]},{"title":"Hyperscalers","symbols":[{"s":"NASDAQ:MSFT","d":"MSFT · Microsoft"},{"s":"NASDAQ:AMZN","d":"AMZN · Amazon"},{"s":"NASDAQ:GOOGL","d":"GOOGL · Alphabet (Google)"},{"s":"NASDAQ:META","d":"META · Meta Platforms"},{"s":"NYSE:ORCL","d":"ORCL · Oracle"}]},{"title":"Power","symbols":[{"s":"NASDAQ:CEG","d":"CEG · Constellation Energy"},{"s":"NYSE:VST","d":"VST · Vistra"},{"s":"NYSE:GEV","d":"GEV · GE Vernova"},{"s":"NYSE:NEE","d":"NEE · NextEra Energy"},{"s":"NYSE:DUK","d":"DUK · Duke Energy"}]},{"title":"Cooling & electrical","symbols":[{"s":"NYSE:VRT","d":"VRT · Vertiv"},{"s":"NYSE:ETN","d":"ETN · Eaton"},{"s":"NYSE:TT","d":"TT · Trane Technologies"},{"s":"NYSE:JCI","d":"JCI · Johnson Controls"},{"s":"NYSE:NVT","d":"NVT · nVent Electric"}]},{"title":"Networking & fibre","symbols":[{"s":"NYSE:ANET","d":"ANET · Arista Networks"},{"s":"NASDAQ:CSCO","d":"CSCO · Cisco"},{"s":"NYSE:CIEN","d":"CIEN · Ciena"},{"s":"NYSE:GLW","d":"GLW · Corning"}]}]}
           </script>
         </div>
+        <div style="margin-top:14px">
+          <div class="eyebrow" style="margin-bottom:8px">Latest market news</div>
+          <div class="tradingview-widget-container">
+            <div class="tradingview-widget-container__widget"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
+            {"feedMode":"market","market":"stock","colorTheme":"dark","isTransparent":true,"displayMode":"regular","width":"100%","height":"420","locale":"en"}
+            </script>
+          </div>
+        </div>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px">
-          <p style="color:var(--muted);font-size:11.5px;max-width:540px">Industry and input-cost intelligence for buyers — not investment research or advice. Crusoe is private and unlisted. Prices may be delayed.</p>
+          <p style="color:var(--muted);font-size:11.5px;max-width:540px">Industry and input-cost intelligence for buyers — not investment research or advice. Crusoe and Nscale are private and unlisted; Schneider Electric's Paris listing isn't in the free feed, so Eaton and nVent represent the electrical-infrastructure segment. Prices may be delayed.</p>
           <button class="btn btn-lime" style="padding:9px 14px;font-size:13px" onclick="runAIWatch()">AI-economy procurement briefing →</button>
         </div>
         <div id="mi-ai-out" style="margin-top:12px"></div>
@@ -416,10 +424,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <button class="btn btn-lime" style="margin-top:12px" onclick="runExposure()">Map my exposure →</button>
         <div id="mi-exp-out" style="margin-top:16px"></div>
       </div>
-    </div>
-
-    <!-- SIMULATOR -->
-    <div class="mi-sec" id="mi-sec-sim" style="display:none">
+      <div style="height:18px"></div>
       <div class="card">
         <h3 style="font-size:19px;margin-bottom:4px">Cost Inflation Simulator</h3>
         <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Stress-test your spend: apply commodity and input shocks and see the annual cost impact. Runs on your mapped exposure (run My Exposure first) or standalone with a total spend figure.</p>
@@ -433,7 +438,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <div class="card">
         <h3 style="font-size:19px;margin-bottom:4px">Manufacturing Labour Cost Benchmarks</h3>
         <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Indicative fully-loaded manufacturing labour costs by country — directional for sourcing comparisons and should-cost models.</p>
-        <div id="mi-labour" style="max-height:340px;overflow-y:auto;padding-right:8px"></div>
+        <div id="mi-labour"></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center">
           <select class="bwin" id="mi-lab-c" style="max-width:240px"></select>
           <button class="btn btn-ghost" style="padding:9px 14px;font-size:13px" onclick="runLabour()">Live check →</button>
@@ -1482,21 +1487,25 @@ function miGo(id){
 const LABOUR=[["Germany",48,55],["Switzerland",55,65],["Norway",52,60],["United States",42,50],["France",43,50],["Netherlands",42,48],["Japan",26,32],["South Korea",27,33],["United Kingdom",30,37],["Italy",32,38],["Spain",26,31],["Taiwan",16,21],["Czechia",15,19],["Poland",13,17],["Romania",11,14],["Brazil",9,13],["Turkey",8,11],["Mexico",5,8],["China (coastal)",8,11],["China (inland)",5,8],["Vietnam",3,4.5],["India",2,3.5]];
 function renderLabour(){
   const max=65;
-  document.getElementById("mi-labour").innerHTML=LABOUR.map(([c,lo,hi])=>`
-    <div style="display:flex;align-items:center;gap:12px;margin:6px 0;font-size:12.5px">
-      <span style="width:130px">${c}</span>
-      <div style="flex:1;height:8px;background:var(--line);border-radius:4px;position:relative">
-        <div style="position:absolute;left:${(lo/max*100).toFixed(1)}%;width:${((hi-lo)/max*100).toFixed(1)}%;height:8px;background:var(--lime);border-radius:4px"></div>
-      </div>
-      <span style="width:78px;text-align:right;color:var(--muted)">$${lo}–${hi}/hr</span>
-    </div>`).join("")+`<p style="color:var(--muted);font-size:11px;margin-top:8px">Indicative 2025 ranges, fully loaded (wages + social costs), USD/hour, general manufacturing — varies by sector, skill and region. Sources: public ILO/Eurostat/BLS-derived estimates. Verify before building business cases.</p>`;
+  const row=(c,lo,hi)=>`
+    <span style="color:var(--text)">${c}</span>
+    <div style="height:9px;background:var(--line);border-radius:5px;position:relative">
+      <div style="position:absolute;left:${(lo/max*100).toFixed(1)}%;width:${Math.max(1.5,((hi-lo)/max*100)).toFixed(1)}%;height:9px;background:var(--lime);border-radius:5px"></div>
+    </div>
+    <span style="text-align:right;color:var(--muted);font-family:'Space Grotesk';font-weight:600">$${lo}–${hi}</span>`;
+  document.getElementById("mi-labour").innerHTML=`
+    <div style="display:grid;grid-template-columns:148px 1fr 86px;gap:11px 16px;align-items:center;font-size:12.5px">
+      <span class="eyebrow" style="font-size:10px">Country</span><span class="eyebrow" style="font-size:10px">$0 ————— fully-loaded cost / hour ————— $65</span><span class="eyebrow" style="font-size:10px;text-align:right">USD/hr</span>
+      ${LABOUR.map(([c,lo,hi])=>row(c,lo,hi)).join("")}
+    </div>
+    <p style="color:var(--muted);font-size:11px;margin-top:12px">Indicative 2025 ranges, fully loaded (wages + social costs), general manufacturing — varies by sector, skill and region. Public ILO/Eurostat/BLS-derived estimates; verify before building business cases.</p>`;
   document.getElementById("mi-lab-c").innerHTML=LABOUR.map(([c])=>`<option>${c}</option>`).join("");
 }
 async function runAIWatch(){
   const out=document.getElementById("mi-ai-out");
   out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Reading the AI buildout through a buyer\'s eyes… (~35 seconds)</p>';
   try{
-    const text=await callAIWeb(`Search the web for current news on the AI infrastructure buildout (data centres, GPUs, neocloud providers like CoreWeave/IREN/Nebius/Applied Digital/Crusoe, hyperscaler capex, power demand). Then write for UK PROCUREMENT professionals (NOT investors), plain text, UK English, no markdown:\nWHAT'S HAPPENING — 4-5 sentences on the buildout's scale and latest moves, figures from sources\nINPUT-COST IMPACT — how this is hitting markets buyers care about: copper, aluminium, electrical equipment (transformers, switchgear) lead times, electricity prices, semiconductors/electronics lead times, construction capacity\nLEAD-TIME WATCH — components/categories with stretched lead times right now\nPROCUREMENT ACTIONS — 4 concrete actions for buyers exposed to these markets\nUnder 380 words. Cite figures from sources found; say so if something can't be verified. This is cost intelligence, not investment commentary.`);
+    const text=await callAIWeb(`Search the web for current news on the AI infrastructure buildout (data centres, GPUs, neocloud providers like CoreWeave/IREN/Nebius/Applied Digital/Crusoe, hyperscaler capex, power demand). Then write for UK PROCUREMENT professionals (NOT investors), plain text, UK English, no markdown:\nWHAT'S HAPPENING — 4-5 sentences on the buildout's scale and latest moves, figures from sources\nINPUT-COST IMPACT — how this is hitting markets buyers care about: copper, aluminium, electrical equipment (transformers, switchgear) lead times, electricity prices, semiconductors/electronics lead times, construction capacity\nNEWS → PRICE REACTION — 4 recent AI-economy news items, one line each in the format: [IMPACT: High/Medium/Low] headline — what the relevant stock(s) did on the news with % move from sources — what it signals for buyers\nLEAD-TIME WATCH — components/categories with stretched lead times right now\nPROCUREMENT ACTIONS — 4 concrete actions for buyers exposed to these markets\nUnder 380 words. Cite figures from sources found; say so if something can't be verified. This is cost intelligence, not investment commentary.`);
     window.MI&&(MI.ai={text,at:miStamp()});
     out.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><span style="color:var(--muted);font-size:11px">Generated ${MI.ai.at}</span></div>${miBox(text)}`;
     miShowExports();
