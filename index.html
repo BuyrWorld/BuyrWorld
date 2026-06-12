@@ -49,6 +49,7 @@ input.bwin:focus, textarea.bwin:focus{border-color:var(--lime)}
 .mi-pill{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:8px 16px;font-family:'Space Grotesk';font-weight:600;font-size:13px;color:var(--text);cursor:pointer;transition:all .15s}
 .mi-pill:hover{border-color:var(--lime)}
 .mi-pill.on{background:var(--lime);color:#111;border-color:var(--lime)}
+.chip-on{background:var(--lime)!important;color:#111!important;border-color:var(--lime)!important}
 ::-webkit-scrollbar{width:11px;height:11px}
 ::-webkit-scrollbar-track{background:var(--panel)}
 ::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:6px;border:2px solid var(--panel)}
@@ -102,7 +103,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ HOME ============ -->
 <div class="page on" id="page-home">
   <section class="hero" style="position:relative;overflow:hidden">
-    <canvas id="hero-net" style="position:absolute;inset:0;width:100%;height:100%;opacity:.55"></canvas>
+    <canvas id="hero-net" style="position:absolute;inset:0;width:100%;height:100%;opacity:.85"></canvas>
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(17,17,17,0) 0%,rgba(17,17,17,.85) 78%)"></div>
     <div class="wrap fade" style="position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;padding:46px 0">
       <div class="eyebrow" style="margin-bottom:14px">The home of modern procurement</div>
@@ -148,6 +149,15 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <h2 style="font-size:34px;margin-bottom:10px">Your AI procurement assistant</h2>
     <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Trained on the work of sourcing: RFQs, scorecards, category strategies, risk reviews and negotiation plans. Ask it like you'd brief a strong analyst.</p>
     <div class="chatbox" data-chat="full"></div>
+    <div class="card" style="margin-top:18px;padding:16px 18px">
+      <div class="eyebrow" style="margin-bottom:6px">Download as a branded RFQ (PDF)</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:10px">Turn Buyr AI's last answer into a watermarked BuyrWorld PDF — add your company and name so suppliers know it's from you.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input class="bwin" id="rfq-co" style="max-width:240px" placeholder="Your company name">
+        <input class="bwin" id="rfq-nm" style="max-width:200px" placeholder="Your name">
+        <button class="btn btn-lime" style="padding:9px 14px;font-size:13px" onclick="downloadRFQpdf()">Download PDF →</button>
+      </div>
+    </div>
     <div class="grid3" style="margin-top:28px">
       <div class="card" style="cursor:pointer" onclick="runAgent('rfq')"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">RFQ Generator</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">From a one-line need to a send-ready RFQ with specs, Incoterms and evaluation criteria.</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Launch agent →</div></div>
       <div class="card" style="cursor:pointer" onclick="runAgent('risk')"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">Supplier Risk Agent</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">Surface single-source exposure, financial flags and concentration risk before they bite.</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Launch agent →</div></div>
@@ -191,6 +201,10 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v3h3"/><path d="M9 8.5h5"/><circle cx="12" cy="13.5" r="2.4"/><path d="M10.8 15.5L9.5 19l2.5-1.2L14.5 19l-1.3-3.5"/></svg>
         Contract Intelligence<span class="sub">Review · improve · health check</span>
       </button>
+      <button class="tool-tile" onclick="go('tool-rfq')">
+        <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v3h3"/><path d="M9 11h6M9 14h6M9 17h4"/></svg>
+        RFQ Generator<span class="sub">Branded, watermarked PDF</span>
+      </button>
       <button class="tool-tile" onclick="go('spend')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 12V3.5"/><path d="M12 12l6 6"/></svg>
         Spend Analyser<span class="sub">Instant dashboard · in your browser</span>
@@ -198,10 +212,6 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     </div>
     <div class="eyebrow" style="margin:34px 0 14px">AI agents — guided chat workflows</div>
     <div class="grid4">
-      <button class="tool-tile" onclick="go('ai');setTimeout(()=>runAgent('rfq'),200)">
-        <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v3h3"/><path d="M12 10.5v6M9 13.5h6"/></svg>
-        RFQ Generator<span class="sub">Six questions → send-ready RFQ</span>
-      </button>
       <button class="tool-tile" onclick="go('ai');setTimeout(()=>runAgent('risk'),200)">
         <svg viewBox="0 0 24 24"><path d="M12 3.5L22 21H2L12 3.5z"/><path d="M12 10v5"/><circle cx="12" cy="18" r="0.6"/></svg>
         Supplier Risk Agent<span class="sub">0–100 risk score + mitigations</span>
@@ -285,6 +295,36 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <p style="color:var(--muted);font-size:12px;margin-top:8px">Works with text-based PDFs (not scans/photos). Anonymise anything sensitive — file text is sent to Buyr AI for the comparison.</p>
       <button class="btn btn-lime" style="margin-top:12px" onclick="runComparator()">Compare quotes →</button>
       <div id="q-out" style="margin-top:18px"></div>
+    </div>
+  </div></section>
+</div>
+
+<!-- ============ TOOL: RFQ GENERATOR ============ -->
+<div class="page" id="page-tool-rfq">
+  <section class="sec"><div class="wrap" style="max-width:860px">
+    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
+    <div class="card">
+      <h3 style="font-size:20px;margin-bottom:6px">RFQ Generator</h3>
+      <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:14px">Answer the brief, get a professional Request for Quotation issued in <b style="color:var(--text)">your company's name</b> — downloadable as a BuyrWorld-watermarked PDF, ready to send to suppliers.</p>
+      <div class="grid2" style="margin-bottom:10px">
+        <input class="bwin" id="rfq-co" placeholder="Your company name *">
+        <input class="bwin" id="rfq-name" placeholder="Your name *">
+      </div>
+      <div class="grid2" style="margin-bottom:10px">
+        <input class="bwin" id="rfq-email" placeholder="Contact email for responses (optional)">
+        <input class="bwin" id="rfq-title" placeholder="What are you buying? e.g. CNC machined aluminium housings *">
+      </div>
+      <textarea class="bwin" id="rfq-spec" rows="4" placeholder="Specification & scope: materials, drawings available, tolerances, finishes, standards…"></textarea>
+      <div class="grid2" style="margin:10px 0">
+        <input class="bwin" id="rfq-qty" placeholder="Quantity & schedule, e.g. 5,000/yr, monthly call-off">
+        <input class="bwin" id="rfq-del" placeholder="Delivery location & Incoterms, e.g. Coventry UK, DAP">
+      </div>
+      <div class="grid2" style="margin-bottom:12px">
+        <input class="bwin" id="rfq-dead" placeholder="Response deadline, e.g. 28 June 2026">
+        <input class="bwin" id="rfq-extra" placeholder="Anything else: payment terms, quality requirements…">
+      </div>
+      <button class="btn btn-lime" onclick="runRFQGen()">Generate RFQ →</button>
+      <div id="rfq-out" style="margin-top:16px"></div>
     </div>
   </div></section>
 </div>
@@ -377,12 +417,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <div class="mi-sec" id="mi-sec-ai" style="display:none">
       <div class="card" style="padding:14px 16px">
         <p style="color:var(--muted);font-size:13px;margin-bottom:12px">The AI buildout is pulling on copper, power, semiconductors and construction — the same markets your costs live in.</p>
-        <div class="tradingview-widget-container">
-          <div class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
-          {"width":"100%","height":"560","symbol":"NASDAQ:NVDA","interval":"D","timezone":"Europe/London","theme":"dark","style":"1","locale":"en","backgroundColor":"rgba(17,17,17,0)","gridColor":"rgba(42,42,42,0.35)","withdateranges":true,"range":"YTD","hide_side_toolbar":false,"allow_symbol_change":true,"watchlist":["NASDAQ:NVDA","NASDAQ:AMD","NASDAQ:AVGO","NYSE:TSM","NASDAQ:INTC","NASDAQ:MRVL","NASDAQ:CRWV","NASDAQ:IREN","NASDAQ:NBIS","NASDAQ:APLD","NASDAQ:HUT","NASDAQ:CLSK","NASDAQ:CORZ","NASDAQ:WULF","NASDAQ:CIFR","NASDAQ:GLXY","NASDAQ:MSFT","NASDAQ:AMZN","NASDAQ:GOOGL","NASDAQ:META","NYSE:ORCL","NASDAQ:CEG","NYSE:VST","NYSE:GEV","NYSE:NEE","NYSE:DUK","NYSE:VRT","NYSE:ETN","NYSE:TT","NYSE:JCI","NYSE:NVT","NYSE:ANET","NASDAQ:CSCO","NYSE:CIEN","NYSE:GLW"],"calendar":false,"support_host":"https://www.tradingview.com"}
-          </script>
-        </div>
+        <div id="ai-sectors" style="margin-bottom:12px"></div>
+        <div id="ai-chart"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px">
           <p style="color:var(--muted);font-size:11.5px;max-width:540px">Industry and input-cost intelligence for buyers — not investment research or advice. Crusoe and Nscale are private and unlisted; Schneider Electric's Paris listing isn't in the free feed, so Eaton and nVent represent the electrical-infrastructure segment. Prices may be delayed.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost" style="padding:9px 14px;font-size:13px" onclick="miGo('news')">Top AI &amp; market stories →</button><button class="btn btn-lime" style="padding:9px 14px;font-size:13px" onclick="runAIWatch()">AI-economy procurement briefing →</button></div>
@@ -525,6 +561,10 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ ABOUT ============ -->
 <div class="page" id="page-about">
   <section class="sec"><div class="wrap">
+    <div class="card" style="border-color:var(--lime);margin-bottom:28px">
+      <div class="eyebrow" style="margin-bottom:8px">Our mission</div>
+      <p style="font-family:'Space Grotesk';font-weight:600;font-size:20px;line-height:1.5">To give every buyer the tools, intelligence and confidence of a world-class procurement function — whatever the size of their team.</p>
+    </div>
     <div class="eyebrow" style="margin-bottom:10px">About</div>
     <h2 style="font-size:34px;margin-bottom:32px">The home of modern procurement</h2>
     <div class="grid2">
@@ -566,7 +606,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <div class="card">
       <h3 style="font-size:17px;margin-bottom:8px">Join the waitlist</h3>
       <p style="color:var(--muted);font-size:14px;margin-bottom:16px">Founding members get their first month of Pro free.</p>
-      <form action="https://formspree.io/f/YOUR_FORM_ID" method="POST" style="display:flex;gap:8px;flex-wrap:wrap">
+      <form action="https://formspree.io/f/mwvjrdgy" method="POST" style="display:flex;gap:8px;flex-wrap:wrap">
         <input class="bwin" type="email" name="email" required placeholder="you@company.com" style="flex:1;min-width:220px">
         <button class="btn btn-lime" type="submit">Join waitlist</button>
       </form>
@@ -698,7 +738,7 @@ const FEATURES=[
 ["Spend Analyser","Upload spend data for an instant dashboard — Pareto, concentration risk, savings opportunity and exportable reports.","spend",'<circle cx="12" cy="12" r="8.5"/><path d="M12 12V3.5"/><path d="M12 12l6 6"/>'],
 ["Templates","Battle-tested RFQs, scorecards, planners and policies from real sourcing events. Download, edit, send.","templates",'<path d="M8 3h8l4 4v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M16 3v4h4"/><path d="M4 7v13a1 1 0 0 0 1 1h11"/><path d="M10 11h7M10 14h7"/>'],
 ["Academy","Seven structured pathways and 38 modules — from first PO to CIPS-ready strategic sourcing.","academy",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/>'],
-["Pricing","Free today — Buyr AI, the tools and the Academy. Pro membership launching soon.","pricing",'<path d="M12 2v20"/><path d="M16.5 6.5c0-1.8-2-3-4.5-3s-4.5 1.2-4.5 3 1.6 2.6 4.5 3.2c3.2.7 5 1.7 5 3.8s-2.2 3.5-5 3.5-5-1.4-5-3.2"/>']];
+["Market Intelligence","Live markets, AI-searched commodity briefings, your exposure and a cost-shock simulator — the procurement market terminal.","market",'<path d="M3 20h18"/><path d="M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>']];
 document.getElementById("features").innerHTML=FEATURES.map(([t,d,dest,icon])=>`
 <div class="flip" onclick="go('${dest}')">
   <div class="flip-inner">
@@ -935,6 +975,34 @@ const ARTICLES=[
 <p><b>Day 6 — Verification habit.</b> Pick one AI output from the week and check it line by line. Find the error (there's usually one). That calibrates how much you trust each task type.</p><br>
 <p><b>Day 7 — Write it down.</b> Which prompts worked, what you'd reuse, what you'll never delegate. That one page is your team's AI playbook, version one.</p><br>
 <p>Total time: maybe five hours across the week. Output: a category baseline, a market brief, a send-ready RFQ, a risk view and a negotiation plan. That used to be a month.</p>`}
+,
+{cat:"AI & Careers",t:"Future-proofing your procurement career in the age of AI",mins:6,body:`<svg viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg" style="width:100%;background:#161616;border:1px solid #2A2A2A;border-radius:12px;margin:6px 0 22px"><text x="36" y="48" fill="#8F8F8F" font-family="monospace" font-size="13">PROCUREMENT, 2026 →</text><circle cx="120" cy="140" r="34" fill="none" stroke="#EDEDED" stroke-width="2"/><path d="M120 122v36M104 140h32" stroke="#EDEDED" stroke-width="2"/><text x="120" y="205" fill="#EDEDED" font-size="12" text-anchor="middle" font-family="sans-serif">JUDGEMENT</text><path d="M170 140h70" stroke="#D6FF00" stroke-width="2" stroke-dasharray="6 5"/><rect x="250" y="106" width="68" height="68" rx="12" fill="none" stroke="#D6FF00" stroke-width="2"/><path d="M266 140h36M284 122v36" stroke="#D6FF00" stroke-width="2"/><text x="284" y="205" fill="#D6FF00" font-size="12" text-anchor="middle" font-family="sans-serif">AI LEVERAGE</text><path d="M330 140h70" stroke="#D6FF00" stroke-width="2" stroke-dasharray="6 5"/><path d="M420 180 470 95 520 150 575 70 620 110" fill="none" stroke="#D6FF00" stroke-width="3" stroke-linecap="round"/><circle cx="620" cy="110" r="5" fill="#D6FF00"/><text x="520" y="205" fill="#EDEDED" font-size="12" text-anchor="middle" font-family="sans-serif">CAREER TRAJECTORY</text></svg><h3 style="font-size:26px;margin-bottom:14px">Future-proofing your procurement career in the age of AI</h3>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">AI is not coming for procurement. It has already arrived — drafting RFQs, comparing quotes, summarising contracts and reading markets faster than any of us can. The question worth asking isn't "will AI replace buyers?" but "which buyers will AI make irreplaceable?" The honest answer: the ones who treat it as leverage rather than threat.</p>
+<h4 style="font-size:18px;margin:22px 0 10px">What AI genuinely does better than you</h4>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">Speed and breadth. It reads a 40-page contract in seconds, normalises five quotes into landed cost without a calculator, and never gets bored on line 3,000 of a spend cube. Fighting it on these fronts is like racing a forklift to lift a pallet.</p>
+<h4 style="font-size:18px;margin:22px 0 10px">What it genuinely doesn't</h4>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">Judgement, relationships and accountability. AI cannot sit across the table from a supplier who is about to let your production line down and decide whether this is a moment for pressure or partnership. It cannot own a decision in front of your board, and it cannot build the trust that gets you the phone call before the price increase letter lands. These were always the highest-value parts of the job — AI just stripped away the admin that disguised that.</p>
+<h4 style="font-size:18px;margin:22px 0 10px">The five moves to make this year</h4>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">One: become the person who uses the tools, not the person they're used on — run your spend through an analyser, stress-test a contract with AI, learn what good output looks like and where it hallucinates. Two: double down on negotiation and stakeholder skills; they compound while admin skills depreciate. Three: learn to verify — AI output is a draft from a brilliant but overconfident graduate, and the professional who can spot the wrong number becomes more valuable, not less. Four: build market intelligence habits; knowing what copper, energy and freight are doing makes you the buyer suppliers can't bluff. Five: tell the story — practitioners who can explain AI-augmented procurement to a sceptical FD are rare and promotable.</p>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">The buyers at risk are not the junior ones — they're the ones at any level who define their value by tasks AI now does in seconds. Define yours by decisions instead.</p>`},
+{cat:"AI & Careers",t:"What is a prompt engineer — and should a buyer become one?",mins:5,body:`<svg viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg" style="width:100%;background:#161616;border:1px solid #2A2A2A;border-radius:12px;margin:6px 0 22px"><rect x="40" y="34" width="400" height="162" rx="10" fill="#111111" stroke="#2A2A2A"/><circle cx="60" cy="52" r="4" fill="#FF5C5C"/><circle cx="76" cy="52" r="4" fill="#FFB800"/><circle cx="92" cy="52" r="4" fill="#D6FF00"/><text x="58" y="92" fill="#8F8F8F" font-family="monospace" font-size="13">&gt; Act as a category manager.</text><text x="58" y="116" fill="#8F8F8F" font-family="monospace" font-size="13">&gt; Context: £400k castings spend…</text><text x="58" y="140" fill="#D6FF00" font-family="monospace" font-size="13">&gt; Output: negotiation plan ▌</text><path d="M470 115h60" stroke="#D6FF00" stroke-width="2" stroke-dasharray="6 5"/><rect x="545" y="62" width="130" height="30" rx="8" fill="none" stroke="#D6FF00"/><text x="610" y="82" fill="#D6FF00" font-size="12" text-anchor="middle" font-family="sans-serif">CLEAR CONTEXT</text><rect x="545" y="100" width="130" height="30" rx="8" fill="none" stroke="#EDEDED"/><text x="610" y="120" fill="#EDEDED" font-size="12" text-anchor="middle" font-family="sans-serif">DEFINED OUTPUT</text><rect x="545" y="138" width="130" height="30" rx="8" fill="none" stroke="#8F8F8F"/><text x="610" y="158" fill="#8F8F8F" font-size="12" text-anchor="middle" font-family="sans-serif">VERIFICATION</text></svg><h3 style="font-size:26px;margin-bottom:14px">What is a prompt engineer — and should a buyer become one?</h3>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">"Prompt engineer" became one of the most talked-about job titles of the AI boom — the person who knows how to ask an AI model for things so that it actually delivers. At its peak the title commanded six-figure salaries; today it's quietly disappearing as a standalone job. Both facts matter to you.</p>
+<h4 style="font-size:18px;margin:22px 0 10px">What prompting actually is</h4>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">A prompt is just the instruction you give an AI. Prompt engineering is the craft of writing those instructions well: giving the model a role ("act as a senior category manager"), context (your spend, your market, your constraint), a defined output ("a one-page negotiation plan with targets and a concessions ladder") and rules ("flag every assumption; mark missing data TBC rather than inventing it"). The difference between a lazy prompt and a good one is the difference between a generic essay and a usable working document.</p>
+<h4 style="font-size:18px;margin:22px 0 10px">Should you become one?</h4>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">As a job title — probably not. The dedicated role is being absorbed into every other role, the way "spreadsheet specialist" disappeared once Excel became assumed knowledge. As a skill — emphatically yes, and faster than your colleagues. The buyer who can brief an AI like they'd brief a capable analyst gets ten drafts in the time others produce one, and procurement is unusually rich in tasks that reward exactly that: RFQs, supplier comms, contract summaries, category research, meeting minutes.</p>
+<h4 style="font-size:18px;margin:22px 0 10px">The 80/20 of prompting for buyers</h4>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">Role, context, output, rules — that structure gets you most of the value. Then two habits separate professionals from dabblers: iterate (your second prompt, informed by the first answer, is always better) and verify (numbers, clause references and market claims get checked before they go anywhere near a supplier or a board pack). AI confidence is not AI accuracy.</p>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">So no — don't retrain as a prompt engineer. Become a buyer who prompts like one. That combination is rarer, and it's the one that gets paid.</p>`},
+{cat:"Profession",t:"How big is the procurement profession — and what do MCIPS, Chartered and FCIPS actually mean?",mins:6,body:`<svg viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg" style="width:100%;background:#161616;border:1px solid #2A2A2A;border-radius:12px;margin:6px 0 22px"><text x="40" y="44" fill="#8F8F8F" font-size="12" font-family="sans-serif">THE CIPS LADDER</text><rect x="40" y="170" width="150" height="26" rx="6" fill="none" stroke="#8F8F8F"/><text x="115" y="188" fill="#8F8F8F" font-size="12" text-anchor="middle" font-family="sans-serif">Student / Affiliate</text><rect x="210" y="138" width="150" height="26" rx="6" fill="none" stroke="#EDEDED"/><text x="285" y="156" fill="#EDEDED" font-size="12" text-anchor="middle" font-family="sans-serif">Diploma levels 2–6</text><rect x="380" y="106" width="150" height="26" rx="6" fill="none" stroke="#D6FF00"/><text x="455" y="124" fill="#D6FF00" font-size="12" text-anchor="middle" font-family="sans-serif">MCIPS (+ Chartered)</text><rect x="550" y="74" width="130" height="26" rx="6" fill="#D6FF00"/><text x="615" y="92" fill="#111" font-size="12" text-anchor="middle" font-family="sans-serif" font-weight="bold">FCIPS — Fellow</text><path d="M115 168V120c0-40 60-60 120-60h380" stroke="#2A2A2A" stroke-width="1.5" fill="none" stroke-dasharray="4 5"/></svg><h3 style="font-size:26px;margin-bottom:14px">How big is the procurement profession — and what do MCIPS, Chartered and FCIPS actually mean?</h3>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">Procurement is one of those professions that's everywhere and somehow invisible. Here's a sense of scale — and a plain-English guide to the letters after people's names.</p>
+<h4 style="font-size:18px;margin:22px 0 10px">How many of us are there?</h4>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">Precise counts are slippery because job titles vary wildly, but the scale is large: UK industry bodies estimate the wider logistics and supply chain sector employs in the region of 2.5–3 million people, with procurement-specific roles a substantial subset of that — commonly put in the low hundreds of thousands. Globally, the profession runs into the millions. CIPS — the Chartered Institute of Procurement &amp; Supply, the profession's largest body — reports a global community of well over 60,000 members across more than 150 countries. (Figures move; check cips.org and ONS data before quoting them in anything formal.)</p>
+<h4 style="font-size:18px;margin:22px 0 10px">The CIPS ladder, decoded</h4>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px"><b style="color:#EDEDED">Student and Affiliate membership</b> is where most people start — studying the CIPS diplomas (Levels 2 through 6) or working in the profession without full qualification. <b style="color:#EDEDED">MCIPS</b> — Member of the Chartered Institute — is the profession's benchmark: earned through completing the Level 6 Professional Diploma (or equivalent experience and management routes) plus three years of relevant experience. On a CV it signals a tested, rounded professional, and many senior roles list it as essential.</p>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px"><b style="color:#EDEDED">Chartered status</b> is what MCIPS becomes when you maintain it: an annual commitment to continuing professional development and the CIPS ethics test. The distinction matters — MCIPS says you reached the standard; Chartered MCIPS says you're still at it, this year. <b style="color:#EDEDED">FCIPS — Fellow</b> — is the institute's most senior grade, awarded not for passing exams but for significant personal contribution to the profession: leadership, advancement of practice, giving back. Fellows are a small fraction of the membership; CIPS doesn't publish exact grade-by-grade numbers, but Fellowship is rare enough that it genuinely means something.</p>
+<h4 style="font-size:18px;margin:22px 0 10px">Does it matter in the AI era?</h4>
+<p style="color:#CFCFCF;font-size:15px;line-height:1.75;margin-bottom:16px">More, arguably. As AI levels the playing field on drafting and analysis, verified professional judgement — which is what chartership certifies — becomes the differentiator. The letters were never about the exams; they're about a profession holding itself to a standard. That's exactly the thing machines can't award themselves.</p>`}
 ];
 document.getElementById("blog-list").innerHTML=ARTICLES.map((a,i)=>`<div class="card" style="cursor:pointer" onclick="openArticle(${i})"><span class="tag">${a.cat}</span><h3 style="font-size:17px;margin:12px 0 8px">${a.t}</h3><p style="color:var(--muted);font-size:13px">${a.mins} min read</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Read article →</div></div>`).join("");
 function openArticle(i){document.getElementById("blog-list").style.display="none";document.getElementById("blog-article").style.display="block";document.getElementById("blog-body").innerHTML=ARTICLES[i].body;window.scrollTo({top:0});}
@@ -1370,6 +1438,109 @@ async function runContractHealth(){
   }catch(e){document.getElementById("ci-out").innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
 }
 
+// ---------- RFQ Generator (watermarked PDF) ----------
+async function runRFQGen(){
+  const v=id=>document.getElementById(id).value.trim();
+  const co=v("rfq-co"),nm=v("rfq-name"),ti=v("rfq-title");
+  const out=document.getElementById("rfq-out");
+  if(!co||!nm||!ti){out.innerHTML='<p style="color:var(--muted);font-size:14px">Company name, your name and what you\'re buying are required.</p>';return;}
+  out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Drafting your RFQ… (~20 seconds)</p>';
+  try{
+    const text=await callAI(`Draft a professional Request for Quotation in UK English, PLAIN TEXT, no markdown symbols. Issued by: ${co} (contact: ${nm}${v("rfq-email")?", "+v("rfq-email"):""}). Requirement: ${ti}. Specification/scope: ${v("rfq-spec")||"TBC"}. Quantity & schedule: ${v("rfq-qty")||"TBC"}. Delivery & Incoterms: ${v("rfq-del")||"TBC"}. Response deadline: ${v("rfq-dead")||"TBC"}. Additional: ${v("rfq-extra")||"none"}.\nUse EXACTLY these numbered sections, each header in CAPITALS on its own line: 1. INTRODUCTION (one short paragraph issued on behalf of ${co}) 2. SCOPE AND SPECIFICATION 3. QUANTITY AND DELIVERY SCHEDULE 4. COMMERCIAL REQUIREMENTS (pricing format, currency, quote validity, proposed payment terms, Incoterms) 5. QUALITY AND COMPLIANCE 6. EVALUATION CRITERIA (weighted percentages) 7. RESPONSE INSTRUCTIONS (deadline ${v("rfq-dead")||"TBC"}, submit to ${nm}${v("rfq-email")?" at "+v("rfq-email"):""}) 8. GENERAL TERMS (no commitment to award, confidentiality). Mark unknowns TBC, never invent. Under 700 words.`);
+    window._rfq={text:ciClean(text),co,nm,ti,email:v("rfq-email")};
+    out.innerHTML=`${miBox(window._rfq.text)}
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-lime" onclick="rfqPDF()">Download RFQ (PDF)</button>
+      </div>
+      <p style="color:var(--muted);font-size:12px;margin-top:10px">PDF is issued in ${ciEsc(co)}'s name with a BuyrWorld watermark. Review before sending — you're responsible for the final content.</p>`;
+  }catch(e){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
+}
+async function rfqPDF(){
+  if(!window._rfq)return;
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:"mm",format:"a4"});
+  const W=210,H=297,M=20;let y;
+  function stamp(){
+    doc.setFont("helvetica","bold");doc.setFontSize(58);doc.setTextColor(232,232,232);
+    doc.text("BUYRWORLD",W/2,H/2,{angle:45,align:"center"});
+    doc.setFontSize(8);doc.setTextColor(140);doc.setFont("helvetica","normal");
+    doc.text("Created with BuyrWorld — buyrworld.com",W/2,H-9,{align:"center"});
+  }
+  function newPage(){doc.addPage();stamp();y=M;}
+  stamp();y=M;
+  doc.setFont("helvetica","bold");doc.setFontSize(17);doc.setTextColor(17,17,17);doc.text("BUYR",M,y+2);
+  doc.setTextColor(90,107,0);doc.text("WORLD",M+17.5,y+2);
+  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(140);
+  doc.text("The Home of Modern Procurement",M,y+7);
+  doc.setDrawColor(90,107,0);doc.setLineWidth(1);doc.line(M,y+11,W-M,y+11);
+  y+=20;
+  doc.setFont("helvetica","bold");doc.setFontSize(15);doc.setTextColor(17,17,17);
+  doc.text("REQUEST FOR QUOTATION",M,y);y+=8;
+  doc.setFontSize(10);doc.setFont("helvetica","normal");doc.setTextColor(60);
+  doc.text(`Issued by: ${window._rfq.co}`,M,y);y+=5.5;
+  doc.text(`Contact: ${window._rfq.nm}${window._rfq.email?" · "+window._rfq.email:""}`,M,y);y+=5.5;
+  doc.text(`Subject: ${window._rfq.ti}`,M,y);y+=5.5;
+  doc.text(`Date: ${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}`,M,y);y+=9;
+  const lines=window._rfq.text.split("\n");
+  for(const raw of lines){
+    const line=raw.trim();
+    if(y>H-24)newPage();
+    if(!line){y+=3;continue;}
+    const isHead=/^\d{1,2}\.\s+[A-Z]/.test(line)&&line.replace(/^\d{1,2}\.\s+/,"")===line.replace(/^\d{1,2}\.\s+/,"").toUpperCase();
+    if(isHead){y+=3;doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(90,107,0);
+      doc.text(line,M,y);y+=6;doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(40);continue;}
+    doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(40);
+    const wrapped=doc.splitTextToSize(line,W-2*M);
+    for(const wl of wrapped){if(y>H-24)newPage();doc.text(wl,M,y);y+=5;}
+  }
+  const n=doc.getNumberOfPages();
+  for(let p=1;p<=n;p++){doc.setPage(p);doc.setFontSize(8);doc.setTextColor(140);doc.text(`Page ${p} of ${n}`,W-M,H-9,{align:"right"});}
+  doc.save(`RFQ-${window._rfq.co.replace(/[^a-z0-9]+/gi,"-")}-${window._rfq.ti.slice(0,30).replace(/[^a-z0-9]+/gi,"-")}.pdf`);
+}
+
+
+async function downloadRFQpdf(){
+  const hist=HIST[fullId()]||[];
+  const last=[...hist].reverse().find(m=>m.role==="assistant");
+  if(!last){alert("Ask Buyr AI to generate your RFQ first — then download it here.");return;}
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:"mm",format:"a4"});
+  const co=document.getElementById("rfq-co").value.trim()||"[Your company]";
+  const nm=document.getElementById("rfq-nm").value.trim();
+  const W=210,M=18,bodyW=W-2*M;
+  const text=ciClean(last.content);
+  const lines=doc.setFont("helvetica","normal").setFontSize(10.5).splitTextToSize(text,bodyW);
+  let y=34,page=1;
+  const header=()=>{
+    doc.setFont("helvetica","bold").setFontSize(15).setTextColor(17,17,17).text("BUYR",M,16);
+    doc.setTextColor(112,134,0).text("WORLD",M+15.5,16);
+    doc.setFontSize(8.5).setFont("helvetica","normal").setTextColor(120).text("Request for Quotation",W-M,12,{align:"right"});
+    doc.text(`Issued by: ${co}${nm?" — "+nm:""}`,W-M,16.5,{align:"right"});
+    doc.text(new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}),W-M,21,{align:"right"});
+    doc.setDrawColor(90,107,0).setLineWidth(0.8).line(M,24,W-M,24);
+  };
+  const footer=()=>{
+    doc.setFontSize(7.5).setTextColor(140).text(`Generated with BuyrWorld — buyrworld.com · Page ${page}`,W/2,290,{align:"center"});
+  };
+  const watermark=()=>{
+    doc.saveGraphicsState();
+    doc.setGState(new doc.GState({opacity:0.07}));
+    doc.setFont("helvetica","bold").setFontSize(58).setTextColor(90,107,0);
+    doc.text("BUYRWORLD",W/2,170,{align:"center",angle:40});
+    doc.setFontSize(12);doc.text("buyrworld.com",W/2,196,{align:"center",angle:40});
+    doc.restoreGraphicsState();
+  };
+  header();watermark();
+  doc.setFont("helvetica","normal").setFontSize(10.5).setTextColor(26,26,26);
+  for(const ln of lines){
+    if(y>275){footer();doc.addPage();page++;header();watermark();doc.setFont("helvetica","normal").setFontSize(10.5).setTextColor(26,26,26);y=34;}
+    doc.text(ln,M,y);y+=5.1;
+  }
+  footer();
+  doc.save("RFQ-"+co.replace(/[^a-z0-9]+/gi,"-")+"-BuyrWorld.pdf");
+}
 // ---------- Market Intelligence ----------
 async function callAIWeb(prompt){
   const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({web:true,messages:[{role:"user",content:prompt}]})});
@@ -1511,6 +1682,32 @@ function miDownloadDoc(){const b=new Blob(["\ufeff",miReportHTML()],{type:"appli
 function miPrintReport(){const w=window.open("","_blank");w.document.write(miReportHTML());w.document.close();setTimeout(()=>w.print(),400);}
 buildSim();
 
+const AI_GROUPS=[["Semiconductors",[["NASDAQ:NVDA","NVDA · NVIDIA"],["NASDAQ:AMD","AMD · Advanced Micro Devices"],["NASDAQ:AVGO","AVGO · Broadcom"],["NYSE:TSM","TSM · TSMC"],["NASDAQ:INTC","INTC · Intel"],["NASDAQ:MRVL","MRVL · Marvell"]]],
+["Neoclouds",[["NASDAQ:CRWV","CRWV · CoreWeave"],["NASDAQ:IREN","IREN · IREN"],["NASDAQ:NBIS","NBIS · Nebius"],["NASDAQ:APLD","APLD · Applied Digital"],["NASDAQ:HUT","HUT · Hut 8"],["NASDAQ:CLSK","CLSK · CleanSpark"],["NASDAQ:CORZ","CORZ · Core Scientific"],["NASDAQ:WULF","WULF · TeraWulf"],["NASDAQ:CIFR","CIFR · Cipher Mining"],["NASDAQ:GLXY","GLXY · Galaxy Digital"]]],
+["Hyperscalers",[["NASDAQ:MSFT","MSFT · Microsoft"],["NASDAQ:AMZN","AMZN · Amazon"],["NASDAQ:GOOGL","GOOGL · Alphabet"],["NASDAQ:META","META · Meta"],["NYSE:ORCL","ORCL · Oracle"]]],
+["Power",[["NASDAQ:CEG","CEG · Constellation"],["NYSE:VST","VST · Vistra"],["NYSE:GEV","GEV · GE Vernova"],["NYSE:NEE","NEE · NextEra"],["NYSE:DUK","DUK · Duke Energy"]]],
+["Cooling & electrical",[["NYSE:VRT","VRT · Vertiv"],["NYSE:ETN","ETN · Eaton"],["NYSE:TT","TT · Trane"],["NYSE:JCI","JCI · Johnson Controls"],["NYSE:NVT","NVT · nVent"]]],
+["Networking & fibre",[["NYSE:ANET","ANET · Arista"],["NASDAQ:CSCO","CSCO · Cisco"],["NYSE:CIEN","CIEN · Ciena"],["NYSE:GLW","GLW · Corning"]]]];
+function loadAIChart(sym){
+  const all=AI_GROUPS.flatMap(([,arr])=>arr.map(([s])=>s));
+  const box=document.getElementById("ai-chart"); if(!box)return;
+  box.innerHTML='<div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>';
+  const s=document.createElement("script");
+  s.src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";s.async=true;
+  s.text=JSON.stringify({width:"100%",height:"560",symbol:sym,interval:"D",timezone:"Europe/London",theme:"dark",style:"1",locale:"en",backgroundColor:"rgba(17,17,17,0)",gridColor:"rgba(42,42,42,0.35)",withdateranges:true,range:"YTD",hide_side_toolbar:false,allow_symbol_change:true,watchlist:all,calendar:false,support_host:"https://www.tradingview.com"});
+  box.firstChild.appendChild(s);
+  document.querySelectorAll("#ai-sectors .chip").forEach(c=>c.classList.toggle("chip-on",c.dataset.s===sym));
+}
+function renderAISectors(){
+  const box=document.getElementById("ai-sectors"); if(!box)return;
+  box.innerHTML=AI_GROUPS.map(([g,arr])=>`
+    <div style="margin-bottom:10px">
+      <div class="eyebrow" style="font-size:10px;margin-bottom:6px">${g}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${arr.map(([s,d])=>`<button class="chip" data-s="${s}" style="font-size:11.5px;padding:5px 11px" onclick="loadAIChart('${s}')">${d}</button>`).join("")}</div>
+    </div>`).join("");
+  loadAIChart("NASDAQ:NVDA");
+}
+renderAISectors();
 function miGo(id){
   document.querySelectorAll(".mi-sec").forEach(d=>d.style.display="none");
   const sec=document.getElementById("mi-sec-"+id); if(sec)sec.style.display="block";
@@ -1534,13 +1731,15 @@ function renderLabour(){
     </div>
     <p style="color:var(--muted);font-size:11px;margin-top:12px">Indicative 2025 ranges, fully loaded (wages + social costs), general manufacturing — varies by sector, skill and region. <span id="lab-rate-note">Fetching live GBP rate…</span> Verify before building business cases.</p>`;
   document.getElementById("mi-lab-c").innerHTML=LABOUR.map(([c])=>`<option>${c}</option>`).join("");
-  fetch("https://api.frankfurter.app/latest?from=USD&to=GBP").then(x=>x.json()).then(j=>{
-    const r=j.rates.GBP;
+  (async()=>{
+    let r=null,src="";
+    try{const j=await (await fetch("https://api.frankfurter.app/latest?from=USD&to=GBP")).json();r=j.rates.GBP;src=`live ECB reference rate: 1 USD = £${r.toFixed(3)} (frankfurter.app, ${j.date})`;}catch(e){}
+    if(!r){try{const j=await (await fetch("https://open.er-api.com/v6/latest/USD")).json();r=j.rates&&j.rates.GBP;if(r)src=`live rate: 1 USD = £${r.toFixed(3)} (open.er-api.com)`;}catch(e){}}
+    if(!r){r=0.79;src="indicative rate 1 USD ≈ £0.79 (live rate unavailable on this network)";}
+    return {r,src};
+  })().then(({r,src})=>{const j={rates:{GBP:r}};window._labSrc=src;
     LABOUR.forEach(([c,lo,hi],i)=>{const el=document.getElementById("lab-gbp-"+i);if(el)el.textContent=`£${Math.round(lo*r)}–${Math.round(hi*r)}`;});
-    const n=document.getElementById("lab-rate-note");if(n)n.textContent=`Converted at live ECB reference rate: 1 USD = £${r.toFixed(3)} (frankfurter.app, ${j.date}).`;
-  }).catch(()=>{
-    LABOUR.forEach((_,i)=>{const el=document.getElementById("lab-gbp-"+i);if(el)el.textContent="—";});
-    const n=document.getElementById("lab-rate-note");if(n)n.textContent="Live GBP rate unavailable right now — USD shown.";
+    const n=document.getElementById("lab-rate-note");if(n)n.textContent=`Converted at ${window._labSrc}.`;
   });
 }
 async function runAIWatch(){
@@ -1894,7 +2093,7 @@ async function send(id,text){
   const ctx=cv.getContext("2d");
   let W,H,pts=[];
   function size(){W=cv.width=cv.offsetWidth;H=cv.height=cv.offsetHeight;
-    const n=Math.min(70,Math.floor(W/16));
+    const n=Math.min(85,Math.floor(W/13));
     pts=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35}));}
   size();window.addEventListener("resize",size);
   const still=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1903,10 +2102,10 @@ async function send(id,text){
     for(const p of pts){
       if(!still){p.x+=p.vx;p.y+=p.vy;
         if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;}
-      ctx.fillStyle="rgba(214,255,0,.8)";ctx.beginPath();ctx.arc(p.x,p.y,1.4,0,7);ctx.fill();}
+      ctx.fillStyle="rgba(214,255,0,1)";ctx.beginPath();ctx.arc(p.x,p.y,1.9,0,7);ctx.fill();}
     for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
       const a=pts[i],b=pts[j],dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy;
-      if(d2<16900){ctx.strokeStyle=`rgba(214,255,0,${(1-d2/16900)*.16})`;ctx.lineWidth=1;
+      if(d2<16900){ctx.strokeStyle=`rgba(214,255,0,${(1-d2/16900)*.34})`;ctx.lineWidth=1.2;
         ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}
     if(!still)requestAnimationFrame(frame);}
   frame();
