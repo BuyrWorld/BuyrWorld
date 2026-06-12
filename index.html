@@ -48,7 +48,12 @@ input.bwin:focus, textarea.bwin:focus{border-color:var(--lime)}
 .flip-back{transform:rotateY(180deg);border-color:var(--lime);justify-content:space-between;text-align:left}
 .mi-pill{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:8px 16px;font-family:'Space Grotesk';font-weight:600;font-size:13px;color:var(--text);cursor:pointer;transition:all .15s}
 .mi-pill:hover{border-color:var(--lime)}
+.mi-pill{display:inline-flex;align-items:center;gap:8px}
+.mi-pill svg{width:15px;height:15px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .mi-pill.on{background:var(--lime);color:#111;border-color:var(--lime)}
+.mi-pill.on svg{stroke:#111}
+.founder-img{width:148px;height:148px;border-radius:50%;object-fit:cover;border:3px solid rgba(214,255,0,.45);box-shadow:0 0 0 rgba(214,255,0,0);transition:border .18s ease,box-shadow .3s ease;flex-shrink:0}
+.founder-img:hover{border:6px solid rgba(214,255,0,.85);box-shadow:0 0 30px rgba(214,255,0,.4)}
 .fbtn{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px dashed #4a4a4a;border-radius:10px;padding:10px 16px;font-size:13px;color:var(--text);cursor:pointer;transition:border-color .15s;font-family:'Space Grotesk';font-weight:600}
 .fbtn:hover{border-color:var(--lime)}
 .fbtn input{display:none}
@@ -142,9 +147,14 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
   <section class="sec" style="padding-top:0"><div class="wrap">
     <div class="card" style="border-color:var(--lime)">
+      <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+      <img src="founder.jpg" alt="Josh Frost, founder of BuyrWorld" class="founder-img" onerror="this.style.display='none'">
+      <div style="flex:1;min-width:260px">
       <div class="eyebrow" style="margin-bottom:10px">About the founder</div>
       <h3 style="font-size:22px;margin-bottom:12px">Built by a buyer, not a SaaS tourist.</h3>
       <p style="color:var(--muted);font-size:14.5px;line-height:1.65;max-width:760px">BuyrWorld was founded by Josh Frost, a CIPS-qualified Senior Procurement Manager with 12+ years across supply chain and procurement — negotiating real contracts, managing real supplier risk and chasing real savings. Every template, pathway and AI workflow comes from that practice, refit for teams who believe procurement deserves better tools.</p>
+      </div>
+      </div>
       <button class="btn btn-ghost" style="margin-top:18px" onclick="go('about')">Read the story</button>
     </div>
   </div></section>
@@ -319,9 +329,17 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <input class="bwin" id="rfq-qty" placeholder="Quantity & schedule, e.g. 5,000/yr, monthly call-off">
         <input class="bwin" id="rfq-del" placeholder="Delivery location & Incoterms, e.g. Coventry UK, DAP">
       </div>
+      <div class="grid2" style="margin:0 0 10px">
+        <input class="bwin" id="rfq-mat" placeholder="Material / grade, e.g. 6082-T6 aluminium">
+        <input class="bwin" id="rfq-qual" placeholder="Quality requirements, e.g. ISO 9001, material certs, FAI">
+      </div>
+      <div class="grid2" style="margin-bottom:10px">
+        <input class="bwin" id="rfq-pay" placeholder="Payment terms, e.g. 60 days net">
+        <input class="bwin" id="rfq-cur" placeholder="Currency & quote validity, e.g. GBP, 90 days">
+      </div>
       <div class="grid2" style="margin-bottom:12px">
         <input class="bwin" id="rfq-dead" placeholder="Response deadline, e.g. 28 June 2026">
-        <input class="bwin" id="rfq-extra" placeholder="Anything else: payment terms, quality requirements…">
+        <input class="bwin" id="rfq-extra" placeholder="Anything else: tooling, packaging, volume flexibility…">
       </div>
       <button class="btn btn-lime" onclick="runRFQGen()">Generate RFQ →</button>
       <div id="rfq-out" style="margin-top:16px"></div>
@@ -379,13 +397,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <p style="color:var(--muted);max-width:720px;line-height:1.6;margin-bottom:18px">Live indices, metals, energy and FX. AI-searched briefings and commodity intelligence. Your commodity exposure, stress-tested. Everything a buyer needs to read the market — and decide what to do about it.</p>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px">
-      <button class="mi-pill on" data-t="live" onclick="miGo('live')">Live Markets</button>
-      <button class="mi-pill" data-t="ai" onclick="miGo('ai')">AI Economy</button>
-      <button class="mi-pill" data-t="news" onclick="miGo('news')">News</button>
-      <button class="mi-pill" data-t="brief" onclick="miGo('brief')">Daily Briefing</button>
-      <button class="mi-pill" data-t="comm" onclick="miGo('comm')">Commodity Intel</button>
-      <button class="mi-pill" data-t="exp" onclick="miGo('exp')">Exposure &amp; Simulator</button>
-      <button class="mi-pill" data-t="lab" onclick="miGo('lab')">Labour Costs</button>
+      <button class="mi-pill on" data-t="live" onclick="miGo('live')"><svg viewBox="0 0 24 24"><path d="M3 19h18"/><path d="M5 15l4-5 3 3 5-7"/></svg>Live Markets</button>
+      <button class="mi-pill" data-t="ai" onclick="miGo('ai')"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg>AI Economy</button>
+      <button class="mi-pill" data-t="news" onclick="miGo('news')"><svg viewBox="0 0 24 24"><path d="M4 5h13v15H6a2 2 0 0 1-2-2V5z"/><path d="M17 8h3v10a2 2 0 0 1-2 2"/><path d="M7 9h7M7 12.5h7M7 16h4"/></svg>News</button>
+      <button class="mi-pill" data-t="brief" onclick="miGo('brief')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg>Daily Briefing</button>
+      <button class="mi-pill" data-t="comm" onclick="miGo('comm')"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12L4 7.5M12 12v9"/></svg>Commodity Intel</button>
+      <button class="mi-pill" data-t="exp" onclick="miGo('exp')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/></svg>Exposure &amp; Simulator</button>
+      <button class="mi-pill" data-t="lab" onclick="miGo('lab')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5"/><path d="M16.5 9.5c1.4.4 2.5 1.7 2.5 3.3M16 4.8a3 3 0 0 1 0 5.7"/></svg>Labour Costs</button>
     </div>
 
     <!-- LIVE MARKETS -->
@@ -397,12 +415,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           {"symbols":[{"proName":"FOREXCOM:UKXGBP","title":"FTSE 100 Index"},{"proName":"FOREXCOM:SPXUSD","title":"S&P 500 Index"},{"proName":"FOREXCOM:DJI","title":"Dow Jones Industrial"},{"proName":"TVC:GOLD","title":"Gold Spot"},{"proName":"TVC:SILVER","title":"Silver Spot"},{"proName":"CAPITALCOM:COPPER","title":"Copper"},{"proName":"TVC:UKOIL","title":"Brent Crude"},{"proName":"TVC:USOIL","title":"WTI Crude"},{"proName":"CAPITALCOM:NATURALGAS","title":"Natural Gas"},{"proName":"FX:GBPUSD","title":"Pound / US Dollar"},{"proName":"FX:EURGBP","title":"Euro / Pound"}],"showSymbolLogo":false,"colorTheme":"dark","isTransparent":true,"displayMode":"adaptive","locale":"en"}
           </script>
         </div>
-        <div class="tradingview-widget-container">
-          <div class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
-          {"width":"100%","height":"560","symbol":"FOREXCOM:UKXGBP","interval":"D","timezone":"Europe/London","theme":"dark","style":"1","locale":"en","backgroundColor":"rgba(17,17,17,0)","gridColor":"rgba(42,42,42,0.35)","withdateranges":true,"range":"YTD","hide_side_toolbar":false,"allow_symbol_change":true,"watchlist":["FOREXCOM:UKXGBP","FOREXCOM:SPXUSD","FOREXCOM:NSXUSD","FOREXCOM:DJI","INDEX:DEU40","INDEX:NKY","CAPITALCOM:COPPER","CAPITALCOM:NICKEL","TVC:GOLD","TVC:SILVER","TVC:PLATINUM","TVC:PALLADIUM","TVC:UKOIL","TVC:USOIL","CAPITALCOM:NATURALGAS","FX:GBPUSD","FX:EURGBP","FX:EURUSD","FX:USDCNH","FX:USDJPY"],"calendar":false,"support_host":"https://www.tradingview.com"}
-          </script>
-        </div>
+        <div id="live-nav" style="margin-bottom:10px"></div>
+        <div id="live-chart"></div>
+        <p id="live-legend" style="color:var(--muted);font-size:11.5px;margin-top:8px"></p>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
           <p style="color:var(--muted);font-size:11.5px;max-width:560px">Scroll the watchlist (right) to switch instruments · use the range buttons (bottom) — YTD shows year-to-date in green/red · use the ruler tool in the left toolbar to measure the % change between any two points in time. LME base metals (aluminium, zinc, tin, lead) and steel indices are licensed data with no free feed — use the live AI check instead. Prices may be delayed; indicative, not for contract settlement.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1449,7 +1464,7 @@ async function runRFQGen(){
   if(!co||!nm||!ti){out.innerHTML='<p style="color:var(--muted);font-size:14px">Company name, your name and what you\'re buying are required.</p>';return;}
   out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Drafting your RFQ… (~20 seconds)</p>';
   try{
-    const text=await callAI(`Draft a professional Request for Quotation in UK English, PLAIN TEXT, no markdown symbols. Issued by: ${co} (contact: ${nm}${v("rfq-email")?", "+v("rfq-email"):""}). Requirement: ${ti}. Specification/scope: ${v("rfq-spec")||"TBC"}. Quantity & schedule: ${v("rfq-qty")||"TBC"}. Delivery & Incoterms: ${v("rfq-del")||"TBC"}. Response deadline: ${v("rfq-dead")||"TBC"}. Additional: ${v("rfq-extra")||"none"}.\nUse EXACTLY these numbered sections, each header in CAPITALS on its own line: 1. INTRODUCTION (one short paragraph issued on behalf of ${co}) 2. SCOPE AND SPECIFICATION 3. QUANTITY AND DELIVERY SCHEDULE 4. COMMERCIAL REQUIREMENTS (pricing format, currency, quote validity, proposed payment terms, Incoterms) 5. QUALITY AND COMPLIANCE 6. EVALUATION CRITERIA (weighted percentages) 7. RESPONSE INSTRUCTIONS (deadline ${v("rfq-dead")||"TBC"}, submit to ${nm}${v("rfq-email")?" at "+v("rfq-email"):""}) 8. GENERAL TERMS (no commitment to award, confidentiality). Mark unknowns TBC, never invent. Under 700 words.`);
+    const text=await callAI(`Draft a professional Request for Quotation in UK English, PLAIN TEXT, no markdown symbols. Issued by: ${co} (contact: ${nm}${v("rfq-email")?", "+v("rfq-email"):""}). Requirement: ${ti}. Specification/scope: ${v("rfq-spec")||"TBC"}. Material/grade: ${v("rfq-mat")||"TBC"}. Quantity & schedule: ${v("rfq-qty")||"TBC"}. Delivery & Incoterms: ${v("rfq-del")||"TBC"}. Quality requirements: ${v("rfq-qual")||"TBC"}. Payment terms: ${v("rfq-pay")||"TBC"}. Currency & validity: ${v("rfq-cur")||"TBC"}. Response deadline: ${v("rfq-dead")||"TBC"}. Additional: ${v("rfq-extra")||"none"}.\nUse EXACTLY these numbered sections, each header in CAPITALS on its own line: 1. INTRODUCTION (one short paragraph issued on behalf of ${co}) 2. SCOPE AND SPECIFICATION 3. QUANTITY AND DELIVERY SCHEDULE 4. COMMERCIAL REQUIREMENTS (pricing format, currency, quote validity, proposed payment terms, Incoterms) 5. QUALITY AND COMPLIANCE 6. EVALUATION CRITERIA (weighted percentages) 7. RESPONSE INSTRUCTIONS (deadline ${v("rfq-dead")||"TBC"}, submit to ${nm}${v("rfq-email")?" at "+v("rfq-email"):""}) 8. GENERAL TERMS (no commitment to award, confidentiality). CRITICAL RULES: do NOT add your own title block, reference number or date - start directly at section 1. Use the buyer's details exactly as given. Write TBC ONLY where a field above says TBC - never add TBC lines for details that were not asked about, and never invent specifics the buyer did not state. Where something is TBC, say once that it will be confirmed prior to award rather than listing TBC bullet lines. Under 700 words.`);
     window._rfq={text:ciClean(text),co,nm,ti,email:v("rfq-email")};
     out.innerHTML=`${miBox(window._rfq.text)}
       <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
@@ -1465,10 +1480,13 @@ async function rfqPDF(){
   const doc=new jsPDF({unit:"mm",format:"a4"});
   const W=210,H=297,M=20;let y;
   function stamp(){
-    doc.setFont("helvetica","bold");doc.setFontSize(58);doc.setTextColor(232,232,232);
-    doc.text("BUYRWORLD",W/2,H/2,{angle:45,align:"center"});
+    doc.setDrawColor(214,255,0);doc.setLineWidth(0.9);
+    doc.roundedRect(7,7,W-14,H-14,3,3);
     doc.setFontSize(8);doc.setTextColor(140);doc.setFont("helvetica","normal");
-    doc.text("Created with BuyrWorld — buyrworld.com",W/2,H-9,{align:"center"});
+    doc.text("Created with BuyrWorld — buyrworld.com",W/2,H-11,{align:"center"});
+    doc.setFont("helvetica","bold");doc.setFontSize(9);
+    doc.setTextColor(17,17,17);doc.text("BUYR",W-31,H-11);
+    doc.setTextColor(112,134,0);doc.text("WORLD",W-22,H-11);
   }
   function newPage(){doc.addPage();stamp();y=M;}
   stamp();y=M;
@@ -1727,6 +1745,30 @@ async function runLabour(){
   }catch(e){miFail("mi-lab-out");}
 }
 renderLabour();
+
+const LIVE_GROUPS=[
+["Indices",[["FOREXCOM:UKXGBP","UKX · FTSE 100"],["FOREXCOM:SPXUSD","SPX · S&P 500"],["FOREXCOM:NSXUSD","NDX · Nasdaq 100"],["FOREXCOM:DJI","DJI · Dow Jones"],["INDEX:DEU40","DAX · DAX 40"],["INDEX:NKY","NKY · Nikkei 225"]]],
+["Metals",[["CAPITALCOM:COPPER","COPPER · Copper"],["CAPITALCOM:NICKEL","NICKEL · Nickel"],["TVC:GOLD","GOLD · Gold Spot"],["TVC:SILVER","SILVER · Silver Spot"],["TVC:PLATINUM","PLATINUM · Platinum"],["TVC:PALLADIUM","PALLADIUM · Palladium"]]],
+["Energy",[["TVC:UKOIL","UKOIL · Brent Crude"],["TVC:USOIL","USOIL · WTI Crude"],["CAPITALCOM:NATURALGAS","NATGAS · Natural Gas"]]],
+["Currencies",[["FX:GBPUSD","GBPUSD · Pound / Dollar"],["FX:EURGBP","EURGBP · Euro / Pound"],["FX:EURUSD","EURUSD · Euro / Dollar"],["FX:USDCNH","USDCNH · Dollar / Yuan"],["FX:USDJPY","USDJPY · Dollar / Yen"]]]];
+let _liveGroup="Indices";
+function loadLiveChart(group,sym){
+  _liveGroup=group||_liveGroup;
+  const arr=(LIVE_GROUPS.find(([g])=>g===_liveGroup)||LIVE_GROUPS[0])[1];
+  const symbol=sym||arr[0][0];
+  const nav=document.getElementById("live-nav");
+  nav.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${LIVE_GROUPS.map(([g])=>`<button class="mi-pill${g===_liveGroup?" on":""}" style="padding:7px 13px;font-size:12px" onclick="loadLiveChart('${g}')">${g}</button>`).join("")}</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">${arr.map(([s,d])=>`<button class="chip" style="font-size:11.5px;padding:5px 11px${s===symbol?";border-color:var(--lime);color:var(--lime)":""}" onclick="loadLiveChart('${_liveGroup}','${s}')">${d}</button>`).join("")}</div>`;
+  const host=document.getElementById("live-chart");host.innerHTML="";
+  const wrap=document.createElement("div");wrap.className="tradingview-widget-container";
+  const inner=document.createElement("div");inner.className="tradingview-widget-container__widget";wrap.appendChild(inner);
+  const s=document.createElement("script");s.type="text/javascript";s.async=true;
+  s.src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+  s.text=JSON.stringify({width:"100%",height:"500",symbol:symbol,interval:"D",timezone:"Europe/London",theme:"dark",style:"1",locale:"en",backgroundColor:"rgba(17,17,17,0)",gridColor:"rgba(42,42,42,0.35)",withdateranges:true,range:"YTD",hide_side_toolbar:false,allow_symbol_change:true,watchlist:arr.map(x=>x[0]),calendar:false,support_host:"https://www.tradingview.com"});
+  wrap.appendChild(s);host.appendChild(wrap);
+  document.getElementById("live-legend").textContent="Tip: range buttons (bottom) — YTD shows the year's % move in green/red · ruler tool (left toolbar) measures % change between any two points.";
+}
+loadLiveChart("Indices");
 
 // ---------- Spend Analyser (runs entirely in the browser) ----------
 function loadSpendFile(inp){
