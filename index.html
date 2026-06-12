@@ -49,6 +49,12 @@ input.bwin:focus, textarea.bwin:focus{border-color:var(--lime)}
 .mi-pill{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:8px 16px;font-family:'Space Grotesk';font-weight:600;font-size:13px;color:var(--text);cursor:pointer;transition:all .15s}
 .mi-pill:hover{border-color:var(--lime)}
 .mi-pill.on{background:var(--lime);color:#111;border-color:var(--lime)}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:var(--panel)}
+::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:6px;border:2px solid var(--panel)}
+::-webkit-scrollbar-thumb:hover{background:var(--lime)}
+@media (max-width:860px){.grid2{grid-template-columns:1fr}}
+@media (max-width:620px){.lab-grid{grid-template-columns:96px 1fr 62px 62px!important;font-size:11px!important;gap:9px 8px!important}}
 section.sec{padding:72px 0}
 .fade{animation:fadeUp .5s ease both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -324,9 +330,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ MARKET INTELLIGENCE ============ -->
 <div class="page" id="page-market">
   <section class="sec"><div class="wrap">
-    <div class="eyebrow" style="margin-bottom:10px">Market Intelligence OS</div>
-    <h2 style="font-size:34px;margin-bottom:8px">What should procurement do today?</h2>
-    <p style="color:var(--muted);max-width:700px;line-height:1.6;margin-bottom:18px">Live markets, AI-generated intelligence, your commodity exposure and a cost-shock simulator — interpreted into procurement actions, not just data.</p>
+    <div class="eyebrow" style="margin-bottom:10px">Market Intelligence</div>
+    <h2 style="font-size:34px;margin-bottom:8px">The procurement market terminal</h2>
+    <p style="color:var(--muted);max-width:720px;line-height:1.6;margin-bottom:18px">Live indices, metals, energy and FX. AI-searched briefings and commodity intelligence. Your commodity exposure, stress-tested. Everything a buyer needs to read the market — and decide what to do about it.</p>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px">
       <button class="mi-pill on" data-t="live" onclick="miGo('live')">Live Markets</button>
@@ -1360,7 +1366,7 @@ async function runContractHealth(){
   }catch(e){document.getElementById("ci-out").innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
 }
 
-// ---------- Market Intelligence OS ----------
+// ---------- Market Intelligence ----------
 async function callAIWeb(prompt){
   const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({web:true,messages:[{role:"user",content:prompt}]})});
   if(!r.ok)throw new Error("api");
@@ -1508,24 +1514,30 @@ function miGo(id){
 }
 // ---- AI Economy Watch + Labour benchmarks ----
 const LABOUR=[["Germany",48,55],["Switzerland",55,65],["Norway",52,60],["United States",42,50],["France",43,50],["Netherlands",42,48],["Japan",26,32],["South Korea",27,33],["United Kingdom",30,37],["Italy",32,38],["Spain",26,31],["Taiwan",16,21],["Czechia",15,19],["Poland",13,17],["Romania",11,14],["Brazil",9,13],["Turkey",8,11],["Mexico",5,8],["China (coastal)",8,11],["China (inland)",5,8],["Vietnam",3,4.5],["India",2,3.5]];
-async function renderLabour(){
+function renderLabour(){
   const max=65;
-  let r=null,rateNote="Live GBP rate unavailable — showing USD only.";
-  try{const x=await fetch("https://api.frankfurter.app/latest?from=USD&to=GBP");const j=await x.json();r=j.rates.GBP;rateNote=`Converted at live ECB reference rate: 1 USD = £${r.toFixed(3)} (frankfurter.app, ${j.date}).`;}catch(e){}
-  const row=(c,lo,hi)=>`
+  const row=(c,lo,hi,i)=>`
     <span style="color:var(--text)">${c}</span>
-    <div style="height:9px;background:var(--line);border-radius:5px;position:relative">
+    <div style="height:9px;background:var(--line);border-radius:5px;position:relative" class="lab-bar">
       <div style="position:absolute;left:${(lo/max*100).toFixed(1)}%;width:${Math.max(1.5,((hi-lo)/max*100)).toFixed(1)}%;height:9px;background:var(--lime);border-radius:5px"></div>
     </div>
     <span style="text-align:right;color:var(--muted);font-family:'Space Grotesk';font-weight:600">$${lo}–${hi}</span>
-    <span style="text-align:right;color:var(--muted);font-family:'Space Grotesk';font-weight:600">${r?`£${Math.round(lo*r)}–${Math.round(hi*r)}`:"—"}</span>`;
+    <span style="text-align:right;color:var(--muted);font-family:'Space Grotesk';font-weight:600" id="lab-gbp-${i}">£ …</span>`;
   document.getElementById("mi-labour").innerHTML=`
-    <div style="display:grid;grid-template-columns:140px 1fr 76px 76px;gap:11px 14px;align-items:center;font-size:12.5px">
-      <span class="eyebrow" style="font-size:10px">Country</span><span class="eyebrow" style="font-size:10px">$0 ——— fully-loaded cost / hour ——— $65</span><span class="eyebrow" style="font-size:10px;text-align:right">USD/hr</span><span class="eyebrow" style="font-size:10px;text-align:right">GBP/hr</span>
-      ${LABOUR.map(([c,lo,hi])=>row(c,lo,hi)).join("")}
+    <div class="lab-grid" style="display:grid;grid-template-columns:140px 1fr 76px 76px;gap:11px 14px;align-items:center;font-size:12.5px">
+      <span class="eyebrow" style="font-size:10px">Country</span><span class="eyebrow lab-bar" style="font-size:10px">$0 ——— fully-loaded cost / hour ——— $65</span><span class="eyebrow" style="font-size:10px;text-align:right">USD/hr</span><span class="eyebrow" style="font-size:10px;text-align:right">GBP/hr</span>
+      ${LABOUR.map(([c,lo,hi],i)=>row(c,lo,hi,i)).join("")}
     </div>
-    <p style="color:var(--muted);font-size:11px;margin-top:12px">Indicative 2025 ranges, fully loaded (wages + social costs), general manufacturing — varies by sector, skill and region. ${rateNote} Verify before building business cases.</p>`;
+    <p style="color:var(--muted);font-size:11px;margin-top:12px">Indicative 2025 ranges, fully loaded (wages + social costs), general manufacturing — varies by sector, skill and region. <span id="lab-rate-note">Fetching live GBP rate…</span> Verify before building business cases.</p>`;
   document.getElementById("mi-lab-c").innerHTML=LABOUR.map(([c])=>`<option>${c}</option>`).join("");
+  fetch("https://api.frankfurter.app/latest?from=USD&to=GBP").then(x=>x.json()).then(j=>{
+    const r=j.rates.GBP;
+    LABOUR.forEach(([c,lo,hi],i)=>{const el=document.getElementById("lab-gbp-"+i);if(el)el.textContent=`£${Math.round(lo*r)}–${Math.round(hi*r)}`;});
+    const n=document.getElementById("lab-rate-note");if(n)n.textContent=`Converted at live ECB reference rate: 1 USD = £${r.toFixed(3)} (frankfurter.app, ${j.date}).`;
+  }).catch(()=>{
+    LABOUR.forEach((_,i)=>{const el=document.getElementById("lab-gbp-"+i);if(el)el.textContent="—";});
+    const n=document.getElementById("lab-rate-note");if(n)n.textContent="Live GBP rate unavailable right now — USD shown.";
+  });
 }
 async function runAIWatch(){
   const out=document.getElementById("mi-ai-out");
