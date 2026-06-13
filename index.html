@@ -52,8 +52,8 @@ input.bwin:focus, textarea.bwin:focus{border-color:var(--lime)}
 .mi-pill svg{width:15px;height:15px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .mi-pill.on{background:var(--lime);color:#111;border-color:var(--lime)}
 .mi-pill.on svg{stroke:#111}
-.founder-img{width:148px;height:148px;border-radius:50%;object-fit:cover;border:3px solid rgba(214,255,0,.45);box-shadow:0 0 0 rgba(214,255,0,0);transition:border .18s ease,box-shadow .3s ease;flex-shrink:0}
-.founder-img:hover{border:6px solid rgba(214,255,0,.85);box-shadow:0 0 30px rgba(214,255,0,.4)}
+.founder-img{width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid rgba(214,255,0,.5);box-shadow:0 0 0 rgba(214,255,0,0);transition:border .18s ease,box-shadow .3s ease;flex-shrink:0}
+.founder-img:hover{border:5px solid rgba(214,255,0,.9);box-shadow:0 0 22px rgba(214,255,0,.45)}
 .fbtn{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px dashed #4a4a4a;border-radius:10px;padding:10px 16px;font-size:13px;color:var(--text);cursor:pointer;transition:border-color .15s;font-family:'Space Grotesk';font-weight:600}
 .fbtn:hover{border-color:var(--lime)}
 .fbtn input{display:none}
@@ -147,7 +147,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
   <section class="sec" style="padding-top:0"><div class="wrap">
     <div class="card" style="border-color:var(--lime)">
-      <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
       <img src="founder.jpg" alt="Josh Frost, founder of BuyrWorld" class="founder-img" onerror="this.style.display='none'">
       <div style="flex:1;min-width:260px">
       <div class="eyebrow" style="margin-bottom:10px">About the founder</div>
@@ -432,6 +432,12 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <div class="mi-sec" id="mi-sec-ai" style="display:none">
       <div class="card" style="padding:14px 16px">
         <p style="color:var(--muted);font-size:13px;margin-bottom:12px">The AI buildout is pulling on copper, power, semiconductors and construction — the same markets your costs live in.</p>
+        <div class="tradingview-widget-container" style="margin-bottom:14px">
+          <div class="tradingview-widget-container__widget"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+          {"symbols":[{"proName":"NASDAQ:MSFT","title":"Microsoft"},{"proName":"NASDAQ:AMZN","title":"Amazon"},{"proName":"NASDAQ:GOOGL","title":"Alphabet"},{"proName":"NASDAQ:META","title":"Meta"},{"proName":"NYSE:ORCL","title":"Oracle"},{"proName":"NASDAQ:NVDA","title":"NVIDIA"}],"showSymbolLogo":false,"colorTheme":"dark","isTransparent":true,"displayMode":"adaptive","locale":"en"}
+          </script>
+        </div>
         <div id="ai-sectors" style="margin-bottom:12px"></div>
         <div id="ai-chart"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px">
@@ -1668,30 +1674,26 @@ const AI_GROUPS=[["Semiconductors",[["NASDAQ:NVDA","NVDA · NVIDIA"],["NASDAQ:AM
 ["Power",[["NASDAQ:CEG","CEG · Constellation"],["NYSE:VST","VST · Vistra"],["NYSE:GEV","GEV · GE Vernova"],["NYSE:NEE","NEE · NextEra"],["NYSE:DUK","DUK · Duke Energy"]]],
 ["Cooling & electrical",[["NYSE:VRT","VRT · Vertiv"],["NYSE:ETN","ETN · Eaton"],["NYSE:TT","TT · Trane"],["NYSE:JCI","JCI · Johnson Controls"],["NYSE:NVT","NVT · nVent"]]],
 ["Networking & fibre",[["NYSE:ANET","ANET · Arista"],["NASDAQ:CSCO","CSCO · Cisco"],["NYSE:CIEN","CIEN · Ciena"],["NYSE:GLW","GLW · Corning"]]]];
-function loadAIChart(sym){
-  const all=AI_GROUPS.flatMap(([,arr])=>arr.map(([s])=>s));
-  const box=document.getElementById("ai-chart"); if(!box)return;
+let _aiGroup="Semiconductors";
+function loadAIChart(group,sym){
+  _aiGroup=group||_aiGroup;
+  const arr=(AI_GROUPS.find(([g])=>g===_aiGroup)||AI_GROUPS[0])[1];
+  const symbol=sym||arr[0][0];
+  const nav=document.getElementById("ai-sectors"); if(!nav)return;
+  nav.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${AI_GROUPS.map(([g])=>`<button class="mi-pill${g===_aiGroup?" on":""}" style="padding:7px 13px;font-size:12px" onclick="loadAIChart('${g}')">${g}</button>`).join("")}</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">${arr.map(([s,d])=>`<button class="chip" style="font-size:11.5px;padding:5px 11px${s===symbol?";border-color:var(--lime);color:var(--lime)":""}" onclick="loadAIChart('${_aiGroup}','${s}')">${d}</button>`).join("")}</div>`;
+  const box=document.getElementById("ai-chart");
   box.innerHTML='<div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>';
   const s=document.createElement("script");
   s.src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";s.async=true;
-  s.text=JSON.stringify({width:"100%",height:"560",symbol:sym,interval:"D",timezone:"Europe/London",theme:"dark",style:"1",locale:"en",backgroundColor:"rgba(17,17,17,0)",gridColor:"rgba(42,42,42,0.35)",withdateranges:true,range:"YTD",hide_side_toolbar:false,allow_symbol_change:true,watchlist:all,calendar:false,support_host:"https://www.tradingview.com"});
+  s.text=JSON.stringify({width:"100%",height:"520",symbol:symbol,interval:"D",timezone:"Europe/London",theme:"dark",style:"1",locale:"en",backgroundColor:"rgba(17,17,17,0)",gridColor:"rgba(42,42,42,0.35)",withdateranges:true,range:"YTD",hide_side_toolbar:false,allow_symbol_change:true,watchlist:arr.map(x=>x[0]),calendar:false,support_host:"https://www.tradingview.com"});
   box.firstChild.appendChild(s);
-  document.querySelectorAll("#ai-sectors .chip").forEach(c=>c.classList.toggle("chip-on",c.dataset.s===sym));
 }
-function renderAISectors(){
-  const box=document.getElementById("ai-sectors"); if(!box)return;
-  box.innerHTML=AI_GROUPS.map(([g,arr])=>`
-    <div style="margin-bottom:10px">
-      <div class="eyebrow" style="font-size:10px;margin-bottom:6px">${g}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${arr.map(([s,d])=>`<button class="chip" data-s="${s}" style="font-size:11.5px;padding:5px 11px" onclick="loadAIChart('${s}')">${d}</button>`).join("")}</div>
-    </div>`).join("");
-  loadAIChart("NASDAQ:NVDA");
-}
-renderAISectors();
+loadAIChart("Semiconductors");
 function miGo(id){
   document.querySelectorAll(".mi-sec").forEach(d=>d.style.display="none");
   const sec=document.getElementById("mi-sec-"+id); if(sec)sec.style.display="block";
-  document.querySelectorAll(".mi-pill").forEach(b=>b.classList.toggle("on",b.dataset.t===id));
+  document.querySelectorAll(".mi-pill[data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===id));
 }
 // ---- AI Economy Watch + Labour benchmarks ----
 const LABOUR=[["Germany",48,55],["Switzerland",55,65],["Norway",52,60],["United States",42,50],["France",43,50],["Netherlands",42,48],["Japan",26,32],["South Korea",27,33],["United Kingdom",30,37],["Italy",32,38],["Spain",26,31],["Taiwan",16,21],["Czechia",15,19],["Poland",13,17],["Romania",11,14],["Brazil",9,13],["Turkey",8,11],["Mexico",5,8],["China (coastal)",8,11],["China (inland)",5,8],["Vietnam",3,4.5],["India",2,3.5]];
