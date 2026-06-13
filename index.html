@@ -4,7 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BuyrWorld — The Home of Modern Procurement</title>
-<meta name="description" content="AI-powered sourcing, supplier management, negotiation support and procurement intelligence for modern businesses.">
+<meta name="description" content="BuyrWorld is the home of modern procurement: free AI tools for RFQs, quote comparison, contract review and spend analysis, a live market intelligence terminal, templates and an Academy. Built by an MCIPS Chartered buyer.">
+<link rel="canonical" href="https://buyrworld.com/">
+<meta name="keywords" content="procurement, AI procurement, sourcing, RFQ generator, supplier risk, spend analysis, contract review, negotiation, commodity intelligence, procurement templates, CIPS, category management">
+<meta name="author" content="BuyrWorld">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0C0C0C">
+<!-- Open Graph / LinkedIn / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BuyrWorld">
+<meta property="og:title" content="BuyrWorld — The Home of Modern Procurement">
+<meta property="og:description" content="Free AI procurement tools, a live market intelligence terminal, templates and an Academy — built by a buyer, not a SaaS tourist.">
+<meta property="og:url" content="https://buyrworld.com/">
+<meta property="og:image" content="https://buyrworld.com/buyrworld-logo-hd.png">
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="BuyrWorld — The Home of Modern Procurement">
+<meta name="twitter:description" content="Free AI procurement tools, a live market intelligence terminal, templates and an Academy — built by a buyer, not a SaaS tourist.">
+<meta name="twitter:image" content="https://buyrworld.com/buyrworld-logo-hd.png">
+<!-- Structured data -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"BuyrWorld","url":"https://buyrworld.com/","description":"AI-powered procurement tools, market intelligence, templates and training for buyers and supply chain teams.","logo":"https://buyrworld.com/buyrworld-logo-hd.png","founder":{"@type":"Person","name":"Josh Frost","jobTitle":"MCIPS Chartered Senior Procurement Manager"}}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"BuyrWorld","url":"https://buyrworld.com/","description":"The home of modern procurement — AI tools, market intelligence, templates and Academy."}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -801,7 +825,7 @@ function buy(name){const url=PAYMENT_LINKS[name];if(url){window.open(url,"_blank
 // ---------- Navigation ----------
 const LINKS=[["home","Home"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Templates"],["academy","Academy"],["pricing","Pricing"],["blog","Blog"],["contact","Contact"]];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{if(!document.querySelector('#live-chart .tradingview-widget-container'))miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";renderNav();window.scrollTo({top:0});}
+function go(p){page=p;if(p==='market')setTimeout(()=>{if(!document.querySelector('#live-chart .tradingview-widget-container'))miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";}renderNav();window.scrollTo({top:0});}
 function toggleMenu(){const m=document.getElementById("mobmenu");m.style.display=m.style.display==="flex"?"none":"flex";}
 function renderNav(){
   document.getElementById("desknav").innerHTML=LINKS.map(([k,l])=>`<button class="navlink ${page===k?"on":""}" onclick="go('${k}')">${l}</button>`).join("")+`<button class="btn btn-lime" style="padding:8px 16px;font-size:13px;margin-left:8px" onclick="go('ai')">Start free</button>`;
