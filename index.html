@@ -2111,22 +2111,30 @@ async function send(id,text){
   const cv=document.getElementById("hero-net"); if(!cv)return;
   const ctx=cv.getContext("2d");
   let W,H,pts=[];
+  const mouse={x:-9999,y:-9999};
   function size(){W=cv.width=cv.offsetWidth;H=cv.height=cv.offsetHeight;
     const n=Math.min(85,Math.floor(W/13));
     pts=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35}));}
   size();window.addEventListener("resize",size);
+  cv.addEventListener("mousemove",e=>{const r=cv.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
+  cv.addEventListener("mouseleave",()=>{mouse.x=-9999;mouse.y=-9999;});
   const still=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const R=120, R2=R*R;
   function frame(){
     ctx.clearRect(0,0,W,H);
     for(const p of pts){
       if(!still){p.x+=p.vx;p.y+=p.vy;
         if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;}
-      ctx.fillStyle="rgba(214,255,0,1)";ctx.beginPath();ctx.arc(p.x,p.y,1.9,0,7);ctx.fill();}
+      // gentle repulsion from the cursor
+      const mdx=p.x-mouse.x,mdy=p.y-mouse.y,md2=mdx*mdx+mdy*mdy;
+      if(md2<R2&&md2>0){const md=Math.sqrt(md2),f=(R-md)/R*2.2;p.x+=mdx/md*f;p.y+=mdy/md*f;}
+      ctx.fillStyle="rgba(220,255,40,1)";ctx.shadowColor="rgba(214,255,0,0.9)";ctx.shadowBlur=6;
+      ctx.beginPath();ctx.arc(p.x,p.y,2.1,0,7);ctx.fill();ctx.shadowBlur=0;}
     for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
       const a=pts[i],b=pts[j],dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy;
-      if(d2<16900){ctx.strokeStyle=`rgba(214,255,0,${(1-d2/16900)*.34})`;ctx.lineWidth=1.2;
+      if(d2<16900){ctx.strokeStyle=`rgba(214,255,0,${(1-d2/16900)*.4})`;ctx.lineWidth=1.2;
         ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}
-    if(!still)requestAnimationFrame(frame);}
+    requestAnimationFrame(frame);}
   frame();
 })();
 </script>
