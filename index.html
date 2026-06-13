@@ -624,6 +624,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <div id="blog-article" style="display:none;max-width:720px">
       <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="closeArticle()">← All articles</button>
       <div id="blog-body" style="font-size:16px;line-height:1.75;color:#CFCFCF"></div>
+      <div id="blog-next" style="margin-top:40px"></div>
     </div>
   </div></section>
 </div>
@@ -1055,7 +1056,25 @@ function revealArt(){
   const io=new IntersectionObserver((entries)=>{entries.forEach(en=>{if(en.isIntersecting){en.target.classList.add("revealed");io.unobserve(en.target);}});},{threshold:.15});
   els.forEach(e=>io.observe(e));
 }
-function openArticle(i){document.getElementById("blog-list").style.display="none";document.getElementById("blog-article").style.display="block";document.getElementById("blog-body").innerHTML=ARTICLES[i].body;window.scrollTo({top:0});setTimeout(revealArt,50);}
+function openArticle(i){
+  document.getElementById("blog-list").style.display="none";
+  document.getElementById("blog-article").style.display="block";
+  document.getElementById("blog-body").innerHTML=ARTICLES[i].body;
+  const ni=(i+1)%ARTICLES.length, na=ARTICLES[ni];
+  document.getElementById("blog-next").innerHTML=`
+    <div style="border-top:1px solid var(--line);padding-top:24px">
+      <div class="eyebrow" style="margin-bottom:12px">Next article</div>
+      <button class="card glow-hover" style="width:100%;text-align:left;cursor:pointer;display:flex;align-items:center;gap:16px" onclick="openArticle(${ni})">
+        <div style="flex:1">
+          <span class="tag">${na.cat}</span>
+          <h3 style="font-size:18px;margin:10px 0 4px">${na.t}</h3>
+          <span style="color:var(--muted);font-size:13px">${na.mins} min read</span>
+        </div>
+        <svg viewBox="0 0 24 24" style="width:30px;height:30px;stroke:var(--lime);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>`;
+  window.scrollTo({top:0});setTimeout(revealArt,50);
+}
 function closeArticle(){document.getElementById("blog-list").style.display="grid";document.getElementById("blog-article").style.display="none";}
 
 // ---------- Buyr AI demo (scripted responses) ----------
