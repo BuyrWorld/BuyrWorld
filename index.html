@@ -153,6 +153,12 @@ input.bwin:focus, textarea.bwin:focus{border-color:var(--lime)}
 .mi-pill svg{width:15px;height:15px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .mi-pill.on{background:var(--lime);color:#111;border-color:var(--lime)}
 .mi-pill.on svg{stroke:#111}
+.tier{display:inline-flex;gap:3px;align-items:center}
+.tier i{width:6px;height:14px;border-radius:2px;background:var(--line);display:inline-block;transition:background .2s}
+.tier i.on{background:var(--lime)}
+.acad-roles{margin-top:12px;font-size:11.5px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:10px}
+.acad-roles-label{display:block;font-family:'Space Grotesk';font-weight:600;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--lime);margin-bottom:3px}
+.acad-stage{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .chat-empty{padding:4px 2px}
 .starter-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .starter-card{display:flex;gap:12px;align-items:flex-start;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 15px;cursor:pointer;transition:border-color .15s,transform .15s}
@@ -654,6 +660,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <div class="eyebrow" style="margin-bottom:10px">Academy</div>
     <h2 style="font-size:34px;margin-bottom:10px">Learn procurement properly</h2>
     <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Structured pathways written by a practitioner — from your first PO to category leadership and CIPS.</p>
+    <div class="acad-stage" style="margin-bottom:26px">
+      <span style="color:var(--muted);font-size:13px;margin-right:6px">Where are you?</span>
+      <button class="mi-pill on" data-stage="all" onclick="acadStage('all')">Show all</button>
+      <button class="mi-pill" data-stage="1" onclick="acadStage('1')">New to procurement</button>
+      <button class="mi-pill" data-stage="2" onclick="acadStage('2')">A few years in</button>
+      <button class="mi-pill" data-stage="3" onclick="acadStage('3')">Leading a function</button>
+    </div>
     <div class="grid3" id="pathways"></div>
     <div id="pathway-detail" style="display:none;max-width:760px">
       <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="closePathway()">← All pathways</button>
@@ -885,7 +898,7 @@ const tplCard=([t,p,r,d,c])=>`<div class="card"><div style="display:flex;justify
 document.getElementById("tpl-all").innerHTML=TPL.map(tplCard).join("");
 
 const ACADEMY=[
-{t:"Beginner Buyer",lvl:"Foundation",time:"6 modules · ~4 hrs",d:"POs, RFQs, supplier setup and the habits of a credible first-year buyer.",
+{t:"Beginner Buyer",roles:"Supply chain admin · junior buyer · graduate · career-changer",tier:1,lvl:"Foundation",time:"6 modules · ~4 hrs",d:"POs, RFQs, supplier setup and the habits of a credible first-year buyer.",
 out:["Raise clean POs and run a simple RFQ end to end","Set up and onboard a supplier without drama","Earn stakeholder trust in your first 90 days"],
 mods:[
 {m:"The buyer's role & how money actually flows",l:"Where procurement sits in a business, and the purchase-to-pay cycle: requisition → approval → PO → goods receipt → invoice → payment. Why a PO is a legal offer, not admin — and why 'invoice without a PO' is the first habit to kill. You'll map your own organisation's P2P flow and find where value (and risk) leaks: maverick spend, retrospective POs and unapproved suppliers."},
@@ -894,7 +907,7 @@ mods:[
 {m:"Supplier setup & onboarding",l:"What to collect before the first PO: company details, banking (verified by call-back — invoice fraud is real), insurance, certifications, quality and ESG declarations. Risk-based onboarding: a stationery supplier doesn't need an audit; a single-source machining house does. Build a one-page onboarding checklist you can reuse forever."},
 {m:"Working with stakeholders",l:"Procurement succeeds through other people's budgets. Learn the intake conversation: what do you need, by when, what does good look like, what's the budget? How to say no to a pet supplier without making an enemy — offer the process, not a refusal. And the weekly habits that build credibility: close the loop, deliver small wins fast, never surprise your stakeholder in a meeting."},
 {m:"Ethics, basics of contracts & your 90-day plan",l:"Gifts and hospitality rules, conflicts of interest, and why fair process protects you personally. Contract basics every buyer needs: offer, acceptance, consideration, and what 'signing' a quote actually commits you to. Finish with a 90-day plan template: learn the spend, meet the stakeholders, fix one broken process, bank one visible saving."}]},
-{t:"Strategic Sourcing",lvl:"Intermediate",time:"6 modules · ~5 hrs",d:"Seven-step sourcing, market analysis and award decisions that hold up.",
+{t:"Strategic Sourcing",roles:"Buyer · sourcing specialist · procurement officer",tier:2,lvl:"Intermediate",time:"6 modules · ~5 hrs",d:"Seven-step sourcing, market analysis and award decisions that hold up.",
 out:["Run a full sourcing event from baseline to award","Build a should-cost view suppliers respect","Make award decisions that survive audit and challenge"],
 mods:[
 {m:"The 7-step sourcing process",l:"Profile the category → analyse the supply market → develop the strategy → select the sourcing route → negotiate and select → implement → track benefits. Why most failed sourcing events skipped steps one and two, and how long each step really takes for a £500k category versus a £5m one. You'll pick a live category and carry it through the whole pathway."},
@@ -903,7 +916,7 @@ mods:[
 {m:"Strategy & sourcing routes",l:"Single, dual or multi-source? Tender, negotiate with incumbent, or e-auction? Match the route to the Kraljic position: leverage items reward competition; bottleneck items reward security of supply. Define what you'll trade and what you won't before going to market — switching costs, qualification timelines and tooling ownership decide more deals than price."},
 {m:"Running the event & evaluation",l:"RFP discipline: identical information to every bidder, written Q&A shared with all, deadlines enforced. Score against the weightings you published — adjusting criteria after quotes arrive is how awards get challenged. Normalise to total cost of ownership: price, payment terms value, freight, duty, quality risk and switching cost. Document the decision in a one-page award recommendation."},
 {m:"Implementation & benefits tracking",l:"The deal isn't done at signature. Transition plans, last-time-buys from the loser, first-article approvals from the winner and a risk-managed ramp. Then track savings the way finance will accept: baseline, method, banked vs pipeline, signed off by a budget holder. A saving nobody validates is a story, not a number."}]},
-{t:"Supplier Relationship Management",lvl:"Intermediate",time:"5 modules · ~4 hrs",d:"Segmentation, scorecards, QBRs and turning suppliers into an advantage.",
+{t:"Supplier Relationship Management",roles:"Buyer · SRM lead · supply chain analyst",tier:2,lvl:"Intermediate",time:"5 modules · ~4 hrs",d:"Segmentation, scorecards, QBRs and turning suppliers into an advantage.",
 out:["Segment your supply base and focus effort where it pays","Run QBRs suppliers actually prepare for","Recover failing suppliers — or exit them cleanly"],
 mods:[
 {m:"Segmentation: you can't manage everyone",l:"Plot suppliers by value and risk/criticality: strategic, leverage, bottleneck, routine. Strategic partners get relationship investment; routine suppliers get automation and self-service. The discipline is saying out loud which suppliers you will NOT spend time on. Output: your top-10 list with a named owner and review cadence for each."},
@@ -911,7 +924,7 @@ mods:[
 {m:"Quarterly business reviews",l:"A QBR is not a beating; it's a two-way operating review. Agenda that works: performance vs scorecard, open issues with owners and dates, your forward demand picture (suppliers price uncertainty — share what you can), their market/cost picture, and one improvement initiative each. Forty-five minutes, written actions, no slides over substance."},
 {m:"Development, escalation & exit",l:"When a supplier slips: joint root-cause before threats — capacity, materials, your own forecast chaos? Agree a recovery plan with dates and consequences. Know your escalation ladder (buyer → management → executive sponsor) and use it sparingly. And when it's over: exit checklist — tooling recovery, last-time-buy, open warranty, knowledge transfer — executed while you still have leverage."},
 {m:"From vendor to advantage",l:"The best suppliers bring you cost-downs, innovation and capacity in shortages — but only if there's something in it for them. Longer agreements traded for productivity commitments, early supplier involvement in design, sharing savings from joint projects. Treating your best supplier like a leverage commodity is how you end up at the back of the queue when allocation hits."}]},
-{t:"Negotiation",lvl:"All levels",time:"6 modules · ~5 hrs",d:"Planning, tactics, concessions and keeping the deal after you've won it.",
+{t:"Negotiation",roles:"Any buyer who negotiates — junior to head of procurement",tier:2,lvl:"All levels",time:"6 modules · ~5 hrs",d:"Planning, tactics, concessions and keeping the deal after you've won it.",
 out:["Walk in with targets, a BATNA and a concessions ladder","Recognise and counter the ten most common tactics","Defend price increases with evidence, not emotion"],
 mods:[
 {m:"Planning wins negotiations",l:"Eighty percent of the outcome is decided before anyone speaks. Define your target, your realistic, and your walk-away — and your BATNA (what you'll actually do if this fails; a real qualified alternative is worth more than any tactic). Profile the counterpart: their pressures, their alternatives, who really decides. One page, every deal, no exceptions — the BuyrWorld Negotiation Planner is this module as a template."},
@@ -920,7 +933,7 @@ mods:[
 {m:"Tactics & counters",l:"The classics and their antidotes: good cop/bad cop (negotiate with the room, not the person), the flinch (let it land, restate calmly), limited authority ('then let's meet whoever has it'), the nibble at the end (reopen the whole package), artificial deadlines (test them), and salami slicing (bundle everything before agreeing anything). Naming a tactic, pleasantly, usually kills it."},
 {m:"Defending price increases",l:"The letter says 'unprecedented input costs: +12%'. Your response: decompose it. What share of their cost is the material that moved? If steel is 30% of cost and steel rose 20%, the maths says 6% — and what about the inputs that fell? Ask for the breakdown, counter with index-linking both ways, trade any increase for something (terms, commitment, productivity), and time-box it with a review date."},
 {m:"Closing & keeping the deal",l:"Confirm everything in writing within 24 hours — memories diverge fast. Get the contract to reflect the deal, not the supplier's standard terms. Then protect the relationship you just stretched: implementation kickoff, early performance check, and deliver your side (forecasts, payments on time). A win the supplier resents gets recovered from you in change orders."}]},
-{t:"AI Procurement",lvl:"New",time:"5 modules · ~3.5 hrs",d:"Prompting, agent workflows and where AI actually saves buyers time.",
+{t:"AI Procurement",roles:"Any buyer who wants AI leverage — all roles",tier:2,lvl:"New",time:"5 modules · ~3.5 hrs",d:"Prompting, agent workflows and where AI actually saves buyers time.",
 out:["Prompt AI like briefing a strong analyst","Build daily AI workflows for documents, analysis and prep","Know exactly what to verify and what never to delegate"],
 mods:[
 {m:"What AI is actually good at (for buyers)",l:"Strip the hype: AI excels at drafting, summarising, comparing and categorising — the slow reading-and-writing layer of procurement. It does not own relationships, accountability or judgement. Map your week: every hour spent on first drafts, contract reading, quote comparison and spend classification is automatable today. That's typically 20–30% of a buyer's week back."},
@@ -928,7 +941,7 @@ mods:[
 {m:"Document workflows: RFQs, contracts, plans",l:"The 80/20 pattern: AI produces the structured first draft, you apply judgement and ownership. RFQs from a one-line need. Contract review: extract liability caps, indexation, termination, renewal notice — then verify each flagged clause yourself against the document, because AI misreads occasionally and you sign, not it. Negotiation plans, supplier letters, board summaries: same loop. Never paste confidential data into tools your company hasn't approved."},
 {m:"AI for analysis: spend, quotes & risk",l:"Feed three quotes plus your weightings and get a normalised landed-cost comparison in a minute. Dump the spend tail no one ever categorises and let AI classify it. Ask for risk patterns across your supplier list: concentration, geography, single-source flags. Rule of thumb: AI generates the analysis, you check a sample by hand before any number reaches a decision or a stakeholder."},
 {m:"Agents, governance & your edge",l:"Where it's heading: agent workflows that chain steps — monitor a category, draft the RFQ, chase quotes, prepare the comparison — with you approving the gates. What to keep human forever: the award decision, the relationship, the accountability. Governance basics for your team: approved tools, data rules, verification standards, audit trail. The buyers who thrive aren't replaced by AI; they're the ones running ten times the workload through it."}]},
-{t:"Category Management",lvl:"Advanced",time:"5 modules · ~4.5 hrs",d:"Own a spend area end to end — Kraljic to category plans the board signs off.",
+{t:"Category Management",roles:"Senior buyer · category manager · procurement lead",tier:3,lvl:"Advanced",time:"5 modules · ~4.5 hrs",d:"Own a spend area end to end — Kraljic to category plans the board signs off.",
 out:["Position a category and pick levers with evidence","Write a category plan leadership actually funds","Govern and refresh the strategy as markets move"],
 mods:[
 {m:"Thinking in categories, not transactions",l:"A category is a market you manage, not a queue of requisitions. Define the boundary properly (packaging ≠ 'stuff in the warehouse'), baseline the spend, suppliers, contracts, specs and stakeholders. Kraljic honestly: most buyers overrate their leverage and underrate their bottlenecks. Your category's position dictates everything that follows — strategy, levers, even your negotiation posture."},
@@ -936,7 +949,7 @@ mods:[
 {m:"Choosing levers",l:"The full menu, not just 'negotiate harder': consolidation and volume bundling, specification rationalisation, demand management, make-vs-buy, low-cost-country or nearshoring, index-linked pricing, e-auctions, longer agreements traded for productivity, joint process improvement. Score each lever for value, effort and risk in YOUR category — a lever that saved 12% in packaging may be worthless in castings."},
 {m:"Writing the category plan",l:"The board-ready structure: where we are (baseline, risks), where the market is going, where we want to be in 12–36 months, the levers and the plan, the savings and risk-reduction targets, what you need (resource, stakeholder time, mandate). Ten slides maximum. The test: could a sceptical CFO repeat your argument back? Includes the BuyrWorld Category Strategy Pack as your working template."},
 {m:"Execution, governance & refresh",l:"Strategies die in execution. Quarterly governance: progress vs plan, savings banked vs target, risk register movement, market changes that alter the thesis. Know your triggers for refreshing the strategy early — supplier consolidation, input-cost regime change, demand shifts. And manage upwards: a category manager who surprises the business loses the mandate; one who forecasts problems early keeps it."}]},
-{t:"CIPS Support",lvl:"Exam prep",time:"5 modules · ~3 hrs",d:"Study plans, exam technique and applied examples for CIPS levels.",
+{t:"CIPS Support",roles:"Anyone studying CIPS — student to MCIPS",tier:2,lvl:"Exam prep",time:"5 modules · ~3 hrs",d:"Study plans, exam technique and applied examples for CIPS levels.",
 out:["Build a realistic study plan around a full-time job","Decode command words and structure answers that score","Turn day-job experience into exam-ready examples"],
 mods:[
 {m:"How CIPS works & choosing your route",l:"The ladder: Level 2 Certificate through Level 6 Professional Diploma, MCIPS and what it signals to employers. Objective-response vs constructed-response exams and how differently they reward preparation. Self-study, employer-funded or study centre — honest pros and cons of each, and how long each level genuinely takes alongside a full-time buying job (hint: the official hours are optimistic)."},
@@ -988,7 +1001,17 @@ const EX=[
  "Do one timed past paper this month under exam conditions — timing per mark, no notes."]
 ];
 
-document.getElementById("pathways").innerHTML=ACADEMY.map((p,i)=>`<div class="card" style="cursor:pointer" onclick="openPathway(${i})"><span class="tag" ${p.lvl==="New"?'style="color:var(--lime);border-color:var(--lime)"':""}>${p.lvl}</span><h3 style="font-size:17px;margin:12px 0 8px">${p.t}</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">${p.d}</p><div style="color:var(--muted);font-size:12px;margin-top:12px">${p.time}</div><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:8px">Start pathway →</div></div>`).join("");
+function tierBars(t){return `<span class="tier" title="Level ${t} of 3">${[1,2,3].map(n=>`<i class="${n<=t?'on':''}"></i>`).join("")}</span>`;}
+document.getElementById("pathways").innerHTML=ACADEMY.map((p,i)=>`<div class="card glow-hover acad-card" style="cursor:pointer;position:relative" onclick="openPathway(${i})"><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag" ${p.lvl==="New"?'style="color:var(--lime);border-color:var(--lime)"':""}>${p.lvl}</span>${p.tier?tierBars(p.tier):""}</div><h3 style="font-size:17px;margin:12px 0 8px">${p.t}</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">${p.d}</p>${p.roles?`<div class="acad-roles"><span class="acad-roles-label">Suitable for</span>${p.roles}</div>`:""}<div style="color:var(--muted);font-size:12px;margin-top:12px">${p.time}</div><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:8px">Start pathway →</div></div>`).join("");
+function acadStage(s){
+  document.querySelectorAll(".acad-stage .mi-pill").forEach(b=>b.classList.toggle("on",b.dataset.stage===s));
+  document.querySelectorAll("#pathways .acad-card").forEach((c,i)=>{
+    const p=ACADEMY[i];
+    const show = s==="all" || !p.tier || String(p.tier)===s || p.lvl==="All levels" || p.lvl==="New" || p.lvl==="Exam prep";
+    c.style.display = show ? "" : "none";
+  });
+}
+
 
 function openPathway(i){
   const p=ACADEMY[i];
