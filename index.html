@@ -101,6 +101,19 @@ input.bwin:focus, textarea.bwin:focus{border-color:var(--lime)}
 .art-box:hover .l1{animation-delay:.18s}.art-box:hover .l2{animation-delay:.53s}.art-box:hover .l3{animation-delay:.88s}.art-box:hover .l4{animation-delay:1.23s}
 @keyframes chainbox{0%,70%,100%{stroke:#2A2A2A}8%,55%{stroke:#D6FF00}}
 @keyframes chainlink{0%,70%,100%{opacity:.2}10%,55%{opacity:1}}
+/* Email Josh button: grow + glow on hover */
+.email-josh{transition:transform .2s ease,box-shadow .3s ease}
+.email-josh:hover{transform:scale(1.06);box-shadow:0 0 22px rgba(214,255,0,.5)}
+/* Founder sticker: hidden, then "peels on" when the button is hovered */
+.josh-sticker{position:absolute;top:26px;right:26px;width:104px;text-align:center;opacity:0;
+  transform:scale(.4) rotate(-14deg);transform-origin:top right;
+  filter:blur(6px);pointer-events:none;
+  transition:opacity .5s ease,transform .6s cubic-bezier(.34,1.56,.64,1),filter .5s ease}
+.josh-sticker img{width:96px;height:96px;border-radius:50%;object-fit:cover;
+  border:3px solid var(--lime);box-shadow:0 6px 22px rgba(0,0,0,.55),0 0 18px rgba(214,255,0,.35)}
+.josh-sticker span{display:block;margin-top:6px;font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--text)}
+.email-josh:hover ~ .josh-sticker{opacity:1;transform:scale(1) rotate(-6deg);filter:blur(0)}
+@media (max-width:760px){.josh-sticker{display:none}}
 .art-box .seq{opacity:.32;transition:opacity .3s ease}
 .art-box .seq .seq-box{stroke:#2A2A2A;transition:stroke .3s ease}
 .art-box .seq .seq-bar{fill:#3a3a3a;transition:fill .3s ease}
@@ -747,10 +760,14 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <p style="color:var(--muted);font-size:14.5px;line-height:1.6;margin-bottom:16px">Sourcing events, category strategies, supplier negotiations or building your procurement function from scratch — work directly with Josh Frost, an MCIPS Chartered Senior Procurement Manager with 12+ years across supply chain and procurement. Day rates and fixed-scope projects available.</p>
         <a class="btn btn-lime" href="mailto:Joshua.Frost.1992@gmail.com?subject=Advisory%20enquiry%20%E2%80%94%20BuyrWorld">Enquire about advisory</a>
       </div>
-      <div class="card glow-hover">
+      <div class="card glow-hover" style="position:relative;overflow:hidden">
         <h3 style="font-size:17px;margin-bottom:8px;color:var(--lime)">Support &amp; everything else</h3>
-        <p style="color:var(--muted);font-size:14.5px;line-height:1.6;margin-bottom:16px">Questions about templates, Pro membership, the Academy or press? Email Josh — replies within one working day.</p>
-        <a class="btn btn-lime" href="mailto:Joshua.Frost.1992@gmail.com?subject=BuyrWorld%20enquiry">Email Josh</a>
+        <p style="color:var(--muted);font-size:14.5px;line-height:1.6;margin-bottom:16px;max-width:62%">Questions about templates, Pro membership, the Academy or press? Email Josh — replies within one working day.</p>
+        <a class="btn btn-lime email-josh" href="mailto:Joshua.Frost.1992@gmail.com?subject=BuyrWorld%20enquiry">Email Josh</a>
+        <div class="josh-sticker" aria-hidden="true">
+          <img src="founder.jpg" alt="" onerror="this.parentElement.style.display='none'">
+          <span>Josh Frost</span>
+        </div>
       </div>
     </div>
     <div class="card glow-hover" style="margin-top:18px">
