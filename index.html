@@ -124,8 +124,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <h1 class="hero-h">Procurement,<br><span style="color:var(--lime)">Reimagined.</span></h1>
       <p style="color:var(--muted);font-size:17px;line-height:1.6;margin:20px 0 28px;max-width:560px">AI-powered sourcing, supplier management, negotiation support and procurement intelligence for modern businesses.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
-        <button class="btn btn-lime" onclick="go('ai')">Start using Buyr AI →</button>
-        <button class="btn btn-ghost" onclick="go('tools')">Explore the AI tools</button>
+        <button class="btn btn-lime" style="font-size:16px;padding:15px 28px" onclick="go('market');setTimeout(()=>miGo('brief'),60)">Get today's procurement briefing →</button>
+        <button class="btn btn-ghost" onclick="go('ai')">Try a free AI tool</button>
       </div>
       <div style="display:flex;gap:24px;margin-top:32px;color:var(--muted);font-size:13px;flex-wrap:wrap;justify-content:center">
         <span><b style="color:var(--text);font-family:'Space Grotesk'">12+</b> yrs supply chain &amp; sourcing behind it</span>
@@ -139,9 +139,12 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   </div>
 
   <section class="sec"><div class="wrap">
-    <div class="eyebrow" style="margin-bottom:10px">Platform</div>
-    <h2 style="font-size:34px;margin-bottom:10px">Everything procurement, in one place</h2>
-    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">One site for the work buyers actually do: sourcing, suppliers, negotiation, spend and skills.</p>
+    <div class="eyebrow" style="margin-bottom:10px">Start here</div>
+    <h2 style="font-size:34px;margin-bottom:10px">What do you need today?</h2>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:28px;line-height:1.6">Four ways in, depending on the job in front of you.</p>
+    <div class="grid4" id="pillars" style="margin-bottom:46px"></div>
+    <div class="eyebrow" style="margin-bottom:10px">Explore everything</div>
+    <h3 style="font-size:24px;margin-bottom:24px">The full toolkit</h3>
     <div class="grid3" id="features"></div>
   </div></section>
 
@@ -432,12 +435,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <div class="mi-sec" id="mi-sec-ai" style="display:none">
       <div class="card" style="padding:14px 16px">
         <p style="color:var(--muted);font-size:13px;margin-bottom:12px">The AI buildout is pulling on copper, power, semiconductors and construction — the same markets your costs live in.</p>
-        <div class="tradingview-widget-container" style="margin-bottom:14px">
-          <div class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-          {"symbols":[{"proName":"NASDAQ:MSFT","title":"Microsoft"},{"proName":"NASDAQ:AMZN","title":"Amazon"},{"proName":"NASDAQ:GOOGL","title":"Alphabet"},{"proName":"NASDAQ:META","title":"Meta"},{"proName":"NYSE:ORCL","title":"Oracle"},{"proName":"NASDAQ:NVDA","title":"NVIDIA"}],"showSymbolLogo":false,"colorTheme":"dark","isTransparent":true,"displayMode":"adaptive","locale":"en"}
-          </script>
-        </div>
+        <div id="ai-tape" style="margin-bottom:14px"></div>
         <div id="ai-sectors" style="margin-bottom:12px"></div>
         <div id="ai-chart"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px">
@@ -451,24 +449,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <!-- NEWS -->
     <div class="mi-sec" id="mi-sec-news" style="display:none">
       <div>
-        <div class="card" style="padding:14px 16px">
-          <div class="eyebrow" style="margin-bottom:8px">World &amp; economy</div>
-          <div class="tradingview-widget-container">
-            <div class="tradingview-widget-container__widget"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
-            {"feedMode":"market","market":"index","colorTheme":"dark","isTransparent":true,"displayMode":"regular","width":"100%","height":"560","locale":"en"}
-            </script>
-          </div>
-        </div>
-        <div class="card" style="padding:14px 16px">
-          <div class="eyebrow" style="margin-bottom:8px">Markets &amp; AI economy</div>
-          <div class="tradingview-widget-container">
-            <div class="tradingview-widget-container__widget"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
-            {"feedMode":"market","market":"stock","colorTheme":"dark","isTransparent":true,"displayMode":"regular","width":"100%","height":"560","locale":"en"}
-            </script>
-          </div>
-        </div>
+        <div class="card" style="padding:14px 16px"><div class="eyebrow" style="margin-bottom:8px">World &amp; economy</div><div id="news-w1"></div></div>
+        <div class="card" style="padding:14px 16px"><div class="eyebrow" style="margin-bottom:8px">Markets &amp; AI economy</div><div id="news-w2"></div></div>
       </div>
       <p style="color:var(--muted);font-size:11.5px;margin-top:12px">Live headlines streamed via TradingView. For the procurement interpretation of any story, use the Daily Briefing or the AI-economy briefing.</p>
     </div>
@@ -747,7 +729,7 @@ function buy(name){const url=PAYMENT_LINKS[name];if(url){window.open(url,"_blank
 // ---------- Navigation ----------
 const LINKS=[["home","Home"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Templates"],["academy","Academy"],["pricing","Pricing"],["blog","Blog"],["contact","Contact"]];
 let page="home";
-function go(p){page=p;document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";renderNav();window.scrollTo({top:0});}
+function go(p){page=p;if(p==='market')setTimeout(()=>{if(!document.querySelector('#live-chart .tradingview-widget-container'))miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";renderNav();window.scrollTo({top:0});}
 function toggleMenu(){const m=document.getElementById("mobmenu");m.style.display=m.style.display==="flex"?"none":"flex";}
 function renderNav(){
   document.getElementById("desknav").innerHTML=LINKS.map(([k,l])=>`<button class="navlink ${page===k?"on":""}" onclick="go('${k}')">${l}</button>`).join("")+`<button class="btn btn-lime" style="padding:8px 16px;font-size:13px;margin-left:8px" onclick="go('ai')">Start free</button>`;
@@ -763,6 +745,18 @@ const FEATURES=[
 ["Templates","Battle-tested RFQs, scorecards, planners and policies from real sourcing events. Download, edit, send.","templates",'<path d="M8 3h8l4 4v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M16 3v4h4"/><path d="M4 7v13a1 1 0 0 0 1 1h11"/><path d="M10 11h7M10 14h7"/>'],
 ["Academy","Seven structured pathways and 38 modules — from first PO to CIPS-ready strategic sourcing.","academy",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/>'],
 ["Market Intelligence","Live markets, AI-searched commodity briefings, your exposure and a cost-shock simulator — the procurement market terminal.","market",'<path d="M3 20h18"/><path d="M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>']];
+const PILLARS=[
+["Intelligence","Live markets, daily AI briefings, commodity & labour intel, your exposure mapped.","market",'<path d="M3 20h18"/><path d="M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>',"market"],
+["Workflows","RFQs, quote comparisons, contract reviews, spend analysis, negotiation prep — done in minutes.","tools",'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2.2"/><circle cx="8" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/>',"tools"],
+["Learn","Structured Academy pathways and a weekly blog — from first PO to category leadership and CIPS.","academy",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/>',"academy"],
+["Advisory","Founder-led help when you want a human in the loop — fixed-scope projects and direct access.","about",'<circle cx="9" cy="8" r="3"/><path d="M3.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5"/><path d="M16.5 9.5c1.4.4 2.5 1.7 2.5 3.3M16 4.8a3 3 0 0 1 0 5.7"/>',"contact"]];
+document.getElementById("pillars").innerHTML=PILLARS.map(([t,d,_ic,icon,dest])=>`
+<div class="card" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--lime)'" onmouseout="this.style.borderColor='var(--line)'" onclick="go('${dest}')">
+  <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;margin-bottom:12px">${icon}</svg>
+  <h3 style="font-size:18px;margin-bottom:8px">${t}</h3>
+  <p style="color:var(--muted);font-size:13.5px;line-height:1.55">${d}</p>
+  <span style="color:var(--lime);font-family:'Space Grotesk';font-weight:600;font-size:13px;display:inline-block;margin-top:12px">Go →</span>
+</div>`).join("");
 document.getElementById("features").innerHTML=FEATURES.map(([t,d,dest,icon])=>`
 <div class="flip" onclick="go('${dest}')">
   <div class="flip-inner">
@@ -1689,11 +1683,29 @@ function loadAIChart(group,sym){
   s.text=JSON.stringify({width:"100%",height:"520",symbol:symbol,interval:"D",timezone:"Europe/London",theme:"dark",style:"1",locale:"en",backgroundColor:"rgba(17,17,17,0)",gridColor:"rgba(42,42,42,0.35)",withdateranges:true,range:"YTD",hide_side_toolbar:false,allow_symbol_change:true,watchlist:arr.map(x=>x[0]),calendar:false,support_host:"https://www.tradingview.com"});
   box.firstChild.appendChild(s);
 }
-loadAIChart("Semiconductors");
+/* AI chart builds on first AI-tab open */
+function tvInject(hostId,src,cfg){
+  const host=document.getElementById(hostId);
+  if(!host||host.dataset.done)return;host.dataset.done="1";
+  const wrap=document.createElement("div");wrap.className="tradingview-widget-container";
+  const inner=document.createElement("div");inner.className="tradingview-widget-container__widget";wrap.appendChild(inner);
+  const s=document.createElement("script");s.type="text/javascript";s.async=true;s.src=src;s.text=JSON.stringify(cfg);
+  wrap.appendChild(s);host.appendChild(wrap);
+}
+function initNews(){
+  tvInject("news-w1","https://s3.tradingview.com/external-embedding/embed-widget-timeline.js",{feedMode:"market",market:"index",colorTheme:"dark",isTransparent:true,displayMode:"regular",width:"100%",height:"560",locale:"en"});
+  tvInject("news-w2","https://s3.tradingview.com/external-embedding/embed-widget-timeline.js",{feedMode:"market",market:"stock",colorTheme:"dark",isTransparent:true,displayMode:"regular",width:"100%",height:"560",locale:"en"});
+}
+function initAITape(){
+  tvInject("ai-tape","https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js",{symbols:[{proName:"NASDAQ:MSFT",title:"Microsoft"},{proName:"NASDAQ:AMZN",title:"Amazon"},{proName:"NASDAQ:GOOGL",title:"Alphabet"},{proName:"NASDAQ:META",title:"Meta"},{proName:"NYSE:ORCL",title:"Oracle"},{proName:"NASDAQ:NVDA",title:"NVIDIA"}],showSymbolLogo:false,colorTheme:"dark",isTransparent:true,displayMode:"adaptive",locale:"en"});
+}
 function miGo(id){
   document.querySelectorAll(".mi-sec").forEach(d=>d.style.display="none");
   const sec=document.getElementById("mi-sec-"+id); if(sec)sec.style.display="block";
   document.querySelectorAll(".mi-pill[data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===id));
+  if(id==="live")loadLiveChart(_liveGroup);
+  if(id==="ai"){loadAIChart(_aiGroup);initAITape();}
+  if(id==="news")initNews();
 }
 // ---- AI Economy Watch + Labour benchmarks ----
 const LABOUR=[["Germany",48,55],["Switzerland",55,65],["Norway",52,60],["United States",42,50],["France",43,50],["Netherlands",42,48],["Japan",26,32],["South Korea",27,33],["United Kingdom",30,37],["Italy",32,38],["Spain",26,31],["Taiwan",16,21],["Czechia",15,19],["Poland",13,17],["Romania",11,14],["Brazil",9,13],["Turkey",8,11],["Mexico",5,8],["China (coastal)",8,11],["China (inland)",5,8],["Vietnam",3,4.5],["India",2,3.5]];
@@ -1770,7 +1782,7 @@ function loadLiveChart(group,sym){
   wrap.appendChild(s);host.appendChild(wrap);
   document.getElementById("live-legend").textContent="Tip: range buttons (bottom) — YTD shows the year's % move in green/red · ruler tool (left toolbar) measures % change between any two points.";
 }
-loadLiveChart("Indices");
+/* live chart builds on first Live-tab open (default visible) */ 
 
 // ---------- Spend Analyser (runs entirely in the browser) ----------
 function loadSpendFile(inp){
