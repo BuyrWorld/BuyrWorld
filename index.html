@@ -2116,8 +2116,9 @@ async function send(id,text){
     const n=Math.min(85,Math.floor(W/13));
     pts=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35}));}
   size();window.addEventListener("resize",size);
-  cv.addEventListener("mousemove",e=>{const r=cv.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
-  cv.addEventListener("mouseleave",()=>{mouse.x=-9999;mouse.y=-9999;});
+  const hero=cv.closest("section")||cv.parentElement;
+  hero.addEventListener("mousemove",e=>{const r=cv.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
+  hero.addEventListener("mouseleave",()=>{mouse.x=-9999;mouse.y=-9999;});
   const still=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const R=120, R2=R*R;
   function frame(){
