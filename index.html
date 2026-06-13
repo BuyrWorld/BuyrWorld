@@ -52,6 +52,14 @@ input.bwin:focus, textarea.bwin:focus{border-color:var(--lime)}
 .mi-pill svg{width:15px;height:15px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .mi-pill.on{background:var(--lime);color:#111;border-color:var(--lime)}
 .mi-pill.on svg{stroke:#111}
+.chat-empty{padding:4px 2px}
+.starter-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.starter-card{display:flex;gap:12px;align-items:flex-start;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 15px;cursor:pointer;transition:border-color .15s,transform .15s}
+.starter-card:hover{border-color:var(--lime);transform:translateY(-2px)}
+.starter-card svg{width:20px;height:20px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;margin-top:1px}
+.starter-card .st-t{display:block;font-family:'Space Grotesk';font-weight:600;font-size:14px;color:var(--text);margin-bottom:3px}
+.starter-card .st-d{display:block;font-size:12px;color:var(--muted);line-height:1.45}
+@media (max-width:620px){.starter-grid{grid-template-columns:1fr}}
 .founder-img{width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid rgba(214,255,0,.5);box-shadow:0 0 0 rgba(214,255,0,0);transition:transform .25s ease,border .18s ease,box-shadow .3s ease;flex-shrink:0;position:relative;z-index:1}
 .founder-img:hover{transform:scale(1.75);border:5px solid rgba(214,255,0,.9);box-shadow:0 0 26px rgba(214,255,0,.5);z-index:5}
 .fbtn{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px dashed #4a4a4a;border-radius:10px;padding:10px 16px;font-size:13px;color:var(--text);cursor:pointer;transition:border-color .15s;font-family:'Space Grotesk';font-weight:600}
@@ -1046,9 +1054,20 @@ const HIST={};
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function md(s){return esc(s).replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/^#+\s?(.+)$/gm,"<b>$1</b>");}
 
+const STARTERS=[
+["Draft an RFQ","From a one-line need to a send-ready request with specs, Incoterms and evaluation criteria.","Generate an RFQ for aluminium castings",'<path d="M6 3h9l3 3v15H6z"/><path d="M15 3v3h3"/><path d="M9 11h6M9 14h6M9 17h4"/>'],
+["Compare suppliers","Weigh two or more options on cost, risk, capability and terms — not just headline price.","Compare two fastener suppliers",'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/>'],
+["Build a category strategy","Kraljic positioning, market view, levers and a board-ready plan for any spend area.","Create a category strategy for packaging",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>'],
+["Stress-test a supplier","Surface single-source exposure, financial flags and concentration risk before they bite.","Identify risks for a single-source supplier",'<path d="M12 3l9 5v6c0 4-3.5 6.5-9 8-5.5-1.5-9-4-9-8V8z"/><path d="M12 8v4M12 15.5v.5"/>']];
 function chatStarter(id){
-  return `<div style="color:var(--muted);margin-bottom:12px">Ask anything a buyer would. Try:</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">${CHIPS.map(c=>`<button class="chip" onclick="send('${id}', this.textContent)">${c}</button>`).join("")}</div>`;
+  return `<div class="chat-empty">
+    <div style="color:var(--muted);font-size:13.5px;margin-bottom:16px;line-height:1.55">I'm your senior procurement adviser — built on the discipline of an <b style="color:var(--text)">MCIPS Chartered</b> professional. I'll ask the right questions, structure the output the way the profession expects, and flag anything you should verify. Pick a starting point, or just tell me what you're working on.</div>
+    <div class="starter-grid">${STARTERS.map(([t,d,q,ic])=>`
+      <button class="starter-card" onclick="send('${id}', '${q.replace(/'/g,"\\'")}')">
+        <svg viewBox="0 0 24 24">${ic}</svg>
+        <div><span class="st-t">${t}</span><span class="st-d">${d}</span></div>
+      </button>`).join("")}</div>
+  </div>`;
 }
 function resetChat(id){
   HIST[id]=[];
@@ -1060,9 +1079,12 @@ document.querySelectorAll("[data-chat]").forEach((box,idx)=>{
   const id="chat"+idx, full=box.dataset.chat==="full";
   HIST[id]=[];
   box.innerHTML=`
-    <div class="chat-head"><span style="width:8px;height:8px;border-radius:99px;background:var(--lime)"></span>
-    <span style="font-family:'Space Grotesk';font-weight:600;font-size:14px">Buyr AI</span>
-    <span style="margin-left:auto;font-size:11px;color:var(--muted)">live assistant</span>
+    <div class="chat-head"><span style="width:8px;height:8px;border-radius:99px;background:var(--lime);box-shadow:0 0 8px var(--lime)"></span>
+    <div style="display:flex;flex-direction:column;line-height:1.2">
+      <span style="font-family:'Space Grotesk';font-weight:600;font-size:14px">Buyr AI</span>
+      <span style="font-size:10.5px;color:var(--muted)">Senior procurement adviser</span>
+    </div>
+    <span style="margin-left:auto;font-size:11px;color:var(--muted)">live</span>
     <button class="chip" style="padding:4px 12px;font-size:12px" onclick="resetChat('${id}')">↺ Reset</button></div>
     <div class="chat-log" id="${id}-log" style="height:${full?420:300}px">${chatStarter(id)}</div>
     <div class="chat-foot"><input class="bwin" id="${id}-in" placeholder="e.g. Draft an RFQ for CNC machined parts…" onkeydown="if(event.key==='Enter')send('${id}')">
