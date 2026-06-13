@@ -1049,16 +1049,15 @@ function route(q){q=q.toLowerCase();
   if(q.includes("risk")||q.includes("single"))return DEMOS.risk;
   return DEMOS.fallback;}
 
-const CHIPS=["Generate an RFQ for aluminium castings","Compare two fastener suppliers","Create a category strategy for packaging","Identify risks for a single-source supplier"];
 const HIST={};
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function md(s){return esc(s).replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/^#+\s?(.+)$/gm,"<b>$1</b>");}
 
 const STARTERS=[
-["Draft an RFQ","From a one-line need to a send-ready request with specs, Incoterms and evaluation criteria.","Generate an RFQ for aluminium castings",'<path d="M6 3h9l3 3v15H6z"/><path d="M15 3v3h3"/><path d="M9 11h6M9 14h6M9 17h4"/>'],
-["Compare suppliers","Weigh two or more options on cost, risk, capability and terms — not just headline price.","Compare two fastener suppliers",'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/>'],
-["Build a category strategy","Kraljic positioning, market view, levers and a board-ready plan for any spend area.","Create a category strategy for packaging",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>'],
-["Stress-test a supplier","Surface single-source exposure, financial flags and concentration risk before they bite.","Identify risks for a single-source supplier",'<path d="M12 3l9 5v6c0 4-3.5 6.5-9 8-5.5-1.5-9-4-9-8V8z"/><path d="M12 8v4M12 15.5v.5"/>']];
+["Draft an RFQ","From a one-line need to a send-ready request with specs, Incoterms and evaluation criteria.","I need to draft an RFQ. Ask me what you need to know first.",'<path d="M6 3h9l3 3v15H6z"/><path d="M15 3v3h3"/><path d="M9 11h6M9 14h6M9 17h4"/>'],
+["Compare suppliers","Weigh two or more options on cost, risk, capability and terms — not just headline price.","I want to compare suppliers. Ask me what you need to know first.",'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/>'],
+["Build a category strategy","Kraljic positioning, market view, levers and a board-ready plan for any spend area.","I want to build a category strategy. Ask me which category and what you need to know first.",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>'],
+["Stress-test a supplier","Surface single-source exposure, financial flags and concentration risk before they bite.","I want to stress-test a supplier for risk. Ask me about them first.",'<path d="M12 3l9 5v6c0 4-3.5 6.5-9 8-5.5-1.5-9-4-9-8V8z"/><path d="M12 8v4M12 15.5v.5"/>']];
 function chatStarter(id){
   return `<div class="chat-empty">
     <div style="color:var(--muted);font-size:13.5px;margin-bottom:16px;line-height:1.55">I'm your senior procurement adviser — built on the discipline of an <b style="color:var(--text)">MCIPS Chartered</b> professional. I'll ask the right questions, structure the output the way the profession expects, and flag anything you should verify. Pick a starting point, or just tell me what you're working on.</div>
