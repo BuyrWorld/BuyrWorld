@@ -2463,16 +2463,14 @@ function renderLabour(){
     </div>
     <p style="color:var(--muted);font-size:11px;margin-top:12px">Indicative 2025 ranges, fully loaded (wages + social costs), general manufacturing — varies by sector, skill and region. <span id="lab-rate-note">Fetching live GBP rate…</span> Verify before building business cases.</p>`;
   document.getElementById("mi-lab-c").innerHTML=LABOUR.map(([c])=>`<option>${c}</option>`).join("");
-  (async()=>{
-    let r=null,src="";
-    try{const j=await (await fetch("https://api.frankfurter.app/latest?from=USD&to=GBP")).json();r=j.rates.GBP;src=`live ECB reference rate: 1 USD = £${r.toFixed(3)} (frankfurter.app, ${j.date})`;}catch(e){}
-    if(!r){try{const j=await (await fetch("https://open.er-api.com/v6/latest/USD")).json();r=j.rates&&j.rates.GBP;if(r)src=`live rate: 1 USD = £${r.toFixed(3)} (open.er-api.com)`;}catch(e){}}
-    if(!r){r=0.79;src="indicative rate 1 USD ≈ £0.79 (live rate unavailable on this network)";}
-    return {r,src};
-  })().then(({r,src})=>{const j={rates:{GBP:r}};window._labSrc=src;
+  (()=>{
+    // Use an indicative USD→GBP rate. Live third-party FX APIs are blocked by CORS in-browser,
+    // so we display an indicative conversion and tell the user to verify (the Live check gives current detail).
+    const r=0.79, src="indicative rate 1 USD ≈ £0.79 — verify current FX before business cases";
+    window._labSrc=src;
     LABOUR.forEach(([c,lo,hi],i)=>{const el=document.getElementById("lab-gbp-"+i);if(el)el.textContent=`£${Math.round(lo*r)}–${Math.round(hi*r)}`;});
-    const n=document.getElementById("lab-rate-note");if(n)n.textContent=`Converted at ${window._labSrc}.`;
-  });
+    const n=document.getElementById("lab-rate-note");if(n)n.textContent=`Converted at ${src}.`;
+  })();
 }
 async function runAIWatch(){
   const out=document.getElementById("mi-ai-out");
