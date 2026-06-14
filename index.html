@@ -235,7 +235,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 @media (max-width:760px){.desk-only{display:none}.mob-only{display:block}}
 .bw-loader{padding:4px 0;position:relative}
 .bw-loader-eta{display:block;color:var(--muted);font-size:11px;margin-top:6px;text-align:right;max-width:340px}
-.bw-bang{display:inline-block;color:var(--lime);font-weight:700;animation:bwbang 0.7s ease-in-out infinite}
+.bw-bang{display:inline-block;color:var(--lime);font-weight:700;margin-left:2px;animation:bwbang 0.7s ease-in-out infinite}
 @keyframes bwbang{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.25)}}
 .bw-loader-msg{color:var(--lime);font-family:'Space Grotesk';font-weight:600;font-size:13px;min-height:18px;transition:opacity .35s}
 .bw-loader-track{height:4px;background:var(--line);border-radius:3px;margin-top:10px;overflow:hidden;position:relative;max-width:340px}
@@ -1976,20 +1976,17 @@ ${spec?`- For each supplier's "mentions" array, check ONLY against these buyer r
     renderSourcing(d,item);
   }catch(e){stopLoader();out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
 }
-// smooth red(0)→amber(50)→green(100) scale, strong separation; returns [r,g,b]. 'good' = score AFTER inversion.
+// THREE DISTINCT bands: red 0-39, amber 40-69, green 70-100. 'good' = score AFTER inversion. returns [r,g,b].
 function scoreRGB(good){
   good=Math.max(0,Math.min(100,good));
-  // strong red #D62828 → amber #F08C00 → green #5CA904 for clear weak/mod/strong distinction
-  const stops=[[0,214,40,40],[50,240,140,0],[100,92,169,4]];
-  let a=stops[0],b=stops[stops.length-1];
-  for(let i=0;i<stops.length-1;i++){if(good>=stops[i][0]&&good<=stops[i+1][0]){a=stops[i];b=stops[i+1];break;}}
-  const span=b[0]-a[0]||1, t=(good-a[0])/span;
-  return [Math.round(a[1]+(b[1]-a[1])*t),Math.round(a[2]+(b[2]-a[2])*t),Math.round(a[3]+(b[3]-a[3])*t)];
+  if(good<40) return [214,40,40];   // red  #D62828
+  if(good<70) return [240,140,0];   // amber #F08C00
+  return [76,165,4];                // green #4CA504
 }
-// word label from the 'good' value; risk bars use Low/Moderate/High risk so colour+word+meaning agree
+// word label from 'good'; risk bars use Low/Moderate/High risk so colour+word+meaning agree
 function scoreWord(good,isRisk){
-  if(isRisk) return good>=60?"Low risk":good>=35?"Moderate risk":"High risk";
-  return good>=60?"Strong":good>=35?"Moderate":"Weak";
+  if(isRisk) return good>=70?"Low risk":good>=40?"Moderate risk":"High risk";
+  return good>=70?"Strong":good>=40?"Moderate":"Weak";
 }
 function srcBar(label,val,invert,desc){
   val=Math.max(0,Math.min(100,Math.round(val||0)));
@@ -2230,7 +2227,12 @@ async function sourcingPDF(){
       R.crit.forEach(c=>{
         const hit=ment.includes(c.toLowerCase())||(s.mentions||[]).some(m=>m.toLowerCase().includes(c.toLowerCase()));
         need(14);
-        if(hit){doc.setTextColor(96,112,0);doc.setFont("helvetica","bold");doc.text("\u2713",M,y);doc.setFont("helvetica","normal");doc.setTextColor(70,70,70);doc.text(`${c}  — mentioned in listing`,M+5,y);}
+        if(hit){
+          // draw a checkmark with lines (jsPDF core fonts can't render ✓)
+          doc.setDrawColor(96,112,0);doc.setLineWidth(0.6);
+          doc.line(M,y-1.1,M+1,y-0.2);doc.line(M+1,y-0.2,M+2.6,y-2.2);
+          doc.setFont("helvetica","normal");doc.setTextColor(70,70,70);doc.text(`${c}  — mentioned in listing`,M+5,y);
+        }
         else{doc.setTextColor(190,140,0);doc.setFont("helvetica","bold");doc.text("?",M+0.6,y);doc.setFont("helvetica","normal");doc.setTextColor(120,120,120);doc.text(`${c}  — not stated, ask the supplier`,M+5,y);}
         y+=4.2;
       });
