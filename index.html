@@ -54,8 +54,10 @@ h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.02em}
 .navlink:hover{color:var(--text)}.navlink.on{color:var(--lime)}
 .chip{background:var(--panel2);border:1px solid var(--line);color:var(--text);font-size:13px;border-radius:999px;padding:8px 14px;cursor:pointer;font-family:'Inter'}
 .chip:hover{border-color:var(--lime);color:var(--lime)}
-input.bwin, textarea.bwin{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px 14px;font-family:'Inter';font-size:14px;width:100%;outline:none}
-input.bwin:focus, textarea.bwin:focus{border-color:var(--lime)}
+input.bwin, textarea.bwin, select.bwin{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px 14px;font-family:'Inter';font-size:14px;width:100%;outline:none}
+select.bwin{appearance:none;-webkit-appearance:none;-moz-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23D6FF00' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+select.bwin option{background:var(--panel2);color:var(--text)}
+input.bwin:focus, textarea.bwin:focus, select.bwin:focus{border-color:var(--lime)}
 .ticker{display:flex;gap:36px;white-space:nowrap;animation:slide 28s linear infinite;color:var(--muted);font-family:'Space Grotesk';font-size:13px;letter-spacing:.1em}
 @keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
