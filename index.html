@@ -324,6 +324,10 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <p style="color:var(--muted);max-width:660px;margin-bottom:30px;line-height:1.6">Free, no signup. Pick a tool — each opens its own workspace.</p>
     <div class="eyebrow" style="margin-bottom:14px">Procurement tools</div>
     <div class="grid4">
+      <button class="tool-tile" onclick="go('tool-sourcing')" style="border-color:var(--lime)">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
+        Supplier Discovery<span class="sub">Find suppliers, regions &amp; market · web-searched</span>
+      </button>
       <button class="tool-tile" onclick="go('tool-defender')">
         <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6l7-3z"/><path d="M9.5 14.5l5-5"/><circle cx="9.7" cy="9.7" r="1"/><circle cx="14.3" cy="14.3" r="1"/></svg>
         Price-Increase Defender<span class="sub">Score &amp; rebut their letter · ≈ 2 min</span>
@@ -363,6 +367,29 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>
         Negotiation Agent<span class="sub">Targets · BATNA · concessions</span>
       </button>
+    </div>
+  </div></section>
+</div>
+
+<!-- ============ TOOL: SUPPLIER DISCOVERY (FLAGSHIP) ============ -->
+<div class="page" id="page-tool-sourcing">
+  <section class="sec"><div class="wrap" style="max-width:900px">
+    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
+    <div class="eyebrow" style="margin-bottom:10px">Supplier Discovery · Flagship</div>
+    <h2 style="font-size:30px;margin-bottom:10px">Find the suppliers, before you go to market</h2>
+    <p style="color:var(--muted);max-width:720px;line-height:1.6;margin-bottom:8px">Describe what you need to buy. Buyr AI searches the live web and maps your supply market: the kind of suppliers who make it, where they cluster, how concentrated the market is, and named candidate suppliers to investigate — so you walk into sourcing knowing the landscape, not guessing.</p>
+    <p style="color:var(--muted);font-size:12.5px;line-height:1.55;margin-bottom:24px">Results are AI-generated from live web sources at the moment you run them. <b style="color:var(--text)">Named companies are leads to verify independently</b> — confirm capability, certifications and status before you contact or rely on any supplier. Not a substitute for your own due diligence.</p>
+    <div class="card">
+      <div class="grid2" style="margin-bottom:10px">
+        <input class="bwin" id="src-item" placeholder="What are you sourcing? e.g. CNC machined aluminium housings *">
+        <input class="bwin" id="src-region" placeholder="Preferred regions, e.g. UK, EU, low-cost (optional)">
+      </div>
+      <div class="grid2" style="margin-bottom:10px">
+        <input class="bwin" id="src-vol" placeholder="Annual volume / value, e.g. 50k units or £400k (optional)">
+        <input class="bwin" id="src-spec" placeholder="Key requirements, e.g. ISO 9001, IATF 16949, material certs (optional)">
+      </div>
+      <button class="btn btn-lime" onclick="runSourcing()">Map my supply market →</button>
+      <div id="src-out" style="margin-top:18px"></div>
     </div>
   </div></section>
 </div>
@@ -1824,6 +1851,28 @@ async function runRFQGen(){
       <p style="color:var(--muted);font-size:12px;margin-top:10px">PDF is issued in ${ciEsc(co)}'s name with a BuyrWorld watermark. Review before sending — you're responsible for the final content.</p>`;
   }catch(e){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
 }
+// ---------- Supplier Discovery (FLAGSHIP, web-grounded) ----------
+async function runSourcing(){
+  const v=id=>document.getElementById(id).value.trim();
+  const item=v("src-item"),region=v("src-region"),vol=v("src-vol"),spec=v("src-spec");
+  const out=document.getElementById("src-out");
+  if(!item){out.innerHTML='<p style="color:var(--muted);font-size:14px">Tell me what you\'re sourcing to map the market.</p>';return;}
+  out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Searching the live market and mapping suppliers… (~30 seconds)</p>';
+  try{
+    const text=await callAIWeb(`You are the BuyrWorld Supplier Discovery engine, a senior UK procurement market analyst. Search the live web NOW and map the supply market for a buyer who needs to source:\nITEM: ${item}\n${region?`PREFERRED REGIONS: ${region}\n`:""}${vol?`VOLUME/VALUE: ${vol}\n`:""}${spec?`KEY REQUIREMENTS: ${spec}\n`:""}\nProduce a procurement-grade market map in UK English, PLAIN TEXT (no markdown symbols, no asterisks or hashes), using EXACTLY these sections, each header in CAPITALS on its own line:\n\nMARKET STRUCTURE\nIs this market fragmented or consolidated? Who are the typical supplier archetypes (e.g. OEMs, contract manufacturers, distributors, machine shops)? Where does production concentrate geographically and why? 3-5 sentences.\n\nWHERE TO LOOK\nThe supplier TYPES and REGIONS to target for this specific item, with the reasoning (cost, capability, lead time, proximity). This is direction, always safe to act on.\n\nNAMED CANDIDATE SUPPLIERS\nList specific companies you found IN YOUR LIVE SEARCH that plausibly supply this item. For EACH: company name | country | one line on why relevant | the source you saw it in. CRITICAL RULES: only name a company if it actually appeared in your web search results for this item — never invent or guess a company name. If you genuinely found none, write "No specific companies surfaced in live search — use the supplier types and regions above as your search terms" and do not pad the list. Begin this section with the line: "Leads to verify independently — confirm each before contacting."\n\nSELECTION CRITERIA\nThe 4-6 things this buyer should evaluate suppliers against for THIS item (certifications, capacity, financial stability, etc.).\n\nMARKET WATCH-OUTS\nCurrent supply, cost, lead-time or geopolitical factors affecting this market right now, with figures/dates from your sources where found.\n\nFIRST MOVES\n3 concrete next steps to start the sourcing process this week.\n\nCite source names inline where you used them. If you could not verify something, say so explicitly rather than inventing it. Under 650 words.`);
+    window._srcItem=item;
+    out.innerHTML=`${miBox(text)}
+      <div style="background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--lime);border-radius:8px;padding:12px 14px;margin-top:12px;font-size:12.5px;color:var(--muted);line-height:1.55">Named companies are <b style="color:var(--text)">unverified leads from a live web search</b> — confirm capability, certifications, quality systems and trading status independently before you contact or rely on any supplier.</div>
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-lime" onclick="sourcingToRFQ()">Generate an RFQ for this →</button>
+      </div>`;
+  }catch(e){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
+}
+function sourcingToRFQ(){
+  go("tool-rfq");
+  setTimeout(()=>{var f=document.getElementById("rfq-title");if(f&&window._srcItem){f.value=window._srcItem;}},120);
+}
+
 async function rfqPDF(){
   if(!window._rfq)return;
   await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
