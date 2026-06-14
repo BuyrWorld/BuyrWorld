@@ -330,7 +330,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       </button>
       <button class="tool-tile" onclick="go('tool-sim')">
         <svg viewBox="0 0 24 24"><path d="M3 4h12v7H8l-3 3v-3H3z"/><path d="M9 13h12v7h-2v3l-3-3H9z"/></svg>
-        Negotiation Simulator<span class="sub">Get scored /100 · boss fight</span>
+        Negotiation Simulator<span class="sub">Get scored /100 · negotiate vs an AI supplier</span>
       </button>
       <button class="tool-tile" onclick="go('tool-minutes')">
         <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 11h6M9 14h6"/><path d="M9 17.5l1.5 1.5 3-3"/></svg>
@@ -397,7 +397,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       </div>
       <div class="grid2" style="margin-bottom:12px">
         <input class="bwin" id="sim-goal" placeholder="Your goal, e.g. hold at +2% max and extend payment terms">
-        <select class="bwin" id="sim-mode"><option value="Standard">Difficulty: Standard</option><option value="Friendly">Difficulty: Friendly</option><option value="Hardball">Difficulty: Hardball (boss fight)</option></select>
+        <select class="bwin" id="sim-mode"><option value="Standard">Difficulty: Standard</option><option value="Friendly">Difficulty: Friendly</option><option value="Hardball">Difficulty: Hardball</option></select>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
         <button class="btn btn-lime" onclick="startSim()">Start simulation</button>
@@ -695,7 +695,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   <section class="sec"><div class="wrap">
     <div class="eyebrow" style="margin-bottom:10px">Pricing</div>
     <h2 style="font-size:34px;margin-bottom:10px">Simple, buyer-friendly pricing</h2>
-    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">No procurement-grade negotiation required.</p>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Free during Beta · Pro £9.99/mo at launch.</p>
     <div class="grid3" id="plans"></div>
   </div></section>
 </div>
@@ -730,7 +730,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   <section class="sec"><div class="wrap">
     <div class="eyebrow" style="margin-bottom:10px">Blog</div>
     <h2 style="font-size:34px;margin-bottom:10px">The Modern Buyer</h2>
-    <p style="color:var(--muted);max-width:640px;margin-bottom:10px;line-height:1.6">Practical procurement, written by a practitioner. New articles weekly.</p><p style="color:var(--lime);font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:32px">Latest: June 2026 · updated monthly</p>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:10px;line-height:1.6">Practical procurement, written by a practitioner.</p><p style="color:var(--lime);font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:32px">Latest: June 2026 · updated monthly</p>
     <div class="blog-filter" id="blog-filter" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
     <div class="blog-months" id="blog-months" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px;align-items:center"></div>
     <div id="blog-list" class="grid3"></div>
@@ -751,7 +751,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <p style="color:var(--muted);margin-bottom:28px;line-height:1.6">A private space for sourcing managers, buyers and supply chain people: deal clinics, template swaps, salary threads, CIPS study groups and honest talk about suppliers. Opens with BuyrWorld Pro at launch.</p>
     <div class="card">
       <h3 style="font-size:17px;margin-bottom:8px">Join the waitlist</h3>
-      <p style="color:var(--muted);font-size:14px;margin-bottom:16px">Founding members get their first month of Pro free.</p>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:16px">Founding members get 50% off their first month of Pro.</p>
       <form action="https://formspree.io/f/mwvjrdgy" method="POST" style="display:flex;gap:8px;flex-wrap:wrap">
         <input class="bwin" type="email" name="email" required placeholder="you@company.com" style="flex:1;min-width:220px">
         <button class="btn btn-lime" type="submit">Join waitlist</button>
@@ -1056,7 +1056,7 @@ function openPathway(i){
       </div>`).join("")}
     <div class="card" style="border-color:var(--lime);margin-top:22px">
       <h3 style="font-size:16px;margin-bottom:6px">Pro is launching soon</h3>
-      <p style="color:var(--muted);font-size:14px;margin-bottom:14px">Pro adds the worked examples, downloadable templates for every module and extra Buyr AI credits. Founding members get their first month free.</p>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:14px">Pro adds the worked examples, downloadable templates for every module and extra Buyr AI credits. Founding members get 50% off their first month.</p>
       <button class="btn btn-lime" onclick="go('community')">Join the Pro waitlist</button>
     </div>`;
   window.scrollTo({top:0});
