@@ -2177,12 +2177,15 @@ async function sourcingPDF(){
   function bullet(t){doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(55,55,55);const wr=doc.splitTextToSize(t,W-2*M-5);let first=true;for(const wl of wr){need(18);if(first){doc.setFillColor(96,112,0);doc.circle(M+1,y-1.1,0.7,"F");}doc.text(wl,M+5,y);y+=4.8;first=false;}y+=1;}
 
   frame();foot();y=M+2;
-  // Masthead
-  doc.setFont("helvetica","bold");doc.setFontSize(19);doc.setTextColor(34,34,34);doc.text("BUYR",M,y+3);
-  const bw=doc.getTextWidth("BUYR");doc.setTextColor(96,112,0);doc.text("WORLD",M+bw,y+3);
-  doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(150,150,150);doc.setCharSpace(0.5);
-  doc.text("THE HOME OF MODERN PROCUREMENT",M,y+8);doc.setCharSpace(0);
-  y+=15;
+  // Masthead — echoes the BUYRWORLD wordmark (Space Grotesk unavailable in jsPDF core fonts;
+  // approximated with bold Helvetica, tight spacing and the brand colour split)
+  doc.setFont("helvetica","bold");doc.setFontSize(22);doc.setCharSpace(-0.4);
+  doc.setTextColor(20,20,20);doc.text("BUYR",M,y+3);
+  const bw=doc.getTextWidth("BUYR");doc.setTextColor(122,150,0);doc.text("WORLD",M+bw,y+3);
+  doc.setCharSpace(0);
+  doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(150,150,150);doc.setCharSpace(1.2);
+  doc.text("THE HOME OF MODERN PROCUREMENT",M,y+8.5);doc.setCharSpace(0);
+  y+=16;
   // Title block
   doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(120,120,120);doc.setCharSpace(0.8);
   doc.text("SUPPLY MARKET REPORT",M,y);doc.setCharSpace(0);y+=8;
@@ -2216,9 +2219,9 @@ async function sourcingPDF(){
     y+=4.6;
     doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(95,95,95);
     const wr=doc.splitTextToSize(barDesc[lab]||"",W-2*M);for(const wl of wr){doc.text(wl,M,y);y+=3.6;}
-    y+=2.8;
+    y+=5.5;
   });
-  if(d.market_structure){y+=1;para(d.market_structure);}
+  if(d.market_structure){y+=2;para(d.market_structure);}
 
   if((d.where_to_look||[]).length){head("Where to look · safe direction");(d.where_to_look||[]).forEach(bullet);}
 
