@@ -233,7 +233,8 @@ header{position:sticky;top:0;z-index:50;background:rgba(12,12,12,.85);backdrop-f
 footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 @media (max-width:860px){.grid3,.grid2{grid-template-columns:1fr}.hero-h{font-size:42px}.hero-flex{flex-direction:column}}
 @media (max-width:760px){.desk-only{display:none}.mob-only{display:block}}
-.bw-loader{padding:4px 0}
+.bw-loader{padding:4px 0;position:relative}
+.bw-loader-eta{display:block;color:var(--muted);font-size:11px;margin-top:6px;text-align:right;max-width:340px}
 .bw-loader-msg{color:var(--lime);font-family:'Space Grotesk';font-weight:600;font-size:13px;min-height:18px;transition:opacity .35s}
 .bw-loader-track{height:4px;background:var(--line);border-radius:3px;margin-top:10px;overflow:hidden;position:relative;max-width:340px}
 .bw-loader-track::after{content:"";position:absolute;top:0;left:0;height:100%;width:40%;background:var(--lime);border-radius:3px;animation:bwslide 1.25s ease-in-out infinite}
@@ -1509,11 +1510,14 @@ function runAgent(kind){
 
 // ---------- Reusable loading animation (cycling messages + indeterminate bar) ----------
 let _bwLoaderTimer=null;
-function startLoader(elId,messages){
+let _bwEtaTimer=null;
+function startLoader(elId,messages,etaSeconds){
   const el=document.getElementById(elId); if(!el)return;
   if(_bwLoaderTimer){clearInterval(_bwLoaderTimer);_bwLoaderTimer=null;}
+  if(_bwEtaTimer){clearInterval(_bwEtaTimer);_bwEtaTimer=null;}
   const msgs=(messages&&messages.length)?messages:["Working…"];
-  el.innerHTML=`<div class="bw-loader"><div class="bw-loader-msg" id="${elId}-lmsg">${msgs[0]}</div><div class="bw-loader-track"></div></div>`;
+  const etaHtml=etaSeconds?`<span class="bw-loader-eta" id="${elId}-leta"></span>`:"";
+  el.innerHTML=`<div class="bw-loader"><div class="bw-loader-msg" id="${elId}-lmsg">${msgs[0]}</div><div class="bw-loader-track"></div>${etaHtml}</div>`;
   let i=0;
   const node=document.getElementById(elId+"-lmsg");
   _bwLoaderTimer=setInterval(()=>{
@@ -1521,8 +1525,15 @@ function startLoader(elId,messages){
     const m=msgs[Math.min(i,msgs.length-1)]; // hold on the last message until the result replaces it
     if(node){node.style.opacity="0";setTimeout(()=>{node.textContent=m;node.style.opacity="1";},350);}
   },2600);
+  if(etaSeconds){
+    let left=etaSeconds;
+    const en=document.getElementById(elId+"-leta");
+    const tick=()=>{ if(en) en.textContent = left>0?`about ${left}s remaining`:"almost there…"; left--; };
+    tick();
+    _bwEtaTimer=setInterval(tick,1000);
+  }
 }
-function stopLoader(){ if(_bwLoaderTimer){clearInterval(_bwLoaderTimer);_bwLoaderTimer=null;} }
+function stopLoader(){ if(_bwLoaderTimer){clearInterval(_bwLoaderTimer);_bwLoaderTimer=null;} if(_bwEtaTimer){clearInterval(_bwEtaTimer);_bwEtaTimer=null;} }
 
 // ---------- AI Tools: Defender & Simulator ----------
 async function callAI(prompt){
@@ -1925,7 +1936,7 @@ async function runSourcing(){
   if(!item){out.innerHTML='<p style="color:var(--muted);font-size:14px">Tell me what you\'re sourcing to map the market.</p>';return;}
   window._srcData={item,region,qty,unit,value,spec,incoterm,dest};
   window._srcItem=item;
-  startLoader("src-out",["Searching live web sources…","Reading what came back…","Mapping the supply market…","Scoring market depth & risk…","Structuring your report…"]);
+  startLoader("src-out",["Searching live web sources…","Reading what came back…","Mapping the supply market…","Scoring market depth & risk…","Structuring your report…"],30);
   const volStr=qty?`${qty}${unit?" "+unit:""}`:"";
   try{
     const text=await callAIWeb(`You are the BuyrWorld Supplier Discovery engine, a senior UK procurement market analyst. Search the live web NOW and map the supply market for a buyer sourcing:
@@ -1957,12 +1968,21 @@ ${spec?`- For each supplier's "mentions" array, check ONLY against these buyer r
     renderSourcing(d,item);
   }catch(e){stopLoader();out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
 }
+// smooth red(0)→amber(50)→green(100) scale; returns [r,g,b]. 'good' is the score AFTER inversion.
+function scoreRGB(good){
+  good=Math.max(0,Math.min(100,good));
+  // red #E5484D (229,72,77) → amber #F2B705 (242,183,5) → lime/green #B6D900 (182,217,0)
+  const stops=[[0,229,72,77],[50,242,183,5],[100,182,217,0]];
+  let a=stops[0],b=stops[stops.length-1];
+  for(let i=0;i<stops.length-1;i++){if(good>=stops[i][0]&&good<=stops[i+1][0]){a=stops[i];b=stops[i+1];break;}}
+  const span=b[0]-a[0]||1, t=(good-a[0])/span;
+  return [Math.round(a[1]+(b[1]-a[1])*t),Math.round(a[2]+(b[2]-a[2])*t),Math.round(a[3]+(b[3]-a[3])*t)];
+}
 function srcBar(label,val,invert,desc){
   val=Math.max(0,Math.min(100,Math.round(val||0)));
-  // invert=true means high value is BAD (supply risk) → colour red when high
-  const good=invert?(100-val):val;
-  const col=good>=66?"var(--lime)":good>=33?"#FFB800":"#FF6B6B";
-  return `<div style="margin:11px 0;font-size:12.5px"><div style="display:flex;justify-content:space-between"><span>${ciEsc(label)}</span><span style="color:var(--muted)">${val}</span></div><div style="height:7px;background:var(--line);border-radius:4px;margin-top:4px"><div style="height:7px;width:${Math.max(3,val)}%;background:${col};border-radius:4px"></div></div>${desc?`<div style="color:var(--muted);font-size:11px;line-height:1.4;margin-top:4px">${ciEsc(desc)}</div>`:""}</div>`;
+  const good=invert?(100-val):val; // invert=true means high value is BAD (supply risk)
+  const [r,g,b]=scoreRGB(good);
+  return `<div style="margin:11px 0;font-size:12.5px"><div style="display:flex;justify-content:space-between"><span>${ciEsc(label)}</span><span style="color:var(--muted)">${val}</span></div><div style="height:7px;background:var(--line);border-radius:4px;margin-top:4px"><div style="height:7px;width:${Math.max(3,val)}%;background:rgb(${r},${g},${b});border-radius:4px"></div></div>${desc?`<div style="color:var(--muted);font-size:11px;line-height:1.4;margin-top:4px">${ciEsc(desc)}</div>`:""}</div>`;
 }
 function renderSourcing(d,item){
   const out=document.getElementById("src-out");
@@ -2112,87 +2132,102 @@ async function sourcingPDF(){
   await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:"mm",format:"a4"});
-  const W=210,H=297,M=20;let y;
-  function stamp(){
-    doc.setDrawColor(214,255,0);doc.setLineWidth(0.9);
-    doc.roundedRect(7,7,W-14,H-14,3,3);
-    doc.setFontSize(8);doc.setTextColor(140);doc.setFont("helvetica","normal");
-    doc.text("Created with BuyrWorld — buyrworld.com",W/2,H-11,{align:"center"});
-    doc.setFont("helvetica","bold");doc.setFontSize(9);
-    doc.setTextColor(17,17,17);doc.text("BUYR",W-31,H-11);
-    doc.setTextColor(112,134,0);doc.text("WORLD",W-22,H-11);
+  const W=210,H=297,M=22;let y;
+  const INK=[34,34,34], MUT=[120,120,120], FAINT=[160,160,160], OLIVE=[96,112,0];
+  function frame(){
+    doc.setDrawColor(214,214,214);doc.setLineWidth(0.4);
+    doc.rect(10,10,W-20,H-20);
   }
-  function newPage(){doc.addPage();stamp();y=M;}
+  function foot(){
+    doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(150,150,150);
+    doc.text("Created with BuyrWorld · buyrworld.com",M,H-13);
+    doc.setFont("helvetica","bold");
+    doc.setTextColor(34,34,34);doc.text("BUYR",W-M-15,H-13);
+    doc.setTextColor(96,112,0);doc.text("WORLD",W-M-7.5,H-13);
+  }
+  function newPage(){doc.addPage();frame();foot();y=M+4;}
   function need(mm){if(y>H-mm)newPage();}
-  function head(t){need(30);y+=3;doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(90,107,0);doc.text(t,M,y);y+=6;doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(40);}
-  function para(t){doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(40);const wr=doc.splitTextToSize(t,W-2*M);for(const wl of wr){need(20);doc.text(wl,M,y);y+=5;}}
-  function bullet(t){doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(40);const wr=doc.splitTextToSize(t,W-2*M-4);let first=true;for(const wl of wr){need(20);doc.text(first?"•":" ",M,y);doc.text(wl,M+4,y);y+=5;first=false;}}
-  stamp();y=M;
-  doc.setFont("helvetica","bold");doc.setFontSize(17);doc.setTextColor(17,17,17);doc.text("BUYR",M,y+2);
-  doc.setTextColor(90,107,0);doc.text("WORLD",M+17.5,y+2);
-  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(140);
-  doc.text("The Home of Modern Procurement",M,y+7);
-  doc.setDrawColor(90,107,0);doc.setLineWidth(1);doc.line(M,y+11,W-M,y+11);
-  y+=20;
-  doc.setFont("helvetica","bold");doc.setFontSize(15);doc.setTextColor(17,17,17);
-  doc.text("SUPPLY MARKET REPORT",M,y);y+=8;
-  doc.setFontSize(11);doc.setFont("helvetica","bold");doc.setTextColor(60);
-  const titleWr=doc.splitTextToSize(R.item||"",W-2*M);for(const wl of titleWr){doc.text(wl,M,y);y+=6;}
-  doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(120);
-  doc.text(`Prepared ${R.at} · web-searched market intelligence`,M,y);y+=8;
-  // Market read scores
-  head("MARKET READ");
+  function rule(){doc.setDrawColor(225,225,225);doc.setLineWidth(0.3);doc.line(M,y,W-M,y);}
+  function head(t){need(34);y+=5;doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(96,112,0);doc.setCharSpace(0.6);doc.text(t.toUpperCase(),M,y);doc.setCharSpace(0);y+=2.5;rule();y+=5;doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(60,60,60);}
+  function para(t,size,col){doc.setFont("helvetica","normal");doc.setFontSize(size||9.5);doc.setTextColor.apply(doc,col||[60,60,60]);const wr=doc.splitTextToSize(t,W-2*M);for(const wl of wr){need(18);doc.text(wl,M,y);y+=(size&&size<9?4:4.8);}}
+  function bullet(t){doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(55,55,55);const wr=doc.splitTextToSize(t,W-2*M-5);let first=true;for(const wl of wr){need(18);if(first){doc.setFillColor(96,112,0);doc.circle(M+1,y-1.1,0.7,"F");}doc.text(wl,M+5,y);y+=4.8;first=false;}y+=1;}
+
+  frame();foot();y=M+2;
+  // Masthead
+  doc.setFont("helvetica","bold");doc.setFontSize(19);doc.setTextColor(34,34,34);doc.text("BUYR",M,y+3);
+  const bw=doc.getTextWidth("BUYR");doc.setTextColor(96,112,0);doc.text("WORLD",M+bw,y+3);
+  doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(150,150,150);doc.setCharSpace(0.5);
+  doc.text("THE HOME OF MODERN PROCUREMENT",M,y+8);doc.setCharSpace(0);
+  y+=15;
+  // Title block
+  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(150,150,150);doc.setCharSpace(0.8);
+  doc.text("SUPPLY MARKET REPORT",M,y);doc.setCharSpace(0);y+=8;
+  doc.setFont("helvetica","bold");doc.setFontSize(19);doc.setTextColor(34,34,34);
+  const titleWr=doc.splitTextToSize(R.item||"",W-2*M);for(const wl of titleWr){doc.text(wl,M,y);y+=8;}
+  doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(150,150,150);
+  doc.text(`Prepared ${R.at}  ·  web-searched market intelligence`,M,y);y+=4;
+
+  // Market read
+  head("Market read");
+  const barDesc={"Market depth":"Number of capable suppliers — higher means more choice and competitive tension.","Supply risk":"Risk of disruption or single-source exposure — lower is safer.","UK / EU availability":"How well it can be sourced close to home — higher means less reliance on distant imports.","Price competitiveness":"How contestable pricing is — higher means more room to negotiate."};
   const bars=[["Market depth",sc.market_depth,false],["Supply risk",sc.supply_risk,true],["UK / EU availability",sc.uk_eu_availability,false],["Price competitiveness",sc.price_competitiveness,false]];
   bars.forEach(([lab,val,inv])=>{
     val=Math.max(0,Math.min(100,Math.round(val||0)));
     const good=inv?(100-val):val;
-    const c=good>=66?[120,150,0]:good>=33?[200,140,0]:[200,60,60];
-    need(16);
-    doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(40);
-    doc.text(lab,M,y);doc.text(String(val),W-M,y,{align:"right"});y+=2;
-    doc.setFillColor(225,225,225);doc.roundedRect(M,y,W-2*M,2.4,1,1,"F");
-    doc.setFillColor(c[0],c[1],c[2]);doc.roundedRect(M,y,(W-2*M)*Math.max(3,val)/100,2.4,1,1,"F");
-    y+=7;
+    const c=scoreRGB(good);
+    need(22);
+    doc.setFont("helvetica","bold");doc.setFontSize(9.5);doc.setTextColor(45,45,45);
+    doc.text(lab,M,y);
+    doc.setFont("helvetica","bold");doc.text(String(val),W-M,y,{align:"right"});y+=2.2;
+    doc.setFillColor(232,232,232);doc.roundedRect(M,y,W-2*M,2.2,1.1,1.1,"F");
+    doc.setFillColor(c[0],c[1],c[2]);doc.roundedRect(M,y,(W-2*M)*Math.max(3,val)/100,2.2,1.1,1.1,"F");
+    y+=4.5;
+    doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(135,135,135);
+    const wr=doc.splitTextToSize(barDesc[lab]||"",W-2*M);for(const wl of wr){doc.text(wl,M,y);y+=3.6;}
+    y+=2.5;
   });
   if(d.market_structure){y+=1;para(d.market_structure);}
-  // Where to look
-  if((d.where_to_look||[]).length){head("WHERE TO LOOK (SAFE DIRECTION)");(d.where_to_look||[]).forEach(bullet);}
-  // Suppliers
-  head("NAMED CANDIDATE SUPPLIERS");
-  doc.setFont("helvetica","italic");doc.setFontSize(8.5);doc.setTextColor(120);
-  para("Leads found in live web search — verify each independently (capability, certifications, quality systems, trading status) before contacting or relying on them. Criteria ticks reflect what each listing states, not verified fact.");
-  doc.setFont("helvetica","normal");
+
+  if((d.where_to_look||[]).length){head("Where to look · safe direction");(d.where_to_look||[]).forEach(bullet);}
+
+  head("Named candidate suppliers");
+  para("Leads found in live web search. Verify each independently — capability, certifications, quality systems and trading status — before contacting or relying on them. Criteria marks below reflect what each listing states, not verified fact.",8,[135,135,135]);
+  y+=1;
   const sups=d.suppliers||[];
   if(sups.length){sups.forEach(s=>{
-    need(26);y+=2;
-    doc.setFont("helvetica","bold");doc.setFontSize(10.5);doc.setTextColor(17,17,17);
-    doc.text(`${s.name||"—"}${s.country?"  ("+s.country+")":""}`,M,y);y+=5;
-    doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(50);
-    if(s.why){const wr=doc.splitTextToSize(s.why,W-2*M);for(const wl of wr){need(18);doc.text(wl,M,y);y+=4.6;}}
+    need(30);y+=2.5;
+    doc.setFont("helvetica","bold");doc.setFontSize(10.5);doc.setTextColor(34,34,34);
+    doc.text(s.name||"—",M,y);
+    if(s.country){doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(150,150,150);doc.text(s.country,W-M,y,{align:"right"});}
+    y+=4.8;
+    if(s.why){doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(60,60,60);const wr=doc.splitTextToSize(s.why,W-2*M);for(const wl of wr){need(16);doc.text(wl,M,y);y+=4.3;}}
     if((R.crit||[]).length){
       const ment=(s.mentions||[]).join(" ").toLowerCase();
-      const parts=R.crit.map(c=>{const hit=ment.includes(c.toLowerCase())||(s.mentions||[]).some(m=>m.toLowerCase().includes(c.toLowerCase()));return (hit?"[mentioned] ":"[ask] ")+c;});
-      doc.setFontSize(8.5);doc.setTextColor(110);
-      const wr=doc.splitTextToSize("Against your requirements: "+parts.join("  ·  "),W-2*M);for(const wl of wr){need(16);doc.text(wl,M,y);y+=4.2;}
+      doc.setFontSize(8.5);
+      R.crit.forEach(c=>{
+        const hit=ment.includes(c.toLowerCase())||(s.mentions||[]).some(m=>m.toLowerCase().includes(c.toLowerCase()));
+        need(14);
+        if(hit){doc.setTextColor(96,112,0);doc.setFont("helvetica","bold");doc.text("\u2713",M,y);doc.setFont("helvetica","normal");doc.setTextColor(70,70,70);doc.text(`${c}  — mentioned in listing`,M+5,y);}
+        else{doc.setTextColor(190,140,0);doc.setFont("helvetica","bold");doc.text("?",M+0.6,y);doc.setFont("helvetica","normal");doc.setTextColor(120,120,120);doc.text(`${c}  — not stated, ask the supplier`,M+5,y);}
+        y+=4.2;
+      });
     }
-    if(s.url){doc.setFontSize(8.5);doc.setTextColor(90,107,0);doc.text(`Website: ${s.url}`,M,y);y+=4.2;}
-    if(s.source){doc.setFontSize(8);doc.setTextColor(140);doc.text(`Source: ${s.source}`,M,y);y+=4.2;}
-    y+=1.5;
+    if(s.url){doc.setFontSize(8.5);doc.setTextColor(96,112,0);doc.text(`Website: ${s.url}`,M,y);y+=4.2;}
+    if(s.source){doc.setFontSize(8);doc.setTextColor(155,155,155);doc.text(`Source: ${s.source}`,M,y);y+=4.2;}
+    y+=2;
   });}else{para("No specific companies surfaced in the live search — use the supplier types and regions above as your search terms.");}
-  // Selection criteria
-  if((d.selection_criteria||[]).length){head("EVALUATE SUPPLIERS ON");(d.selection_criteria||[]).forEach(bullet);}
-  // Logistics
-  if(d.logistics){head("LOGISTICS & INCOTERMS (DIRECTIONAL)");para(d.logistics);doc.setFont("helvetica","italic");doc.setFontSize(8.5);doc.setTextColor(120);para("Freight is too volatile to quote a price — get live quotes from carriers/forwarders for your actual route and volume.");doc.setFont("helvetica","normal");}
-  // Watch-outs
-  if((d.watchouts||[]).length){head("MARKET WATCH-OUTS");(d.watchouts||[]).forEach(bullet);}
-  // First moves
-  if((d.first_moves||[]).length){head("YOUR FIRST MOVES");(d.first_moves||[]).forEach(bullet);}
-  // Disclaimer
-  need(30);y+=4;doc.setDrawColor(200);doc.setLineWidth(0.3);doc.line(M,y,W-M,y);y+=5;
-  doc.setFont("helvetica","italic");doc.setFontSize(8);doc.setTextColor(130);
-  para("This report is AI-generated from live web sources at the time of search. Named companies are unverified leads — confirm capability, certifications and status before contacting or relying on any supplier. Not a substitute for your own due diligence. Not investment advice.");
+
+  if((d.selection_criteria||[]).length){head("Evaluate suppliers on");(d.selection_criteria||[]).forEach(bullet);}
+  if(d.logistics){head("Logistics & Incoterms · directional");para(d.logistics);y+=1;para("Freight is too volatile to quote a price — get live quotes from carriers or forwarders for your actual route and volume.",8,[135,135,135]);}
+  if((d.watchouts||[]).length){head("Market watch-outs");(d.watchouts||[]).forEach(bullet);}
+  if((d.first_moves||[]).length){head("Your first moves");(d.first_moves||[]).forEach(bullet);}
+
+  need(34);y+=5;rule();y+=5;
+  para("This report is AI-generated from live web sources at the time of search. Named companies are unverified leads — confirm capability, certifications and status before contacting or relying on any supplier. Not a substitute for your own due diligence. Not investment advice.",7.5,[150,150,150]);
+
   const n=doc.getNumberOfPages();
-  for(let p=1;p<=n;p++){doc.setPage(p);doc.setFontSize(8);doc.setTextColor(140);doc.text(`Page ${p} of ${n}`,W-M,H-9,{align:"right"});}
+  for(let p=1;p<=n;p++){doc.setPage(p);doc.setFontSize(7.5);doc.setTextColor(150,150,150);doc.text(`Page ${p} of ${n}`,W/2,H-13,{align:"center"});}
+  // restore the BUYRWORLD footer wordmark on each page (drawn after page numbers overwrite area)
   doc.save(`BuyrWorld-Supply-Market-${(R.item||"report").slice(0,34).replace(/[^a-z0-9]+/gi,"-")}.pdf`);
 }
 
