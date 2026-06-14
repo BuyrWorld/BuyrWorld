@@ -723,9 +723,12 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Indicative fully-loaded manufacturing labour costs by country — directional for sourcing comparisons and should-cost models.</p>
         <div id="mi-labour"></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center">
-          <select class="bwin" id="mi-lab-c" style="max-width:240px"></select>
+          <select class="bwin" id="mi-lab-c" style="max-width:220px" onchange="labDash()"></select>
+          <span style="color:var(--muted);font-size:12px">vs</span>
+          <select class="bwin" id="mi-lab-base" style="max-width:180px" onchange="labDash()"></select>
           <button class="btn btn-ghost" style="padding:9px 14px;font-size:13px" onclick="runLabour()">Live check →</button>
         </div>
+        <div id="mi-lab-dash" style="margin-top:14px"></div>
         <div id="mi-lab-out" style="margin-top:12px"></div>
       </div>
     </div>
@@ -2463,6 +2466,8 @@ function renderLabour(){
     </div>
     <p style="color:var(--muted);font-size:11px;margin-top:12px">Indicative 2025 ranges, fully loaded (wages + social costs), general manufacturing — varies by sector, skill and region. <span id="lab-rate-note">Fetching live GBP rate…</span> Verify before building business cases.</p>`;
   document.getElementById("mi-lab-c").innerHTML=LABOUR.map(([c])=>`<option>${c}</option>`).join("");
+  const baseSel=document.getElementById("mi-lab-base");
+  if(baseSel){baseSel.innerHTML=LABOUR.map(([c])=>`<option ${c==="United Kingdom"?"selected":""}>${c}</option>`).join("");}
   (()=>{
     // Use an indicative USD→GBP rate. Live third-party FX APIs are blocked by CORS in-browser,
     // so we display an indicative conversion and tell the user to verify (the Live check gives current detail).
@@ -2471,6 +2476,54 @@ function renderLabour(){
     LABOUR.forEach(([c,lo,hi],i)=>{const el=document.getElementById("lab-gbp-"+i);if(el)el.textContent=`£${Math.round(lo*r)}–${Math.round(hi*r)}`;});
     const n=document.getElementById("lab-rate-note");if(n)n.textContent=`Converted at ${src}.`;
   })();
+  labDash();
+}
+// Labour comparison dashboard — built from the trustworthy static table (no AI), updates on selector change
+function labDash(){
+  const host=document.getElementById("mi-lab-dash"); if(!host)return;
+  const cSel=document.getElementById("mi-lab-c"), bSel=document.getElementById("mi-lab-base");
+  if(!cSel||!bSel)return;
+  const country=cSel.value, base=bSel.value;
+  const find=n=>LABOUR.find(x=>x[0]===n);
+  const cc=find(country), bb=find(base);
+  if(!cc||!bb)return;
+  const mid=x=>(x[1]+x[2])/2;
+  const cMid=mid(cc), bMid=mid(bb);
+  const mult=bMid?cMid/bMid:0;
+  const r=0.79; // indicative USD→GBP
+  const diffPerHr=(cMid-bMid)*r; // GBP/hr premium(+) or saving(−) vs baseline
+  // rank: 1 = most expensive
+  const sorted=[...LABOUR].sort((a,b)=>mid(b)-mid(a));
+  const rank=sorted.findIndex(x=>x[0]===country)+1;
+  // chart set: selected country + baseline + the two table-neighbours of the selected country (by cost)
+  const idx=sorted.findIndex(x=>x[0]===country);
+  const picks=new Set([country,base]);
+  if(sorted[idx-1])picks.add(sorted[idx-1][0]);
+  if(sorted[idx+1])picks.add(sorted[idx+1][0]);
+  const chartData=[...picks].map(find).filter(Boolean).sort((a,b)=>mid(b)-mid(a));
+  const maxMid=Math.max(...chartData.map(mid));
+  const multColor = mult<1 ? "var(--lime)" : mult>1.3 ? "#FF6B6B" : "#FFB800";
+  const cmpWord = mult<0.95?`cheaper than ${base}` : mult>1.05?`more than ${base}` : `≈ same as ${base}`;
+  const bars=chartData.map(row=>{
+    const m=mid(row), isC=row[0]===country, isB=row[0]===base;
+    const col=isC?"var(--lime)":isB?"#7a8a3a":"var(--line)";
+    const lab=row[0]+(isB?" (baseline)":"");
+    return `<div style="margin:7px 0;font-size:12px">
+      <div style="display:flex;justify-content:space-between"><span style="color:${isC?"var(--text)":"var(--muted)"}">${ciEsc(lab)}</span><span style="color:var(--muted);font-family:'Space Grotesk'">$${row[1]}–${row[2]}/hr</span></div>
+      <div style="height:8px;background:var(--line);border-radius:4px;margin-top:3px"><div style="height:8px;width:${Math.max(3,m/maxMid*100).toFixed(0)}%;background:${col};border-radius:4px"></div></div>
+    </div>`;
+  }).join("");
+  host.innerHTML=`
+  <div class="grid3" style="gap:12px;margin-bottom:14px">
+    <div class="card" style="padding:14px;text-align:center"><div style="font-family:'Space Grotesk';font-weight:700;font-size:24px;color:${multColor}">${mult.toFixed(2)}×</div><div style="color:var(--muted);font-size:11.5px;margin-top:2px">${ciEsc(country)} vs ${ciEsc(base)}<br>${cmpWord}</div></div>
+    <div class="card" style="padding:14px;text-align:center"><div style="font-family:'Space Grotesk';font-weight:700;font-size:24px;color:${diffPerHr<0?"var(--lime)":"var(--text)"}">${diffPerHr<0?"−":"+"}£${Math.abs(diffPerHr).toFixed(2)}</div><div style="color:var(--muted);font-size:11.5px;margin-top:2px">per hour ${diffPerHr<0?"saving":"premium"}<br>vs ${ciEsc(base)} (indicative)</div></div>
+    <div class="card" style="padding:14px;text-align:center"><div style="font-family:'Space Grotesk';font-weight:700;font-size:24px;color:var(--text)">#${rank}<span style="font-size:14px;color:var(--muted)"> / ${LABOUR.length}</span></div><div style="color:var(--muted);font-size:11.5px;margin-top:2px">cost rank<br>(1 = most expensive)</div></div>
+  </div>
+  <div class="card" style="padding:14px">
+    <div class="eyebrow" style="margin-bottom:10px">${ciEsc(country)} vs ${ciEsc(base)} & neighbours</div>
+    ${bars}
+    <p style="color:var(--muted);font-size:10.5px;margin-top:8px">Indicative fully-loaded ranges from the table above; midpoints used for comparison. £ figures at ~£0.79/USD. Directional — verify before commitments.</p>
+  </div>`;
 }
 async function runAIWatch(){
   const out=document.getElementById("mi-ai-out");
@@ -2487,7 +2540,7 @@ async function runLabour(){
   const out=document.getElementById("mi-lab-out");
   startLoader("mi-lab-out",["Searching labour-cost sources for "+c+"…","Reading the latest data…","Writing your sourcing read…"],45);
   try{
-    const text=await callAIWeb(`Do ONE quick web search for the current manufacturing labour-cost picture in ${c}, then answer concisely. For a UK sourcing audience, plain text, UK English, no markdown, under 150 words. Two short paragraphs only:\n1) COST & TREND — typical fully-loaded manufacturing labour cost (rough figure if found) and whether wages are rising, with one source named.\n2) SOURCING READ — what this means if you're sourcing from ${c} this year (availability/skills if notable). Do not invent figures; if not found in the search, say the range is indicative and to verify. Keep it tight to finish quickly.`);
+    const text=await callAIWeb(`Do ONE quick web search for the MOST RECENT manufacturing labour-cost data for ${c} — prioritise 2026, then 2025 figures. Today is ${new Date().getFullYear()}. Answer concisely for a UK sourcing audience, plain text, UK English, no markdown, under 160 words. Two short paragraphs:\n1) COST & TREND — lead with the most recent figure you can find and ALWAYS state its year explicitly. Prefer current-year/last-year data; only cite older official benchmarks (e.g. 2020) if no recent figure exists, and if so say plainly that the latest hard figure is from that earlier year and more recent data wasn't found. Note the recent wage trend, with one source named.\n2) SOURCING READ — what this means if you're sourcing from ${c} this year (availability/skills if notable). Do not invent figures; if recent data isn't found, say the range is indicative and to verify. Keep it tight to finish quickly.`);
     MI.lab={country:c,text,at:miStamp()};
     out.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="tag tag-lime">${ciEsc(c)}</span><span style="color:var(--muted);font-size:11px">Generated ${MI.lab.at}</span></div>${miBox(text)}`;
     miShowExports();
