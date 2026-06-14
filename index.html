@@ -1772,6 +1772,13 @@ function ciClean(t){
   let s=t.replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/^---+\s*$/gm,"").replace(/\s*---\s*/g,"\n\n");
   s=s.replace(/(?:^|\s)(\d{1,2}\.\s*)?(TOP 5 RISKS|TOP 5 NEGOTIATION OPPORTUNITIES|MISSING CLAUSES|ESTIMATED COMMERCIAL EXPOSURE|RECOMMENDED NEXT STEPS|DISCLAIMER|EXECUTIVE SUMMARY|OVERALL RISK RATING|CONTRACT HEALTH SCORE|KEY COMMERCIAL RISKS|PROBLEM CLAUSES|SUPPLIER-FAVOURABLE LANGUAGE|PROCUREMENT NEGOTIATION POINTS|SUGGESTED REPLACEMENT WORDING|PRIORITY ACTIONS BEFORE SIGNING|REDLINED CONTRACT|CHANGE RATIONALE|COVER NOTE|NEGOTIATION RATIONALE)\b/g,"\n\n$1$2");
   s=s.replace(/([^\n])\s(\d{1,2})\.\s+(?=[A-Z(£"])/g,"$1\n$2. ");
+  // Join lines broken mid-sentence: a single newline whose next line continues the sentence
+  // (i.e. doesn't start a new block). Protect double-newlines (paragraph breaks) first.
+  s=s.replace(/\n{2,}/g,"\u0000");                 // mark real paragraph breaks
+  s=s.replace(/\n(?!\d{1,2}\.\s)/g," ");           // join single newlines, unless next line is a numbered item
+  s=s.replace(/\u0000/g,"\n\n");                    // restore paragraph breaks
+  s=s.replace(/[ \t]{2,}/g," ");                    // tidy doubled spaces
+  s=s.replace(/\s+([,.;:])/g,"$1");                 // remove space before punctuation (from joined lines)
   return s.replace(/\n{3,}/g,"\n\n").trim();
 }
 function ciBodyHTML(t){
