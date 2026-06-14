@@ -2192,12 +2192,13 @@ async function sourcingPDF(){
     need(22);
     doc.setFont("helvetica","bold");doc.setFontSize(9.5);doc.setTextColor(40,40,40);
     doc.text(lab,M,y);
-    // right side: coloured word + score
+    // right side: coloured word + score, with a guaranteed gap between them
     doc.setFont("helvetica","bold");doc.setFontSize(9.5);
     const scoreTxt=String(val);
-    const wWord=doc.getTextWidth(word+"  ");
-    doc.setTextColor(c[0],c[1],c[2]);doc.text(word,W-M-doc.getTextWidth("  "+scoreTxt),y,{align:"right"});
+    const scoreW=doc.getTextWidth(scoreTxt);
+    const GAP=4; // mm gap between word and score
     doc.setTextColor(70,70,70);doc.text(scoreTxt,W-M,y,{align:"right"});
+    doc.setTextColor(c[0],c[1],c[2]);doc.text(word,W-M-scoreW-GAP,y,{align:"right"});
     y+=2.4;
     doc.setFillColor(228,228,228);doc.roundedRect(M,y,W-2*M,2.4,1.2,1.2,"F");
     doc.setFillColor(c[0],c[1],c[2]);doc.roundedRect(M,y,(W-2*M)*Math.max(3,val)/100,2.4,1.2,1.2,"F");
