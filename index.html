@@ -2110,20 +2110,35 @@ async function rfqPDF(){
   const doc=new jsPDF({unit:"mm",format:"a4"});
   const W=210,H=297,M=20;let y;
   function stamp(){
-    doc.setDrawColor(214,255,0);doc.setLineWidth(0.9);
-    doc.roundedRect(7,7,W-14,H-14,3,3);
-    doc.setFontSize(8);doc.setTextColor(140);doc.setFont("helvetica","normal");
-    doc.text("Created with BuyrWorld — buyrworld.com",W/2,H-11,{align:"center"});
-    doc.setFont("helvetica","bold");doc.setFontSize(9);
-    doc.setTextColor(17,17,17);doc.text("BUYR",W-31,H-11);
-    doc.setTextColor(112,134,0);doc.text("WORLD",W-22,H-11);
+    doc.setDrawColor(214,214,214);doc.setLineWidth(0.4);
+    doc.rect(10,10,W-20,H-20);
+    doc.setFontSize(7.5);doc.setTextColor(150);doc.setFont("helvetica","normal");
+    doc.text("Created with BuyrWorld · buyrworld.com",M,H-13);
+    // boxed wordmark (lime on near-black, matching the real logo) bottom-right
+    const bx=W-M-34, by=H-17.5, bw2=34, bh=7;
+    doc.setFillColor(12,12,12);doc.roundedRect(bx,by,bw2,bh,1.4,1.4,"F");
+    doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setCharSpace(-0.2);
+    doc.setTextColor(237,237,237);doc.text("BUYR",bx+4,by+4.9);
+    const w1=doc.getTextWidth("BUYR");
+    doc.setTextColor(198,232,0);doc.text("WORLD",bx+4+w1,by+4.9);
+    doc.setCharSpace(0);
   }
   function newPage(){doc.addPage();stamp();y=M;}
   stamp();y=M;
-  doc.setFont("helvetica","bold");doc.setFontSize(17);doc.setTextColor(17,17,17);doc.text("BUYR",M,y+2);
-  doc.setTextColor(90,107,0);doc.text("WORLD",M+17.5,y+2);
-  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(140);
-  doc.text("The Home of Modern Procurement",M,y+7);
+  // Masthead — boxed wordmark on near-black so the real lime reads correctly
+  (function(){
+    const bx=M, by=y-3, bh=11;
+    doc.setFont("helvetica","bold");doc.setFontSize(20);doc.setCharSpace(-0.4);
+    const w1=doc.getTextWidth("BUYR"), w2=doc.getTextWidth("WORLD");
+    const bw2=w1+w2+10;
+    doc.setFillColor(12,12,12);doc.roundedRect(bx,by,bw2,bh,2,2,"F");
+    doc.setTextColor(237,237,237);doc.text("BUYR",bx+5,by+7.6);
+    doc.setTextColor(198,232,0);doc.text("WORLD",bx+5+w1,by+7.6);
+    doc.setCharSpace(0);
+  })();
+  doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(150);doc.setCharSpace(1.1);
+  doc.text("THE HOME OF MODERN PROCUREMENT",M,y+12.5);doc.setCharSpace(0);
+  y+=4;
   doc.setDrawColor(90,107,0);doc.setLineWidth(1);doc.line(M,y+11,W-M,y+11);
   y+=20;
   doc.setFont("helvetica","bold");doc.setFontSize(15);doc.setTextColor(17,17,17);
@@ -2165,9 +2180,14 @@ async function sourcingPDF(){
   function foot(){
     doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(150,150,150);
     doc.text("Created with BuyrWorld · buyrworld.com",M,H-13);
-    doc.setFont("helvetica","bold");
-    doc.setTextColor(34,34,34);doc.text("BUYR",W-M-15,H-13);
-    doc.setTextColor(96,112,0);doc.text("WORLD",W-M-7.5,H-13);
+    // boxed wordmark (lime on near-black) bottom-right
+    const bx=W-M-34, by=H-17.5, bw2=34, bh=7;
+    doc.setFillColor(12,12,12);doc.roundedRect(bx,by,bw2,bh,1.4,1.4,"F");
+    doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setCharSpace(-0.2);
+    doc.setTextColor(237,237,237);doc.text("BUYR",bx+4,by+4.9);
+    const w1=doc.getTextWidth("BUYR");
+    doc.setTextColor(198,232,0);doc.text("WORLD",bx+4+w1,by+4.9);
+    doc.setCharSpace(0);
   }
   function newPage(){doc.addPage();frame();foot();y=M+4;}
   function need(mm){if(y>H-mm)newPage();}
@@ -2177,15 +2197,20 @@ async function sourcingPDF(){
   function bullet(t){doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(55,55,55);const wr=doc.splitTextToSize(t,W-2*M-5);let first=true;for(const wl of wr){need(18);if(first){doc.setFillColor(96,112,0);doc.circle(M+1,y-1.1,0.7,"F");}doc.text(wl,M+5,y);y+=4.8;first=false;}y+=1;}
 
   frame();foot();y=M+2;
-  // Masthead — echoes the BUYRWORLD wordmark (Space Grotesk unavailable in jsPDF core fonts;
-  // approximated with bold Helvetica, tight spacing and the brand colour split)
-  doc.setFont("helvetica","bold");doc.setFontSize(22);doc.setCharSpace(-0.4);
-  doc.setTextColor(20,20,20);doc.text("BUYR",M,y+3);
-  const bw=doc.getTextWidth("BUYR");doc.setTextColor(122,150,0);doc.text("WORLD",M+bw,y+3);
-  doc.setCharSpace(0);
+  // Masthead — boxed wordmark on near-black so the real lime reads correctly (matches logo)
+  (function(){
+    const bx=M, by=y-3, bh=11;
+    doc.setFont("helvetica","bold");doc.setFontSize(20);doc.setCharSpace(-0.4);
+    const w1=doc.getTextWidth("BUYR"), w2=doc.getTextWidth("WORLD");
+    const bw2=w1+w2+10;
+    doc.setFillColor(12,12,12);doc.roundedRect(bx,by,bw2,bh,2,2,"F");
+    doc.setTextColor(237,237,237);doc.text("BUYR",bx+5,by+7.6);
+    doc.setTextColor(198,232,0);doc.text("WORLD",bx+5+w1,by+7.6);
+    doc.setCharSpace(0);
+  })();
   doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(150,150,150);doc.setCharSpace(1.2);
-  doc.text("THE HOME OF MODERN PROCUREMENT",M,y+8.5);doc.setCharSpace(0);
-  y+=16;
+  doc.text("THE HOME OF MODERN PROCUREMENT",M,y+13);doc.setCharSpace(0);
+  y+=18;
   // Title block
   doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(120,120,120);doc.setCharSpace(0.8);
   doc.text("SUPPLY MARKET REPORT",M,y);doc.setCharSpace(0);y+=8;
