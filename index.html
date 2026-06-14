@@ -421,7 +421,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       </div>
       <div class="grid2" style="margin-bottom:10px">
         <input class="bwin" id="src-spec" placeholder="Key requirements, e.g. ISO 9001, IATF 16949, certs (optional)">
-        <div></div>
+        <input class="bwin" id="src-detail" placeholder="Grade, form, brand, colour, finish… (optional)">
       </div>
       <div class="grid2" style="margin-bottom:10px">
         <select class="bwin" id="src-incoterm">
@@ -1931,17 +1931,17 @@ async function runRFQGen(){
 // ---------- Supplier Discovery (web-grounded, visual) ----------
 async function runSourcing(){
   const v=id=>document.getElementById(id).value.trim();
-  const item=v("src-item"),region=v("src-region"),qty=v("src-qty"),unit=v("src-unit"),value=v("src-value"),spec=v("src-spec"),incoterm=v("src-incoterm"),dest=v("src-dest");
+  const item=v("src-item"),region=v("src-region"),qty=v("src-qty"),unit=v("src-unit"),value=v("src-value"),spec=v("src-spec"),detail=v("src-detail"),incoterm=v("src-incoterm"),dest=v("src-dest");
   const out=document.getElementById("src-out");
   if(!item){out.innerHTML='<p style="color:var(--muted);font-size:14px">Tell me what you\'re sourcing to map the market.</p>';return;}
-  window._srcData={item,region,qty,unit,value,spec,incoterm,dest};
+  window._srcData={item,region,qty,unit,value,spec,detail,incoterm,dest};
   window._srcItem=item;
   startLoader("src-out",["Searching live web sources…","Reading what came back…","Mapping the supply market…","Scoring market depth & risk…","Structuring your report…"],30);
   const volStr=qty?`${qty}${unit?" "+unit:""}`:"";
   try{
     const text=await callAIWeb(`You are the BuyrWorld Supplier Discovery engine, a senior UK procurement market analyst. Search the live web NOW and map the supply market for a buyer sourcing:
 ITEM: ${item}
-${region?`PREFERRED REGIONS: ${region}\n`:""}${volStr?`REQUIRED QUANTITY: ${volStr}\n`:""}${value?`TARGET / BUDGET VALUE: ${value}\n`:""}${spec?`KEY REQUIREMENTS: ${spec}\n`:""}${incoterm?`TARGET INCOTERM: ${incoterm}\n`:""}${dest?`DELIVERY DESTINATION: ${dest}\n`:""}
+${region?`PREFERRED REGIONS: ${region}\n`:""}${volStr?`REQUIRED QUANTITY: ${volStr}\n`:""}${value?`TARGET / BUDGET VALUE: ${value}\n`:""}${spec?`KEY REQUIREMENTS: ${spec}\n`:""}${detail?`PRODUCT DETAIL (grade/form/brand/colour/finish): ${detail}\n`:""}${incoterm?`TARGET INCOTERM: ${incoterm}\n`:""}${dest?`DELIVERY DESTINATION: ${dest}\n`:""}
 Return ONLY a JSON object, no other text, no markdown fences. Use this exact shape:
 {
  "market_structure":"3-4 sentences: fragmented vs consolidated, the supplier archetypes (OEMs, contract manufacturers, distributors, machine shops), and where production concentrates geographically and why.",
@@ -2073,6 +2073,8 @@ function sourcingToRFQ(){
     const del=[d.dest,d.incoterm?d.incoterm.split(" — ")[0]:""].filter(Boolean).join(", ");
     set("rfq-del",del);
     set("rfq-qual",d.spec);
+    set("rfq-mat",d.detail);
+    if(d.detail)set("rfq-spec",d.detail);
     // budget/value goes in the 'anything else' context line
     set("rfq-extra",d.value?`Target/budget value: ${d.value}`:"");
     const bk=document.getElementById("rfq-back-sourcing");if(bk)bk.style.display="inline-flex";
