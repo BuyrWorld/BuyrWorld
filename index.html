@@ -229,6 +229,11 @@ header{position:sticky;top:0;z-index:50;background:rgba(12,12,12,.85);backdrop-f
 footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 @media (max-width:860px){.grid3,.grid2{grid-template-columns:1fr}.hero-h{font-size:42px}.hero-flex{flex-direction:column}}
 @media (max-width:760px){.desk-only{display:none}.mob-only{display:block}}
+.bw-loader{padding:4px 0}
+.bw-loader-msg{color:var(--lime);font-family:'Space Grotesk';font-weight:600;font-size:13px;min-height:18px;transition:opacity .35s}
+.bw-loader-track{height:4px;background:var(--line);border-radius:3px;margin-top:10px;overflow:hidden;position:relative;max-width:340px}
+.bw-loader-track::after{content:"";position:absolute;top:0;left:0;height:100%;width:40%;background:var(--lime);border-radius:3px;animation:bwslide 1.25s ease-in-out infinite}
+@keyframes bwslide{0%{left:-40%}100%{left:100%}}
 </style>
 </head>
 <body>
@@ -386,7 +391,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       </div>
       <div class="grid2" style="margin-bottom:10px">
         <div style="display:flex;gap:8px">
-          <input class="bwin" id="src-vol" style="flex:1" placeholder="Annual volume / value, e.g. 50k or £400k (optional)">
+          <input class="bwin" id="src-qty" style="flex:1" placeholder="Required quantity, e.g. 50,000 (optional)">
           <select class="bwin" id="src-unit" style="max-width:130px">
             <option value="">Unit…</option>
             <option>each</option>
@@ -405,10 +410,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
             <option>sheets</option>
             <option>pallets</option>
             <option>hours</option>
-            <option>£ / year</option>
           </select>
         </div>
+        <input class="bwin" id="src-value" placeholder="Target / budget value, e.g. £400k (optional)">
+      </div>
+      <div class="grid2" style="margin-bottom:10px">
         <input class="bwin" id="src-spec" placeholder="Key requirements, e.g. ISO 9001, IATF 16949, certs (optional)">
+        <div></div>
       </div>
       <div class="grid2" style="margin-bottom:10px">
         <select class="bwin" id="src-incoterm">
@@ -1492,6 +1500,23 @@ function runAgent(kind){
   send(fullId(), AGENTS[kind]);
 }
 
+// ---------- Reusable loading animation (cycling messages + indeterminate bar) ----------
+let _bwLoaderTimer=null;
+function startLoader(elId,messages){
+  const el=document.getElementById(elId); if(!el)return;
+  if(_bwLoaderTimer){clearInterval(_bwLoaderTimer);_bwLoaderTimer=null;}
+  const msgs=(messages&&messages.length)?messages:["Working…"];
+  el.innerHTML=`<div class="bw-loader"><div class="bw-loader-msg" id="${elId}-lmsg">${msgs[0]}</div><div class="bw-loader-track"></div></div>`;
+  let i=0;
+  const node=document.getElementById(elId+"-lmsg");
+  _bwLoaderTimer=setInterval(()=>{
+    i++;
+    const m=msgs[Math.min(i,msgs.length-1)]; // hold on the last message until the result replaces it
+    if(node){node.style.opacity="0";setTimeout(()=>{node.textContent=m;node.style.opacity="1";},350);}
+  },2600);
+}
+function stopLoader(){ if(_bwLoaderTimer){clearInterval(_bwLoaderTimer);_bwLoaderTimer=null;} }
+
 // ---------- AI Tools: Defender & Simulator ----------
 async function callAI(prompt){
   const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
@@ -1503,7 +1528,7 @@ async function runDefender(){
   const ctx=document.getElementById("def-context").value.trim();
   const out=document.getElementById("def-out");
   if(!letter){out.innerHTML='<p style="color:var(--muted);font-size:14px">Paste the supplier\'s letter first.</p>';return;}
-  out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Analysing their justification…</p>';
+  startLoader("def-out",["Reading the supplier letter…", "Decomposing their cost claim…", "Finding the weak points…", "Drafting your rebuttal…"]);
   try{
     const text=await callAI(`You are the BuyrWorld Price-Increase Defender, a sharp UK procurement expert. A supplier sent this price-increase letter:\n"""${letter.slice(0,3000)}"""\n${ctx?`Buyer context: ${ctx}.`:""}\nRespond in UK English with EXACTLY this structure:\nFirst line: JUSTIFICATION STRENGTH: NN/100 (how well-evidenced their case is; vague claims with no numbers score low)\nThen sections:\n**Decomposition** — break their claim into input cost components; estimate the justified % using their product's likely cost structure; note any inputs that have fallen.\n**The three weakest points** — the gaps a buyer should attack.\n**Your rebuttal letter** — a professional, firm draft reply requesting the cost breakdown and countering the increase.\n**Counter-proposal** — concrete: a lower justified %, two-way index-linking with a named index, a review date, and one thing to ask for in return (terms, commitment, productivity). Keep total under 450 words.`);
     const m=text.match(/JUSTIFICATION STRENGTH:\s*(\d{1,3})/i);
@@ -1571,7 +1596,7 @@ async function runMinutes(){
   const notes=document.getElementById("min-notes").value.trim();
   const out=document.getElementById("min-out");
   if(!notes){out.innerHTML='<p style="color:var(--muted);font-size:14px">Paste your meeting notes first.</p>';return;}
-  out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Turning scribbles into minutes…</p>';
+  startLoader("min-out",["Reading your notes…", "Extracting decisions & actions…", "Assigning owners and dates…", "Formatting clean minutes…"]);
   try{
     const text=await callAI(`You are the BuyrWorld Meeting Summariser. Turn these raw meeting notes into clean, email-ready minutes in UK English:\n"""${notes.slice(0,6000)}"""\nRules: PLAIN TEXT ONLY — no markdown symbols, no asterisks, no hashes (it will be pasted into an email). Use this exact structure with blank lines between sections:\nSUBJECT: <one-line email subject with meeting name and date if known>\n\nSUMMARY\n- 2 to 4 short bullets using the hyphen character\n\nDECISIONS\n- each decision on one line (write "None recorded" if none)\n\nACTIONS\n- one line per action in the format: <Task> | Owner: <name or TBC> | Dept: <department or TBC> | Due: <date or estimated date or TBC>\nOnly estimate a due date when the notes imply a timeframe (e.g. "by Friday", "this week") — convert it to an actual date where possible; otherwise write TBC. Never invent owners or departments not implied by the notes.\n\nRISKS / PARKING LOT\n- anything raised but not resolved (or "None")\n\nNEXT MEETING\n- date/time if mentioned, otherwise TBC\nKeep the whole thing under 350 words.`);
     window._minutesText=text.trim();
@@ -1646,7 +1671,7 @@ async function runComparator(){
   const out=document.getElementById("q-out");
   if(quoteFiles.length<2){out.innerHTML='<p style="color:var(--muted);font-size:14px">Add at least two quote files first.</p>';return;}
   const ctx=document.getElementById("q-context").value.trim();
-  out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Reading the quotes, normalising, comparing… (~20 seconds)</p>';
+  startLoader("q-out",["Reading the quotes…", "Normalising to landed cost…", "Weighting & scoring suppliers…", "Writing the recommendation…"]);
   const corpus=quoteFiles.map(q=>`=== QUOTE FILE: ${q.name} ===\n${q.text}`).join("\n\n");
   try{
     const text=await callAI(`You are the BuyrWorld Quote Comparator, a senior UK procurement analyst. Compare these supplier quotations:\n${corpus}\n${ctx?`Buyer's stated weightings/assumptions: ${ctx}.`:"No weightings given — use price 40%, quality/compliance 25%, lead time 20%, commercial risk 15% and say so."}\nProduce a comprehensive review in UK English, PLAIN TEXT (no markdown symbols), using EXACTLY this structure:\nRECOMMENDATION: <supplier> — <one decisive line>\n\n1. QUOTE SUMMARY\nOne block per supplier: Supplier | Unit price & volume basis | Currency | Incoterms | Payment terms | Lead time | Validity | Tooling/extras | Anything unusual\n\n2. NORMALISED COMPARISON\nAdjust to like-for-like landed cost: currency, Incoterms (estimate freight ONLY if needed and flag it as an assumption), payment-terms value (state the cost of capital used), tooling amortised over stated volume. Show the working line by line per supplier, then a final comparable cost per unit.\n\n3. WEIGHTED SCORING\nScore each supplier per criterion out of 5 with one-line justification, then weighted totals.\n\n4. RISKS AND GAPS\nPer supplier: missing information, compliance gaps, commercial risks.\n\n5. QUESTIONS TO ASK\n2-3 sharp clarification questions per supplier before award.\n\n6. RECOMMENDATION AND NEGOTIATION ANGLE\nWho, why, and the lever to use with the chosen supplier and the runner-up.\nFlag every assumption explicitly. If data is missing, say TBC rather than inventing it. Under 800 words.`);
@@ -1710,7 +1735,7 @@ function ciText(){
   const pasted=document.getElementById("ci-paste").value.trim();
   return pasted.length>50?pasted.slice(0,13000):_cText;
 }
-function ciBusy(msg){document.getElementById("ci-out").innerHTML=`<p style="color:var(--lime);font-family:'Space Grotesk';font-size:13px">${msg}</p>`;}
+function ciBusy(msgs){startLoader("ci-out", Array.isArray(msgs)?msgs:[msgs]);}
 function ciNeedText(){document.getElementById("ci-out").innerHTML='<p style="color:var(--muted);font-size:14px">Upload a contract or paste its text first.</p>';}
 const CI_DISCLAIMER='<p style="color:var(--muted);font-size:12px;margin-top:10px">Procurement contract intelligence, not legal advice. AI-generated analysis can be incomplete or wrong — have outputs checked by qualified legal counsel before reliance or signature.</p>';
 function ciEsc(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
@@ -1801,7 +1826,7 @@ function ciPrint(){if(!_cLast)return;const w=window.open("","_blank");w.document
 
 async function runContractReview(){
   const t=ciText(); if(!t)return ciNeedText();
-  ciBusy("Reviewing the contract clause by clause… (~25 seconds)");
+  ciBusy(["Reading the contract…","Checking clause by clause…","Spotting risks & gaps…","Writing the review…"]);
   try{
     const text=await callAI(`You are the BuyrWorld Contract Intelligence Agent — a senior UK procurement specialist reviewing a supplier contract from the BUYER'S perspective. Contract text:\n"""${t}"""\nProduce a review in UK English, PLAIN TEXT only (no markdown symbols), with EXACTLY these numbered sections:\n1. EXECUTIVE SUMMARY (3-4 sentences, plain English)\n2. OVERALL RISK RATING: Low / Medium / High — one line why\n3. CONTRACT HEALTH SCORE: NN/100\n4. KEY COMMERCIAL RISKS (the money: price mechanisms, indexation, payment, volume commitments)\n5. PROBLEM CLAUSES (quote or reference the clause, explain the issue in plain English)\n6. MISSING CLAUSES (what a buyer would expect that isn't there)\n7. SUPPLIER-FAVOURABLE LANGUAGE (one-sided wording to flag)\n8. PROCUREMENT NEGOTIATION POINTS (ranked, with rationale)\n9. SUGGESTED REPLACEMENT WORDING (buyer-friendly alternatives for the 2-3 worst clauses)\n10. PRIORITY ACTIONS BEFORE SIGNING\n11. DISCLAIMER: state this is procurement contract intelligence, not legal advice, and should be reviewed by a qualified legal professional where required.\nMark anything you cannot determine as TBC rather than inventing it. Under 850 words.\\nFORMATTING (critical): every section header on its OWN line in CAPITALS; every numbered point starts on a NEW line; never use asterisks, hashes or --- separators.`);
     _cReview=text.trim();
@@ -1811,7 +1836,7 @@ async function runContractReview(){
 }
 async function runContractGenerate(){
   const t=ciText(); if(!t)return ciNeedText();
-  ciBusy("Rewriting the contract with redlines… (~30 seconds)");
+  ciBusy(["Reading the contract…","Marking up contested wording…","Inserting buyer-friendly terms…","Writing the cover note…"]);
   try{
     const text=await callAI(`You are the BuyrWorld Contract Intelligence Agent. Rewrite this supplier contract from the BUYER'S side as a redlined draft.\nContract:\n"""${t}"""\n${_cReview?`Prior review findings:\n"""${_cReview.slice(0,3000)}"""`:""}\nMARKUP RULES (critical): wrap every piece of wording we contest or remove in [[DEL]]...[[/DEL]] and every piece of proposed buyer wording in [[INS]]...[[/INS]]. Use NO other formatting symbols.\nOutput in UK English, PLAIN TEXT with the markers, in EXACTLY these sections:\n1. REDLINED CONTRACT\nGo through the agreement clause by clause IN ORDER. For clauses that are acceptable, write just: Clause <number/title> — unchanged. For every problematic clause, reproduce its text with the contested wording struck out via [[DEL]] and the replacement inserted via [[INS]] inline, so the redline reads like a marked-up contract. Put each clause heading (e.g. Clause 8 — Intellectual Property) on its OWN line, with the clause text starting on the next line. Strike wording we should not accept even where no replacement is proposed.\n2. CHANGE RATIONALE\nOne line per amended clause: why, in commercial terms a supplier will understand.\n3. COVER NOTE\nA short professional email returning the redline to the supplier.\n4. DISCLAIMER\nDraft for negotiation purposes; must be reviewed by qualified legal counsel before issue or signature.\nKeep total under 1,100 words; prioritise the highest-risk clauses if space is tight.\\nFORMATTING (critical): every section header on its OWN line in CAPITALS; every numbered point starts on a NEW line; never use asterisks, hashes or --- separators.`);
     ciRender("BuyrWorld Redlined Contract Draft",text.trim(),
@@ -1821,7 +1846,7 @@ async function runContractGenerate(){
 }
 async function runContractHealth(){
   const t=ciText(); if(!t)return ciNeedText();
-  ciBusy("Scoring across nine dimensions… (~25 seconds)");
+  ciBusy(["Reading the contract…","Scoring nine dimensions…","Ranking risks & opportunities…","Building the report…"]);
   try{
     const text=await callAI(`You are the BuyrWorld Contract Intelligence Agent producing a management-style contract health report for a UK buyer. Contract:\n"""${t}"""\nFirst line MUST be exactly this machine-readable format (NN = 0-100, higher = better/safer for the buyer; balance: 0 = entirely supplier-friendly, 100 = entirely buyer-friendly):\nSCORES: overall=NN; commercial=NN; legal=NN; compliance=NN; supplier_mgmt=NN; payment=NN; termination=NN; liability=NN; balance=NN\nThen, in PLAIN TEXT UK English:\nTOP 5 RISKS (ranked, one line each with the clause reference)\nTOP 5 NEGOTIATION OPPORTUNITIES\nMISSING CLAUSES\nESTIMATED COMMERCIAL EXPOSURE (qualitative, with rough magnitude relative to contract value where possible — flag every assumption)\nRECOMMENDED NEXT STEPS\nDISCLAIMER: procurement contract intelligence, not legal advice.\nUnder 600 words after the scores line.\\nFORMATTING (critical): every section header on its OWN line in CAPITALS; every numbered point starts on a NEW line; never use asterisks, hashes or --- separators.`);
     const sm={};(text.match(/SCORES:([^\n]*)/i)||["",""])[1].split(";").forEach(p=>{const m=p.match(/(\w+)\s*=\s*(\d{1,3})/);if(m)sm[m[1].toLowerCase()]=Math.min(100,+m[2]);});
@@ -1874,7 +1899,7 @@ async function runRFQGen(){
   const co=v("rfq-co"),nm=v("rfq-name"),ti=v("rfq-title");
   const out=document.getElementById("rfq-out");
   if(!co||!nm||!ti){out.innerHTML='<p style="color:var(--muted);font-size:14px">Company name, your name and what you\'re buying are required.</p>';return;}
-  out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Drafting your RFQ… (~20 seconds)</p>';
+  startLoader("rfq-out",["Structuring the requirement…", "Writing the commercial terms…", "Setting evaluation criteria…", "Finalising your RFQ…"]);
   try{
     const text=await callAI(`Draft a professional Request for Quotation in UK English, PLAIN TEXT, no markdown symbols. Issued by: ${co} (contact: ${nm}${v("rfq-email")?", "+v("rfq-email"):""}). Requirement: ${ti}. Specification/scope: ${v("rfq-spec")||"TBC"}. Material/grade: ${v("rfq-mat")||"TBC"}. Quantity & schedule: ${v("rfq-qty")||"TBC"}. Delivery & Incoterms: ${v("rfq-del")||"TBC"}. Quality requirements: ${v("rfq-qual")||"TBC"}. Payment terms: ${v("rfq-pay")||"TBC"}. Currency & validity: ${v("rfq-cur")||"TBC"}. Response deadline: ${v("rfq-dead")||"TBC"}. Additional: ${v("rfq-extra")||"none"}.\nUse EXACTLY these numbered sections, each header in CAPITALS on its own line: 1. INTRODUCTION (one short paragraph issued on behalf of ${co}) 2. SCOPE AND SPECIFICATION 3. QUANTITY AND DELIVERY SCHEDULE 4. COMMERCIAL REQUIREMENTS (pricing format, currency, quote validity, proposed payment terms, Incoterms) 5. QUALITY AND COMPLIANCE 6. EVALUATION CRITERIA (weighted percentages) 7. RESPONSE INSTRUCTIONS (deadline ${v("rfq-dead")||"TBC"}, submit to ${nm}${v("rfq-email")?" at "+v("rfq-email"):""}) 8. GENERAL TERMS (no commitment to award, confidentiality). CRITICAL RULES: do NOT add your own title block, reference number or date - start directly at section 1. Use the buyer's details exactly as given. Write TBC ONLY where a field above says TBC - never add TBC lines for details that were not asked about, and never invent specifics the buyer did not state. Where something is TBC, say once that it will be confirmed prior to award rather than listing TBC bullet lines. Under 700 words.`);
     window._rfq={text:ciClean(text),co,nm,ti,email:v("rfq-email")};
@@ -1888,15 +1913,15 @@ async function runRFQGen(){
 // ---------- Supplier Discovery (web-grounded, visual) ----------
 async function runSourcing(){
   const v=id=>document.getElementById(id).value.trim();
-  const item=v("src-item"),region=v("src-region"),vol=v("src-vol"),unit=v("src-unit"),spec=v("src-spec"),incoterm=v("src-incoterm"),dest=v("src-dest");
+  const item=v("src-item"),region=v("src-region"),qty=v("src-qty"),unit=v("src-unit"),value=v("src-value"),spec=v("src-spec"),incoterm=v("src-incoterm"),dest=v("src-dest");
   const out=document.getElementById("src-out");
   if(!item){out.innerHTML='<p style="color:var(--muted);font-size:14px">Tell me what you\'re sourcing to map the market.</p>';return;}
-  out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Searching the live market and mapping suppliers… (~30 seconds)</p>';
-  const volStr=vol?`${vol}${unit?" "+unit:""}`:"";
+  startLoader("src-out",["Searching live web sources…","Reading what came back…","Mapping the supply market…","Scoring market depth & risk…","Structuring your report…"]);
+  const volStr=qty?`${qty}${unit?" "+unit:""}`:"";
   try{
     const text=await callAIWeb(`You are the BuyrWorld Supplier Discovery engine, a senior UK procurement market analyst. Search the live web NOW and map the supply market for a buyer sourcing:
 ITEM: ${item}
-${region?`PREFERRED REGIONS: ${region}\n`:""}${volStr?`VOLUME/VALUE: ${volStr}\n`:""}${spec?`KEY REQUIREMENTS: ${spec}\n`:""}${incoterm?`TARGET INCOTERM: ${incoterm}\n`:""}${dest?`DELIVERY DESTINATION: ${dest}\n`:""}
+${region?`PREFERRED REGIONS: ${region}\n`:""}${volStr?`REQUIRED QUANTITY: ${volStr}\n`:""}${value?`TARGET / BUDGET VALUE: ${value}\n`:""}${spec?`KEY REQUIREMENTS: ${spec}\n`:""}${incoterm?`TARGET INCOTERM: ${incoterm}\n`:""}${dest?`DELIVERY DESTINATION: ${dest}\n`:""}
 Return ONLY a JSON object, no other text, no markdown fences. Use this exact shape:
 {
  "market_structure":"3-4 sentences: fragmented vs consolidated, the supplier archetypes (OEMs, contract manufacturers, distributors, machine shops), and where production concentrates geographically and why.",
@@ -1914,12 +1939,14 @@ RULES (critical):
 - Every field grounded in your live search; where you cannot verify, say so in the text rather than inventing. UK English.`);
     let d;try{d=JSON.parse(text.replace(/```json|```/g,"").trim());}catch(e){
       // fallback: if not valid JSON, show as plain text rather than failing
+      stopLoader();
       out.innerHTML=`${miBox(text)}<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn btn-lime" onclick="sourcingToRFQ()">Generate an RFQ for this →</button></div>`;
       window._srcItem=item;return;
     }
     window._srcItem=item;
+    stopLoader();
     renderSourcing(d,item);
-  }catch(e){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
+  }catch(e){stopLoader();out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
 }
 function srcBar(label,val,invert){
   val=Math.max(0,Math.min(100,Math.round(val||0)));
@@ -2049,7 +2076,7 @@ function miShowExports(){document.getElementById("mi-export-row").style.display=
 
 async function runBriefing(){
   const out=document.getElementById("mi-brief");
-  out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Searching global markets and writing your briefing… (~40 seconds)</p>';
+  startLoader("mi-brief",["Searching global market sources…", "Reading the latest news…", "Assessing procurement impact…", "Writing your briefing…"]);
   try{
     const text=await callAIWeb(`Search the web for today's commodity, supply chain and macro news relevant to UK/European procurement, then produce:\nFirst line EXACTLY (NN=0-100, higher=better/calmer; assess from what you found):\nINDICES: sentiment=NN; supply_stress=NN; commodity_inflation=NN; supplier_risk=NN; geopolitical=NN; logistics=NN; energy=NN\nThen "TODAY'S PROCUREMENT BRIEFING" (max 280 words): what happened globally; key procurement implications; cost inflation risks; notable commodity movements with rough figures from sources; supplier concerns; opportunities; 3 recommended actions.\nThen "TOP HEADLINES" — 6 items, each on 3 lines: the headline; one-line implication; "Action:" recommendation with impact (cost/lead-time/supply) noted.\nPlain text, UK English, no markdown symbols. Cite figures from what you actually found; if something can't be verified, say so rather than inventing it.`);
     const sm={};(text.match(/INDICES:([^\n]*)/i)||["",""])[1].split(";").forEach(p=>{const m=p.match(/(\w+)\s*=\s*(\d{1,3})/);if(m)sm[m[1].toLowerCase()]=Math.min(100,+m[2]);});
@@ -2065,7 +2092,7 @@ async function runBriefing(){
 async function runCommodity(){
   const c=document.getElementById("mi-comm").value;
   const out=document.getElementById("mi-comm-out");
-  out.innerHTML=`<p style="color:var(--lime);font-family:'Space Grotesk';font-size:13px">Searching the live ${c} market… (~30 seconds)</p>`;
+  startLoader("mi-comm-out",["Searching the live "+c+" market…","Reading current levels…","Assessing the drivers…","Writing the outlook…"]);
   try{
     const text=await callAIWeb(`Search the web for the current ${c} market (price level, recent movement, news). Then produce for a UK procurement audience, plain text, UK English, no markdown:\nCURRENT MARKET — price level and recent moves with figures and dates from your sources (state the source names inline)\nKEY DRIVERS — supply, demand, inventories, energy, trade/geopolitics, currency (only the ones that matter now)\nOUTLOOK — short paragraphs for 1 month, 3 months, 12 months, each with bull/base/bear framing and a confidence note\nPROCUREMENT ACTION — concrete: buy forward/hold/index-link/hedge via contract terms, what to put in supplier conversations this week\nWATCH LIST — 3 signals that would change this view\nUnder 450 words. Never invent prices — if live figures aren't found, say so explicitly.`);
     MI.comm={name:c,text,at:miStamp()};
@@ -2099,7 +2126,7 @@ async function runExposure(){
   const {cat,total}=miParse(raw);
   const cats=Object.entries(cat).sort((a,b)=>b[1]-a[1]).slice(0,25);
   if(!cats.length){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t read any amounts — check the format.</p>';return;}
-  out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Mapping categories to commodity content… (~20 seconds)</p>';
+  startLoader("mi-exp-out",["Reading your spend…", "Mapping categories to commodities…", "Calculating your exposure…", "Building the breakdown…"]);
   try{
     const text=await callAI(`You are a procurement cost-modelling expert. For each spend category below, estimate the typical cost composition by underlying commodity/input for a UK manufacturer. Use ONLY these exposure buckets: Aluminium, Copper, Nickel, Steel, Stainless Steel, Other metals, Polymers, Packaging materials, Energy, Freight, Labour, Other.\nCategories: ${cats.map(([k])=>k).join("; ")}\nReturn ONLY a JSON array, no other text, like: [{"category":"Castings","mix":{"Aluminium":0.45,"Energy":0.15,"Labour":0.25,"Other":0.15}}] — shares must sum to 1 per category. Be realistic; use "Other" when unsure.`);
     let map;try{map=JSON.parse(text.replace(/```json|```/g,"").trim());}catch(e){throw new Error("parse");}
@@ -2253,7 +2280,7 @@ function renderLabour(){
 }
 async function runAIWatch(){
   const out=document.getElementById("mi-ai-out");
-  out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Reading the AI buildout through a buyer\'s eyes… (~35 seconds)</p>';
+  startLoader("mi-ai-out",["Searching AI-economy sources…", "Reading the latest moves…", "Tracing input-cost impact…", "Writing the procurement read…"]);
   try{
     const text=await callAIWeb(`Search the web for current news on the AI infrastructure buildout (data centres, GPUs, neocloud providers like CoreWeave/IREN/Nebius/Applied Digital/Crusoe, hyperscaler capex, power demand). Then write for UK PROCUREMENT professionals (NOT investors), plain text, UK English, no markdown:\nWHAT'S HAPPENING — 4-5 sentences on the buildout's scale and latest moves, figures from sources\nINPUT-COST IMPACT — how this is hitting markets buyers care about: copper, aluminium, electrical equipment (transformers, switchgear) lead times, electricity prices, semiconductors/electronics lead times, construction capacity\nNEWS → PRICE REACTION — 4 recent AI-economy news items, one line each in the format: [IMPACT: High/Medium/Low] headline — what the relevant stock(s) did on the news with % move from sources — what it signals for buyers\nLEAD-TIME WATCH — components/categories with stretched lead times right now\nPROCUREMENT ACTIONS — 4 concrete actions for buyers exposed to these markets\nUnder 380 words. Cite figures from sources found; say so if something can't be verified. This is cost intelligence, not investment commentary.`);
     window.MI&&(MI.ai={text,at:miStamp()});
@@ -2264,7 +2291,7 @@ async function runAIWatch(){
 async function runLabour(){
   const c=document.getElementById("mi-lab-c").value;
   const out=document.getElementById("mi-lab-out");
-  out.innerHTML=`<p style="color:var(--lime);font-family:'Space Grotesk';font-size:13px">Checking the current picture in ${c}… (~30 seconds)</p>`;
+  startLoader("mi-lab-out",["Searching labour-cost sources for "+c+"…","Reading wage & FX data…","Assessing the sourcing read…","Writing it up…"]);
   try{
     const text=await callAIWeb(`Search the web for current manufacturing labour costs and conditions in ${c}. For a UK sourcing audience, plain text, UK English, no markdown, under 250 words:\nCURRENT COSTS — typical fully-loaded manufacturing labour cost with figures and sources; recent wage inflation\nAVAILABILITY — labour market tightness, skills notes\nCURRENCY — recent FX move vs GBP and what it means for landed cost\nSOURCING READ — one short paragraph: what this means if you're sourcing from ${c} this year`);
     window.MI&&(MI.lab={country:c,text,at:miStamp()});
