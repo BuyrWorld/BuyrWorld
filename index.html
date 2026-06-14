@@ -324,7 +324,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <p style="color:var(--muted);max-width:660px;margin-bottom:30px;line-height:1.6">Free, no signup. Pick a tool — each opens its own workspace.</p>
     <div class="eyebrow" style="margin-bottom:14px">Procurement tools</div>
     <div class="grid4">
-      <button class="tool-tile" onclick="go('tool-sourcing')" style="border-color:var(--lime)">
+      <button class="tool-tile" onclick="go('tool-sourcing')">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
         Supplier Discovery<span class="sub">Find suppliers, regions &amp; market · web-searched</span>
       </button>
@@ -375,7 +375,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <div class="page" id="page-tool-sourcing">
   <section class="sec"><div class="wrap" style="max-width:900px">
     <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
-    <div class="eyebrow" style="margin-bottom:10px">Supplier Discovery · Flagship</div>
+    <div class="eyebrow" style="margin-bottom:10px">Supplier Discovery</div>
     <h2 style="font-size:30px;margin-bottom:10px">Find the suppliers, before you go to market</h2>
     <p style="color:var(--muted);max-width:720px;line-height:1.6;margin-bottom:8px">Describe what you need to buy. Buyr AI searches the live web and maps your supply market: the kind of suppliers who make it, where they cluster, how concentrated the market is, and named candidate suppliers to investigate — so you walk into sourcing knowing the landscape, not guessing.</p>
     <p style="color:var(--muted);font-size:12.5px;line-height:1.55;margin-bottom:24px">Results are AI-generated from live web sources at the moment you run them. <b style="color:var(--text)">Named companies are leads to verify independently</b> — confirm capability, certifications and status before you contact or rely on any supplier. Not a substitute for your own due diligence.</p>
@@ -385,8 +385,42 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <input class="bwin" id="src-region" placeholder="Preferred regions, e.g. UK, EU, low-cost (optional)">
       </div>
       <div class="grid2" style="margin-bottom:10px">
-        <input class="bwin" id="src-vol" placeholder="Annual volume / value, e.g. 50k units or £400k (optional)">
-        <input class="bwin" id="src-spec" placeholder="Key requirements, e.g. ISO 9001, IATF 16949, material certs (optional)">
+        <div style="display:flex;gap:8px">
+          <input class="bwin" id="src-vol" style="flex:1" placeholder="Annual volume / value, e.g. 50k or £400k (optional)">
+          <select class="bwin" id="src-unit" style="max-width:130px">
+            <option value="">Unit…</option>
+            <option>each</option>
+            <option>pairs</option>
+            <option>sets</option>
+            <option>kg</option>
+            <option>tonnes</option>
+            <option>g</option>
+            <option>litres</option>
+            <option>ml</option>
+            <option>metres</option>
+            <option>ft</option>
+            <option>m²</option>
+            <option>m³</option>
+            <option>rolls</option>
+            <option>sheets</option>
+            <option>pallets</option>
+            <option>hours</option>
+            <option>£ / year</option>
+          </select>
+        </div>
+        <input class="bwin" id="src-spec" placeholder="Key requirements, e.g. ISO 9001, IATF 16949, certs (optional)">
+      </div>
+      <div class="grid2" style="margin-bottom:10px">
+        <select class="bwin" id="src-incoterm">
+          <option value="">Target Incoterm… (optional)</option>
+          <option>EXW — Ex Works</option>
+          <option>FCA — Free Carrier</option>
+          <option>FOB — Free On Board</option>
+          <option>CIF — Cost, Insurance &amp; Freight</option>
+          <option>DAP — Delivered At Place</option>
+          <option>DDP — Delivered Duty Paid</option>
+        </select>
+        <input class="bwin" id="src-dest" placeholder="Delivery destination, e.g. Coventry UK (optional)">
       </div>
       <button class="btn btn-lime" onclick="runSourcing()">Map my supply market →</button>
       <div id="src-out" style="margin-top:18px"></div>
@@ -1851,22 +1885,102 @@ async function runRFQGen(){
       <p style="color:var(--muted);font-size:12px;margin-top:10px">PDF is issued in ${ciEsc(co)}'s name with a BuyrWorld watermark. Review before sending — you're responsible for the final content.</p>`;
   }catch(e){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
 }
-// ---------- Supplier Discovery (FLAGSHIP, web-grounded) ----------
+// ---------- Supplier Discovery (web-grounded, visual) ----------
 async function runSourcing(){
   const v=id=>document.getElementById(id).value.trim();
-  const item=v("src-item"),region=v("src-region"),vol=v("src-vol"),spec=v("src-spec");
+  const item=v("src-item"),region=v("src-region"),vol=v("src-vol"),unit=v("src-unit"),spec=v("src-spec"),incoterm=v("src-incoterm"),dest=v("src-dest");
   const out=document.getElementById("src-out");
   if(!item){out.innerHTML='<p style="color:var(--muted);font-size:14px">Tell me what you\'re sourcing to map the market.</p>';return;}
   out.innerHTML='<p style="color:var(--lime);font-family:\'Space Grotesk\';font-size:13px">Searching the live market and mapping suppliers… (~30 seconds)</p>';
+  const volStr=vol?`${vol}${unit?" "+unit:""}`:"";
   try{
-    const text=await callAIWeb(`You are the BuyrWorld Supplier Discovery engine, a senior UK procurement market analyst. Search the live web NOW and map the supply market for a buyer who needs to source:\nITEM: ${item}\n${region?`PREFERRED REGIONS: ${region}\n`:""}${vol?`VOLUME/VALUE: ${vol}\n`:""}${spec?`KEY REQUIREMENTS: ${spec}\n`:""}\nProduce a procurement-grade market map in UK English, PLAIN TEXT (no markdown symbols, no asterisks or hashes), using EXACTLY these sections, each header in CAPITALS on its own line:\n\nMARKET STRUCTURE\nIs this market fragmented or consolidated? Who are the typical supplier archetypes (e.g. OEMs, contract manufacturers, distributors, machine shops)? Where does production concentrate geographically and why? 3-5 sentences.\n\nWHERE TO LOOK\nThe supplier TYPES and REGIONS to target for this specific item, with the reasoning (cost, capability, lead time, proximity). This is direction, always safe to act on.\n\nNAMED CANDIDATE SUPPLIERS\nList specific companies you found IN YOUR LIVE SEARCH that plausibly supply this item. For EACH: company name | country | one line on why relevant | the source you saw it in. CRITICAL RULES: only name a company if it actually appeared in your web search results for this item — never invent or guess a company name. If you genuinely found none, write "No specific companies surfaced in live search — use the supplier types and regions above as your search terms" and do not pad the list. Begin this section with the line: "Leads to verify independently — confirm each before contacting."\n\nSELECTION CRITERIA\nThe 4-6 things this buyer should evaluate suppliers against for THIS item (certifications, capacity, financial stability, etc.).\n\nMARKET WATCH-OUTS\nCurrent supply, cost, lead-time or geopolitical factors affecting this market right now, with figures/dates from your sources where found.\n\nFIRST MOVES\n3 concrete next steps to start the sourcing process this week.\n\nCite source names inline where you used them. If you could not verify something, say so explicitly rather than inventing it. Under 650 words.`);
+    const text=await callAIWeb(`You are the BuyrWorld Supplier Discovery engine, a senior UK procurement market analyst. Search the live web NOW and map the supply market for a buyer sourcing:
+ITEM: ${item}
+${region?`PREFERRED REGIONS: ${region}\n`:""}${volStr?`VOLUME/VALUE: ${volStr}\n`:""}${spec?`KEY REQUIREMENTS: ${spec}\n`:""}${incoterm?`TARGET INCOTERM: ${incoterm}\n`:""}${dest?`DELIVERY DESTINATION: ${dest}\n`:""}
+Return ONLY a JSON object, no other text, no markdown fences. Use this exact shape:
+{
+ "market_structure":"3-4 sentences: fragmented vs consolidated, the supplier archetypes (OEMs, contract manufacturers, distributors, machine shops), and where production concentrates geographically and why.",
+ "scores":{"market_depth":NN,"supply_risk":NN,"uk_eu_availability":NN,"price_competitiveness":NN},
+ "where_to_look":["supplier type or region + one line why — this is safe direction, always grounded","..."],
+ "suppliers":[{"name":"Company","country":"Country","why":"one line why relevant","source":"the website/source you saw it in"}],
+ "selection_criteria":["criterion the buyer should evaluate suppliers on for THIS item","..."],
+ "logistics":"QUALITATIVE freight read for this item: is it dense or bulky, likely FCL vs LCL at this volume, whether freight is a big or small share of landed cost, and what the chosen Incoterm (${incoterm||"none given"}) means for who bears cost/risk. Give DIRECTIONAL guidance only — do NOT state specific container prices or freight rates, they are too volatile to quote; tell the buyer to get live quotes. 2-4 sentences.",
+ "watchouts":["current supply/cost/lead-time/geopolitical factor affecting this market now, with a figure/date and source if found","..."],
+ "first_moves":["concrete next step this week","..."]
+}
+RULES (critical):
+- scores are 0-100 integers. market_depth=how many capable suppliers exist; supply_risk=higher means RISKIER; uk_eu_availability=how well-served from UK/EU; price_competitiveness=how competitive/contestable pricing is. Base them on what you actually find.
+- "suppliers": only include a company if it ACTUALLY appeared in your live web search for this item. NEVER invent or guess a company name. If you found none, return an empty array [] — do not pad it.
+- Every field grounded in your live search; where you cannot verify, say so in the text rather than inventing. UK English.`);
+    let d;try{d=JSON.parse(text.replace(/```json|```/g,"").trim());}catch(e){
+      // fallback: if not valid JSON, show as plain text rather than failing
+      out.innerHTML=`${miBox(text)}<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn btn-lime" onclick="sourcingToRFQ()">Generate an RFQ for this →</button></div>`;
+      window._srcItem=item;return;
+    }
     window._srcItem=item;
-    out.innerHTML=`${miBox(text)}
-      <div style="background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--lime);border-radius:8px;padding:12px 14px;margin-top:12px;font-size:12.5px;color:var(--muted);line-height:1.55">Named companies are <b style="color:var(--text)">unverified leads from a live web search</b> — confirm capability, certifications, quality systems and trading status independently before you contact or rely on any supplier.</div>
-      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-        <button class="btn btn-lime" onclick="sourcingToRFQ()">Generate an RFQ for this →</button>
-      </div>`;
+    renderSourcing(d,item);
   }catch(e){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
+}
+function srcBar(label,val,invert){
+  val=Math.max(0,Math.min(100,Math.round(val||0)));
+  // invert=true means high value is BAD (supply risk) → colour red when high
+  const good=invert?(100-val):val;
+  const col=good>=66?"var(--lime)":good>=33?"#FFB800":"#FF6B6B";
+  return `<div style="margin:9px 0;font-size:12.5px"><div style="display:flex;justify-content:space-between"><span>${ciEsc(label)}</span><span style="color:var(--muted)">${val}</span></div><div style="height:7px;background:var(--line);border-radius:4px;margin-top:4px"><div style="height:7px;width:${Math.max(3,val)}%;background:${col};border-radius:4px"></div></div></div>`;
+}
+function renderSourcing(d,item){
+  const out=document.getElementById("src-out");
+  const sc=d.scores||{};
+  const scoresHtml=srcBar("Market depth",sc.market_depth)+srcBar("Supply risk",sc.supply_risk,true)+srcBar("UK / EU availability",sc.uk_eu_availability)+srcBar("Price competitiveness",sc.price_competitiveness);
+  const wtl=(d.where_to_look||[]).map(x=>`<li style="margin:5px 0">${ciEsc(x)}</li>`).join("");
+  const sel=(d.selection_criteria||[]).map(x=>`<li style="margin:5px 0">${ciEsc(x)}</li>`).join("");
+  const watch=(d.watchouts||[]).map(x=>`<li style="margin:5px 0">${ciEsc(x)}</li>`).join("");
+  const moves=(d.first_moves||[]).map(x=>`<li style="margin:5px 0">${ciEsc(x)}</li>`).join("");
+  const sups=(d.suppliers||[]);
+  const supHtml=sups.length?sups.map(s=>`<div class="card" style="padding:14px;margin:0">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+        <h4 style="font-size:15px;color:var(--lime);margin:0">${ciEsc(s.name||"—")}</h4>
+        <span style="color:var(--muted);font-size:11.5px">${ciEsc(s.country||"")}</span>
+      </div>
+      <p style="color:#CFCFCF;font-size:13px;line-height:1.55;margin:7px 0 0">${ciEsc(s.why||"")}</p>
+      ${s.source?`<p style="color:var(--muted);font-size:11px;margin:6px 0 0">Source: ${ciEsc(s.source)}</p>`:""}
+    </div>`).join(""):`<div class="card" style="padding:14px;margin:0;color:var(--muted);font-size:13px;line-height:1.55">No specific companies surfaced in the live search for this item. Use the supplier types and regions in “Where to look” as your search terms — that's the grounded, reliable starting point.</div>`;
+  out.innerHTML=`
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <span class="tag tag-lime">Supply market: ${ciEsc(item)}</span>
+    <span style="color:var(--muted);font-size:11px">Web-searched ${typeof miStamp==="function"?miStamp():""}</span>
+  </div>
+  <div class="grid2" style="align-items:start;gap:16px">
+    <div class="card"><div class="eyebrow" style="margin-bottom:10px">Market read</div>
+      ${scoresHtml}
+      <p style="color:#CFCFCF;font-size:13px;line-height:1.6;margin-top:12px">${ciEsc(d.market_structure||"")}</p>
+    </div>
+    <div class="card"><div class="eyebrow" style="margin-bottom:10px">Where to look <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">· safe direction</span></div>
+      <ul style="color:#CFCFCF;font-size:13px;line-height:1.5;padding-left:18px;margin:0">${wtl||'<li style="color:var(--muted)">—</li>'}</ul>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px"><div class="eyebrow" style="margin-bottom:6px">Named candidate suppliers</div>
+    <p style="color:var(--muted);font-size:12px;line-height:1.5;margin:0 0 12px">Leads found in live web search — <b style="color:var(--text)">verify each independently</b> (capability, certifications, quality systems, trading status) before contacting or relying on them.</p>
+    <div class="grid2" style="gap:12px;align-items:start">${supHtml}</div>
+  </div>
+  <div class="grid2" style="align-items:start;gap:16px;margin-top:16px">
+    <div class="card"><div class="eyebrow" style="margin-bottom:10px">Evaluate suppliers on</div>
+      <ul style="color:#CFCFCF;font-size:13px;line-height:1.5;padding-left:18px;margin:0">${sel||'<li style="color:var(--muted)">—</li>'}</ul>
+    </div>
+    <div class="card"><div class="eyebrow" style="margin-bottom:10px">Logistics &amp; Incoterms <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">· directional</span></div>
+      <p style="color:#CFCFCF;font-size:13px;line-height:1.6;margin:0">${ciEsc(d.logistics||"")}</p>
+      <p style="color:var(--muted);font-size:11px;line-height:1.5;margin:10px 0 0">Freight is too volatile to quote a price — get live quotes from carriers/forwarders for your actual route and volume.</p>
+    </div>
+  </div>
+  <div class="grid2" style="align-items:start;gap:16px;margin-top:16px">
+    <div class="card"><div class="eyebrow" style="margin-bottom:10px">Market watch-outs</div>
+      <ul style="color:#CFCFCF;font-size:13px;line-height:1.5;padding-left:18px;margin:0">${watch||'<li style="color:var(--muted)">—</li>'}</ul>
+    </div>
+    <div class="card" style="border-color:var(--lime)"><div class="eyebrow" style="margin-bottom:10px">Your first moves</div>
+      <ul style="color:#CFCFCF;font-size:13px;line-height:1.5;padding-left:18px;margin:0">${moves||'<li style="color:var(--muted)">—</li>'}</ul>
+      <button class="btn btn-lime" style="margin-top:14px;width:100%" onclick="sourcingToRFQ()">Generate an RFQ for this →</button>
+    </div>
+  </div>`;
 }
 function sourcingToRFQ(){
   go("tool-rfq");
