@@ -2113,14 +2113,13 @@ async function rfqPDF(){
     doc.setDrawColor(214,214,214);doc.setLineWidth(0.4);
     doc.rect(10,10,W-20,H-20);
     doc.setFontSize(7.5);doc.setTextColor(150);doc.setFont("helvetica","normal");
-    doc.text("Created with BuyrWorld · buyrworld.com",M,H-13);
-    // boxed wordmark (lime on near-black, matching the real logo) bottom-right
-    const bx=W-M-34, by=H-17.5, bw2=34, bh=7;
-    doc.setFillColor(12,12,12);doc.roundedRect(bx,by,bw2,bh,1.4,1.4,"F");
-    doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setCharSpace(-0.2);
-    doc.setTextColor(237,237,237);doc.text("BUYR",bx+4,by+4.9);
-    const w1=doc.getTextWidth("BUYR");
-    doc.setTextColor(198,232,0);doc.text("WORLD",bx+4+w1,by+4.9);
+    doc.text("Created with BuyrWorld · buyrworld.com",M,H-12);
+    // plain wordmark bottom-right (no box in footer — keeps it clean and clear of the page number)
+    doc.setFont("helvetica","bold");doc.setFontSize(8);doc.setCharSpace(-0.1);
+    const w1=doc.getTextWidth("BUYR"), w2=doc.getTextWidth("WORLD");
+    const startX=W-M-w1-w2;
+    doc.setTextColor(34,34,34);doc.text("BUYR",startX,H-12);
+    doc.setTextColor(110,130,0);doc.text("WORLD",startX+w1,H-12);
     doc.setCharSpace(0);
   }
   function newPage(){doc.addPage();stamp();y=M;}
@@ -2136,7 +2135,7 @@ async function rfqPDF(){
     doc.setTextColor(198,232,0);doc.text("WORLD",bx+5+w1,by+7.6);
     doc.setCharSpace(0);
   })();
-  doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(150);doc.setCharSpace(1.1);
+  doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(90,90,90);doc.setCharSpace(1.1);
   doc.text("THE HOME OF MODERN PROCUREMENT",M,y+12.5);doc.setCharSpace(0);
   y+=4;
   doc.setDrawColor(90,107,0);doc.setLineWidth(1);doc.line(M,y+11,W-M,y+11);
@@ -2179,14 +2178,13 @@ async function sourcingPDF(){
   }
   function foot(){
     doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(150,150,150);
-    doc.text("Created with BuyrWorld · buyrworld.com",M,H-13);
-    // boxed wordmark (lime on near-black) bottom-right
-    const bx=W-M-34, by=H-17.5, bw2=34, bh=7;
-    doc.setFillColor(12,12,12);doc.roundedRect(bx,by,bw2,bh,1.4,1.4,"F");
-    doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setCharSpace(-0.2);
-    doc.setTextColor(237,237,237);doc.text("BUYR",bx+4,by+4.9);
-    const w1=doc.getTextWidth("BUYR");
-    doc.setTextColor(198,232,0);doc.text("WORLD",bx+4+w1,by+4.9);
+    doc.text("Created with BuyrWorld · buyrworld.com",M,H-12);
+    // plain wordmark bottom-right (no box in footer)
+    doc.setFont("helvetica","bold");doc.setFontSize(8);doc.setCharSpace(-0.1);
+    const w1=doc.getTextWidth("BUYR"), w2=doc.getTextWidth("WORLD");
+    const startX=W-M-w1-w2;
+    doc.setTextColor(34,34,34);doc.text("BUYR",startX,H-12);
+    doc.setTextColor(110,130,0);doc.text("WORLD",startX+w1,H-12);
     doc.setCharSpace(0);
   }
   function newPage(){doc.addPage();frame();foot();y=M+4;}
@@ -2208,7 +2206,7 @@ async function sourcingPDF(){
     doc.setTextColor(198,232,0);doc.text("WORLD",bx+5+w1,by+7.6);
     doc.setCharSpace(0);
   })();
-  doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(150,150,150);doc.setCharSpace(1.2);
+  doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(90,90,90);doc.setCharSpace(1.2);
   doc.text("THE HOME OF MODERN PROCUREMENT",M,y+13);doc.setCharSpace(0);
   y+=18;
   // Title block
@@ -2291,7 +2289,7 @@ async function sourcingPDF(){
   para("This report is AI-generated from live web sources at the time of search. Named companies are unverified leads — confirm capability, certifications and status before contacting or relying on any supplier. Not a substitute for your own due diligence. Not investment advice.",7.5,[110,110,110]);
 
   const n=doc.getNumberOfPages();
-  for(let p=1;p<=n;p++){doc.setPage(p);doc.setFontSize(7.5);doc.setTextColor(150,150,150);doc.text(`Page ${p} of ${n}`,W/2,H-13,{align:"center"});}
+  for(let p=1;p<=n;p++){doc.setPage(p);doc.setFontSize(7.5);doc.setTextColor(150,150,150);doc.text(`Page ${p} of ${n}`,W/2,H-8,{align:"center"});}
   // restore the BUYRWORLD footer wordmark on each page (drawn after page numbers overwrite area)
   doc.save(`BuyrWorld-Supply-Market-${(R.item||"report").slice(0,34).replace(/[^a-z0-9]+/gi,"-")}.pdf`);
 }
