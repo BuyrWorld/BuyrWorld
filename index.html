@@ -1974,7 +1974,8 @@ Return ONLY a JSON object, no other text, no markdown fences. Use this exact sha
 RULES (critical):
 - scores are 0-100 integers. market_depth=how many capable suppliers exist; supply_risk=higher means RISKIER; uk_eu_availability=how well-served from UK/EU; price_competitiveness=how competitive/contestable pricing is. Base them on what you actually find.
 - "suppliers": only include a company if it ACTUALLY appeared in your live web search for this item. NEVER invent or guess a company name. If you found none, return an empty array [] — do not pad it.
-${spec?`- For each supplier's "mentions" array, check ONLY against these buyer requirements: ${spec}. Include a requirement in "mentions" ONLY if the supplier's listing/source text explicitly states it. This reflects what the listing SAYS, not verified fact — never assume.\n`:""}- Every field grounded in your live search; where you cannot verify, say so in the text rather than inventing. UK English.`);
+${spec?`- For each supplier's "mentions" array, check ONLY against these buyer requirements: ${spec}. Include a requirement in "mentions" ONLY if the supplier's listing/source text explicitly states it. This reflects what the listing SAYS, not verified fact — never assume.\n`:""}- Every field grounded in your live search; where you cannot verify, say so in the text rather than inventing. UK English.
+- BE EFFICIENT: do at most 2 quick searches, then write. List a MAXIMUM of 4 named suppliers (best matches only). Keep each text field to 1-2 sentences and bullet arrays to 3-4 items. Prioritise finishing quickly over exhaustiveness.`);
     let d;try{d=JSON.parse(text.replace(/```json|```/g,"").trim());}catch(e){
       // fallback: if not valid JSON, show as plain text rather than failing
       stopLoader();
