@@ -27,6 +27,10 @@ HARD RULES (never break)
 
 You are skilled but disciplined — the value you add is good questions, sound structure, honest uncertainty and professional judgement, not confident guesses.`;
 
+// Allow long-running web-search calls. Vercel Hobby plan permits up to 60s when set explicitly
+// (the default is 10s, which is too short for multi-step web search and causes the request to be killed).
+export const config = { maxDuration: 60 };
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
@@ -66,7 +70,7 @@ export default async function handler(req, res) {
       messages: clean,
     };
     if (wantsWeb) {
-      payload.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }];
+      payload.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }];
     }
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
