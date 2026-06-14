@@ -235,6 +235,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 @media (max-width:760px){.desk-only{display:none}.mob-only{display:block}}
 .bw-loader{padding:4px 0;position:relative}
 .bw-loader-eta{display:block;color:var(--muted);font-size:11px;margin-top:6px;text-align:right;max-width:340px}
+.bw-bang{display:inline-block;color:var(--lime);font-weight:700;animation:bwbang 0.7s ease-in-out infinite}
+@keyframes bwbang{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.25)}}
 .bw-loader-msg{color:var(--lime);font-family:'Space Grotesk';font-weight:600;font-size:13px;min-height:18px;transition:opacity .35s}
 .bw-loader-track{height:4px;background:var(--line);border-radius:3px;margin-top:10px;overflow:hidden;position:relative;max-width:340px}
 .bw-loader-track::after{content:"";position:absolute;top:0;left:0;height:100%;width:40%;background:var(--lime);border-radius:3px;animation:bwslide 1.25s ease-in-out infinite}
@@ -1528,7 +1530,13 @@ function startLoader(elId,messages,etaSeconds){
   if(etaSeconds){
     let left=etaSeconds;
     const en=document.getElementById(elId+"-leta");
-    const tick=()=>{ if(en) en.textContent = left>0?`about ${left}s remaining`:"almost there…"; left--; };
+    const tick=()=>{
+      if(!en)return;
+      if(left>0){en.textContent=`about ${left}s remaining`;}
+      else if(left>-10){en.textContent="almost there…";}
+      else{en.innerHTML='Thank you for your patience<span class="bw-bang">!</span>';}
+      left--;
+    };
     tick();
     _bwEtaTimer=setInterval(tick,1000);
   }
@@ -1968,21 +1976,27 @@ ${spec?`- For each supplier's "mentions" array, check ONLY against these buyer r
     renderSourcing(d,item);
   }catch(e){stopLoader();out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
 }
-// smooth red(0)→amber(50)→green(100) scale; returns [r,g,b]. 'good' is the score AFTER inversion.
+// smooth red(0)→amber(50)→green(100) scale, strong separation; returns [r,g,b]. 'good' = score AFTER inversion.
 function scoreRGB(good){
   good=Math.max(0,Math.min(100,good));
-  // red #E5484D (229,72,77) → amber #F2B705 (242,183,5) → lime/green #B6D900 (182,217,0)
-  const stops=[[0,229,72,77],[50,242,183,5],[100,182,217,0]];
+  // strong red #D62828 → amber #F08C00 → green #5CA904 for clear weak/mod/strong distinction
+  const stops=[[0,214,40,40],[50,240,140,0],[100,92,169,4]];
   let a=stops[0],b=stops[stops.length-1];
   for(let i=0;i<stops.length-1;i++){if(good>=stops[i][0]&&good<=stops[i+1][0]){a=stops[i];b=stops[i+1];break;}}
   const span=b[0]-a[0]||1, t=(good-a[0])/span;
   return [Math.round(a[1]+(b[1]-a[1])*t),Math.round(a[2]+(b[2]-a[2])*t),Math.round(a[3]+(b[3]-a[3])*t)];
 }
+// word label from the 'good' value; risk bars use Low/Moderate/High risk so colour+word+meaning agree
+function scoreWord(good,isRisk){
+  if(isRisk) return good>=60?"Low risk":good>=35?"Moderate risk":"High risk";
+  return good>=60?"Strong":good>=35?"Moderate":"Weak";
+}
 function srcBar(label,val,invert,desc){
   val=Math.max(0,Math.min(100,Math.round(val||0)));
   const good=invert?(100-val):val; // invert=true means high value is BAD (supply risk)
   const [r,g,b]=scoreRGB(good);
-  return `<div style="margin:11px 0;font-size:12.5px"><div style="display:flex;justify-content:space-between"><span>${ciEsc(label)}</span><span style="color:var(--muted)">${val}</span></div><div style="height:7px;background:var(--line);border-radius:4px;margin-top:4px"><div style="height:7px;width:${Math.max(3,val)}%;background:rgb(${r},${g},${b});border-radius:4px"></div></div>${desc?`<div style="color:var(--muted);font-size:11px;line-height:1.4;margin-top:4px">${ciEsc(desc)}</div>`:""}</div>`;
+  const word=scoreWord(good,invert);
+  return `<div style="margin:11px 0;font-size:12.5px"><div style="display:flex;justify-content:space-between"><span>${ciEsc(label)}</span><span style="font-family:'Space Grotesk';font-weight:600"><span style="color:rgb(${r},${g},${b})">${word}</span> <span style="color:var(--muted)">· ${val}</span></span></div><div style="height:7px;background:var(--line);border-radius:4px;margin-top:4px"><div style="height:7px;width:${Math.max(3,val)}%;background:rgb(${r},${g},${b});border-radius:4px"></div></div>${desc?`<div style="color:var(--muted);font-size:11px;line-height:1.4;margin-top:4px">${ciEsc(desc)}</div>`:""}</div>`;
 }
 function renderSourcing(d,item){
   const out=document.getElementById("src-out");
@@ -2162,11 +2176,11 @@ async function sourcingPDF(){
   doc.text("THE HOME OF MODERN PROCUREMENT",M,y+8);doc.setCharSpace(0);
   y+=15;
   // Title block
-  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(150,150,150);doc.setCharSpace(0.8);
+  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(120,120,120);doc.setCharSpace(0.8);
   doc.text("SUPPLY MARKET REPORT",M,y);doc.setCharSpace(0);y+=8;
   doc.setFont("helvetica","bold");doc.setFontSize(19);doc.setTextColor(34,34,34);
   const titleWr=doc.splitTextToSize(R.item||"",W-2*M);for(const wl of titleWr){doc.text(wl,M,y);y+=8;}
-  doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(150,150,150);
+  doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(110,110,110);
   doc.text(`Prepared ${R.at}  ·  web-searched market intelligence`,M,y);y+=4;
 
   // Market read
@@ -2177,23 +2191,30 @@ async function sourcingPDF(){
     val=Math.max(0,Math.min(100,Math.round(val||0)));
     const good=inv?(100-val):val;
     const c=scoreRGB(good);
+    const word=scoreWord(good,inv);
     need(22);
-    doc.setFont("helvetica","bold");doc.setFontSize(9.5);doc.setTextColor(45,45,45);
+    doc.setFont("helvetica","bold");doc.setFontSize(9.5);doc.setTextColor(40,40,40);
     doc.text(lab,M,y);
-    doc.setFont("helvetica","bold");doc.text(String(val),W-M,y,{align:"right"});y+=2.2;
-    doc.setFillColor(232,232,232);doc.roundedRect(M,y,W-2*M,2.2,1.1,1.1,"F");
-    doc.setFillColor(c[0],c[1],c[2]);doc.roundedRect(M,y,(W-2*M)*Math.max(3,val)/100,2.2,1.1,1.1,"F");
-    y+=4.5;
-    doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(135,135,135);
+    // right side: coloured word + score
+    doc.setFont("helvetica","bold");doc.setFontSize(9.5);
+    const scoreTxt=String(val);
+    const wWord=doc.getTextWidth(word+"  ");
+    doc.setTextColor(c[0],c[1],c[2]);doc.text(word,W-M-doc.getTextWidth("  "+scoreTxt),y,{align:"right"});
+    doc.setTextColor(70,70,70);doc.text(scoreTxt,W-M,y,{align:"right"});
+    y+=2.4;
+    doc.setFillColor(228,228,228);doc.roundedRect(M,y,W-2*M,2.4,1.2,1.2,"F");
+    doc.setFillColor(c[0],c[1],c[2]);doc.roundedRect(M,y,(W-2*M)*Math.max(3,val)/100,2.4,1.2,1.2,"F");
+    y+=4.6;
+    doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(95,95,95);
     const wr=doc.splitTextToSize(barDesc[lab]||"",W-2*M);for(const wl of wr){doc.text(wl,M,y);y+=3.6;}
-    y+=2.5;
+    y+=2.8;
   });
   if(d.market_structure){y+=1;para(d.market_structure);}
 
   if((d.where_to_look||[]).length){head("Where to look · safe direction");(d.where_to_look||[]).forEach(bullet);}
 
   head("Named candidate suppliers");
-  para("Leads found in live web search. Verify each independently — capability, certifications, quality systems and trading status — before contacting or relying on them. Criteria marks below reflect what each listing states, not verified fact.",8,[135,135,135]);
+  para("Leads found in live web search. Verify each independently — capability, certifications, quality systems and trading status — before contacting or relying on them. Criteria marks below reflect what each listing states, not verified fact.",8,[100,100,100]);
   y+=1;
   const sups=d.suppliers||[];
   if(sups.length){sups.forEach(s=>{
@@ -2220,12 +2241,12 @@ async function sourcingPDF(){
   });}else{para("No specific companies surfaced in the live search — use the supplier types and regions above as your search terms.");}
 
   if((d.selection_criteria||[]).length){head("Evaluate suppliers on");(d.selection_criteria||[]).forEach(bullet);}
-  if(d.logistics){head("Logistics & Incoterms · directional");para(d.logistics);y+=1;para("Freight is too volatile to quote a price — get live quotes from carriers or forwarders for your actual route and volume.",8,[135,135,135]);}
+  if(d.logistics){head("Logistics & Incoterms · directional");para(d.logistics);y+=1;para("Freight is too volatile to quote a price — get live quotes from carriers or forwarders for your actual route and volume.",8,[100,100,100]);}
   if((d.watchouts||[]).length){head("Market watch-outs");(d.watchouts||[]).forEach(bullet);}
   if((d.first_moves||[]).length){head("Your first moves");(d.first_moves||[]).forEach(bullet);}
 
   need(34);y+=5;rule();y+=5;
-  para("This report is AI-generated from live web sources at the time of search. Named companies are unverified leads — confirm capability, certifications and status before contacting or relying on any supplier. Not a substitute for your own due diligence. Not investment advice.",7.5,[150,150,150]);
+  para("This report is AI-generated from live web sources at the time of search. Named companies are unverified leads — confirm capability, certifications and status before contacting or relying on any supplier. Not a substitute for your own due diligence. Not investment advice.",7.5,[110,110,110]);
 
   const n=doc.getNumberOfPages();
   for(let p=1;p<=n;p++){doc.setPage(p);doc.setFontSize(7.5);doc.setTextColor(150,150,150);doc.text(`Page ${p} of ${n}`,W/2,H-13,{align:"center"});}
