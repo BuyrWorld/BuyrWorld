@@ -1772,10 +1772,16 @@ function ciClean(t){
   let s=t.replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/^---+\s*$/gm,"").replace(/\s*---\s*/g,"\n\n");
   s=s.replace(/(?:^|\s)(\d{1,2}\.\s*)?(TOP 5 RISKS|TOP 5 NEGOTIATION OPPORTUNITIES|MISSING CLAUSES|ESTIMATED COMMERCIAL EXPOSURE|RECOMMENDED NEXT STEPS|DISCLAIMER|EXECUTIVE SUMMARY|OVERALL RISK RATING|CONTRACT HEALTH SCORE|KEY COMMERCIAL RISKS|PROBLEM CLAUSES|SUPPLIER-FAVOURABLE LANGUAGE|PROCUREMENT NEGOTIATION POINTS|SUGGESTED REPLACEMENT WORDING|PRIORITY ACTIONS BEFORE SIGNING|REDLINED CONTRACT|CHANGE RATIONALE|COVER NOTE|NEGOTIATION RATIONALE)\b/g,"\n\n$1$2");
   s=s.replace(/([^\n])\s(\d{1,2})\.\s+(?=[A-Z(£"])/g,"$1\n$2. ");
-  // Join lines broken mid-sentence: a single newline whose next line continues the sentence
-  // (i.e. doesn't start a new block). Protect double-newlines (paragraph breaks) first.
+  // Join lines broken mid-sentence, but PRESERVE breaks before new blocks:
+  // numbered items (1. ...) and section headers (a short ALL-CAPS line).
   s=s.replace(/\n{2,}/g,"\u0000");                 // mark real paragraph breaks
-  s=s.replace(/\n(?!\d{1,2}\.\s)/g," ");           // join single newlines, unless next line is a numbered item
+  // protect newlines that precede a numbered item OR an all-caps header line
+  s=s.replace(/\n(?=\d{1,2}[.)]\s)/g,"\u0001");                          // before "1. " / "1) "
+  s=s.replace(/\n(?=[A-Z][A-Z0-9 &\/\-—:()'.]{3,}(?:\n|\u0000|$))/g,"\u0001"); // before an ALL-CAPS header line
+  // protect the newline AFTER a header line (numbered header or all-caps header), so body stays separate
+  s=s.replace(/((?:^|\u0001|\u0000)\s*(?:\d{1,2}[.)]\s*)?[A-Z][A-Z0-9 &\/\-—:()'.]{3,})\n/g,"$1\u0001");
+  s=s.replace(/\n/g," ");                            // join remaining mid-sentence newlines
+  s=s.replace(/\u0001/g,"\n");                       // restore protected single breaks
   s=s.replace(/\u0000/g,"\n\n");                    // restore paragraph breaks
   s=s.replace(/[ \t]{2,}/g," ");                    // tidy doubled spaces
   s=s.replace(/\s+([,.;:])/g,"$1");                 // remove space before punctuation (from joined lines)
