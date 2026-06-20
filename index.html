@@ -60,7 +60,7 @@ select.bwin option{background:var(--panel2);color:var(--text)}
 input.bwin:focus, textarea.bwin:focus, select.bwin:focus{border-color:var(--lime)}
 .ticker{display:inline-flex;white-space:nowrap;animation:slide 28s linear infinite;color:var(--muted);font-family:'Space Grotesk';font-size:13px;letter-spacing:.1em}
 .ticker>span{margin-right:36px}
-@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(calc(-100% / 6))}}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
@@ -1177,7 +1177,7 @@ function closePathway(){document.getElementById("pathways").style.display="grid"
 const PLANS=[["Beta — free for everyone","£0",["Everything free for a limited period while we're in Beta","Buyr AI + all 9 AI tools","Market Intelligence terminal","Full Academy & Blog","Templates available to buy individually"],"Start using it now","free",false],["Pro","£9.99",["AI Tools — unlimited","Market Intelligence — briefings, exposure & exports","All templates included","Full Academy & Blog","Private community access","Founding waitlist members: 50% off your first month"],"Join the waitlist","wait",true]];
 document.getElementById("plans").innerHTML=PLANS.map(([n,p,f,cta,kind,hot])=>`<div class="card" ${hot?'style="border-color:var(--lime)"':""}>${hot?'<span class="tag tag-lime">Launching soon</span>':(kind==="wait"?'<span class="tag">Launching soon</span>':'<span class="tag" style="color:var(--lime);border-color:var(--lime)">Beta · live now</span>')}<h3 style="font-size:18px;margin:12px 0 4px">${n}</h3><div style="font-size:36px;font-family:'Space Grotesk';font-weight:700">${p}<span style="font-size:14px;color:var(--muted);font-weight:400">/mo</span></div><div style="margin:14px 0 18px">${f.map(x=>`<div class="check"><span>✓</span>${x}</div>`).join("")}</div><button class="btn ${hot?"btn-lime":"btn-ghost"}" style="width:100%;justify-content:center" onclick="go('${kind==="wait"?"community":"ai"}')">${cta}</button></div>`).join("");
 
-document.getElementById("ticker").innerHTML=Array(2).fill(["TRUSTED BY MODERN BUYERS","MANUFACTURING","STARTUPS","SMEs","SOURCING TEAMS","SUPPLY CHAIN","CIPS STUDENTS"]).flat().map(t=>`<span>${t} <span style="color:var(--lime)">·</span></span>`).join("");
+document.getElementById("ticker").innerHTML=Array(6).fill(["TRUSTED BY MODERN BUYERS","MANUFACTURING","STARTUPS","SMEs","SOURCING TEAMS","SUPPLY CHAIN","CIPS STUDENTS"]).flat().map(t=>`<span>${t} <span style="color:var(--lime)">·</span></span>`).join("");
 
 // ---------- Blog ----------
 const ARTICLES=[
