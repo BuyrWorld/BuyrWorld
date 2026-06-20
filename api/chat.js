@@ -27,9 +27,9 @@ HARD RULES (never break)
 
 You are skilled but disciplined — the value you add is good questions, sound structure, honest uncertainty and professional judgement, not confident guesses.`;
 
-// Allow long-running web-search calls. Vercel Hobby plan permits up to 60s when set explicitly
-// (the default is 10s, which is too short for multi-step web search and causes the request to be killed).
-export const config = { maxDuration: 60 };
+// Allow long-running web-search calls. Vercel Pro permits up to 300s.
+// Must be set explicitly — the default is 10s, which is too short for web search.
+export const config = { maxDuration: 300 };
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
@@ -61,6 +61,7 @@ export default async function handler(req, res) {
     }
   } catch (_) {}
 
+  let abortTimer;
   try {
     const wantsWeb = req.body && req.body.web === true;
     const payload = {
@@ -72,6 +73,9 @@ export default async function handler(req, res) {
     if (wantsWeb) {
       payload.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }];
     }
+    const controller = new AbortController();
+    abortTimer = setTimeout(() => controller.abort(), 270_000);
+
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -80,7 +84,9 @@ export default async function handler(req, res) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
+    clearTimeout(abortTimer);
 
     const data = await r.json();
     if (!r.ok) {
@@ -90,6 +96,10 @@ export default async function handler(req, res) {
     const text = (data.content || []).map(c => c.text || "").join("\n").trim();
     return res.status(200).json({ text });
   } catch (err) {
+    clearTimeout(abortTimer);
+    if (err.name === "AbortError") {
+      return res.status(504).json({ error: "That search took too long — try a narrower search or a simpler question." });
+    }
     console.error(err);
     return res.status(500).json({ error: "Server error" });
   }
