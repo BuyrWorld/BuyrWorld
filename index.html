@@ -2002,6 +2002,7 @@ Return ONLY a JSON object, no other text, no markdown fences. Use this exact sha
  "market_structure":"3-4 sentences: fragmented vs consolidated, the supplier archetypes (OEMs, contract manufacturers, distributors, machine shops), and where production concentrates geographically and why.",
  "scores":{"market_depth":NN,"supply_risk":NN,"uk_eu_availability":NN,"price_competitiveness":NN},
  "where_to_look":["supplier type or region + one line why — this is safe direction, always grounded","..."],
+ "suppliers":[{"name":"Company","country":"Country","why":"one line why relevant","source":"the website/source you saw it in","url":"the supplier's website if you found it, else empty string","mentions":["which of the buyer's stated requirements are EXPLICITLY mentioned in the sources/listing you found for THIS supplier — copy the requirement wording. Only list a requirement here if the source text actually states it. Empty array if none stated."]}],
  "selection_criteria":["criterion the buyer should evaluate suppliers on for THIS item","..."],
  "logistics":"QUALITATIVE freight read for this item: is it dense or bulky, likely FCL vs LCL at this volume, whether freight is a big or small share of landed cost, and what the chosen Incoterm (${incoterm||"none given"}) means for who bears cost/risk. Give DIRECTIONAL guidance only — do NOT state specific container prices or freight rates, they are too volatile to quote; tell the buyer to get live quotes. 2-4 sentences.",
  "watchouts":["current supply/cost/lead-time/geopolitical factor affecting this market now, with a figure/date and source if found","..."],
@@ -2009,9 +2010,11 @@ Return ONLY a JSON object, no other text, no markdown fences. Use this exact sha
 }
 RULES (critical):
 - scores are 0-100 integers. market_depth=how many capable suppliers exist; supply_risk=higher means RISKIER; uk_eu_availability=how well-served from UK/EU; price_competitiveness=how competitive/contestable pricing is. Base them on what you actually find.
-- Every field grounded in your live search; where you cannot verify, say so rather than inventing. UK English.
-- BE EFFICIENT: do at most 2 quick searches, then write. Keep each text field to 1-2 sentences and bullet arrays to 3-5 items.`);
+- "suppliers": only include a company if it ACTUALLY appeared in your live web search for this item. NEVER invent or guess a company name. If you found none, return an empty array [] — do not pad it.
+${spec?`- For each supplier's "mentions" array, check ONLY against these buyer requirements: ${spec}. Include a requirement in "mentions" ONLY if the supplier's listing/source text explicitly states it. This reflects what the listing SAYS, not verified fact — never assume.\n`:""}- Every field grounded in your live search; where you cannot verify, say so in the text rather than inventing. UK English.
+- BE EFFICIENT: do at most 2 quick searches, then write. List a MAXIMUM of 4 named suppliers (best matches only). Keep each text field to 1-2 sentences and bullet arrays to 3-4 items. Prioritise finishing quickly over exhaustiveness.`);
     let d;try{d=JSON.parse(text.replace(/```json|```/g,"").trim());}catch(e){
+      // fallback: if not valid JSON, show as plain text rather than failing
       stopLoader();
       plausible('Tool Completed',{props:{tool:'Supplier Discovery'}});
       out.innerHTML=`${miBox(text)}<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn btn-lime" onclick="sourcingToRFQ()">Generate an RFQ for this →</button></div>`;
@@ -2019,21 +2022,8 @@ RULES (critical):
     }
     window._srcItem=item;
     stopLoader();
-    renderSourcing(d,item,true);
-    // Phase 2: targeted supplier lookup — runs while user reads the market data above
-    try{
-      const text2=await callAIWeb(`Search the live web NOW for named companies that supply this specific item. Find real candidate suppliers for this buyer:
-ITEM: ${item}
-${region?`PREFERRED REGIONS: ${region}\n`:""}${spec?`KEY REQUIREMENTS: ${spec}\n`:""}${detail?`PRODUCT DETAIL: ${detail}\n`:""}
-Return ONLY a JSON object, no other text, no markdown fences:
-{"suppliers":[{"name":"Company","country":"Country","why":"one line why relevant to this buyer","source":"the website or listing where you found them","url":"their website URL if found, else empty string","mentions":["which of the buyer's stated requirements are EXPLICITLY stated in the source text for this supplier — empty array if none"]}]}
-RULES: only include a company if it ACTUALLY appeared in your live web search — NEVER invent or guess names. If none found return {"suppliers":[]}. Maximum 4 suppliers, best matches only. ${spec?`Buyer requirements to check: ${spec}.`:""} Only add to "mentions" what the source text explicitly states.`);
-      let d2;try{d2=JSON.parse(text2.replace(/```json|```/g,"").trim());}catch(e){d2={suppliers:[]};}
-      fillSourcingSuppliers(d2.suppliers||[]);
-    }catch(e){
-      fillSourcingSuppliers([]);
-    }
     plausible('Tool Completed',{props:{tool:'Supplier Discovery'}});
+    renderSourcing(d,item);
   }catch(e){stopLoader();out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
 }
 // THREE DISTINCT bands: red 0-39, amber 40-69, green 70-100. 'good' = score AFTER inversion. returns [r,g,b].
@@ -2055,7 +2045,7 @@ function srcBar(label,val,invert,desc){
   const word=scoreWord(good,invert);
   return `<div style="margin:11px 0;font-size:12.5px"><div style="display:flex;justify-content:space-between"><span>${ciEsc(label)}</span><span style="font-family:'Space Grotesk';font-weight:600"><span style="color:rgb(${r},${g},${b})">${word}</span> <span style="color:var(--muted)">· ${val}</span></span></div><div style="height:7px;background:var(--line);border-radius:4px;margin-top:4px"><div style="height:7px;width:${Math.max(3,val)}%;background:rgb(${r},${g},${b});border-radius:4px"></div></div>${desc?`<div style="color:var(--muted);font-size:11px;line-height:1.4;margin-top:4px">${ciEsc(desc)}</div>`:""}</div>`;
 }
-function renderSourcing(d,item,placeholder){
+function renderSourcing(d,item){
   const out=document.getElementById("src-out");
   const sc=d.scores||{};
   const scoresHtml=srcBar("Market depth",sc.market_depth,false,"How many capable suppliers exist — higher means more choice and competitive tension.")+srcBar("Supply risk",sc.supply_risk,true,"Risk of disruption, concentration or single-source exposure — lower is safer.")+srcBar("UK / EU availability",sc.uk_eu_availability,false,"How well this can be sourced close to home — higher means less reliance on distant imports.")+srcBar("Price competitiveness",sc.price_competitiveness,false,"How contestable pricing is — higher means more room to negotiate between suppliers.");
@@ -2082,18 +2072,16 @@ function renderSourcing(d,item,placeholder){
     let u=s.url.trim(); if(!/^https?:\/\//i.test(u))u="https://"+u.replace(/^\/+/,"");
     return `<a href="${ciEsc(u)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--lime);text-decoration:none;margin-top:8px"><svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:var(--lime);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Visit website to verify →</a>`;
   }
-  const supHtml=placeholder
-    ?`<div style=”color:var(--muted);font-size:13.5px;padding:4px 0”>Searching for named suppliers — a moment more…</div>`
-    :sups.length?sups.map(s=>`<div class=”card” style=”padding:14px;margin:0”>
-      <div style=”display:flex;justify-content:space-between;gap:8px;align-items:baseline”>
-        <h4 style=”font-size:15px;color:var(--lime);margin:0”>${ciEsc(s.name||”—“)}</h4>
-        <span style=”color:var(--muted);font-size:11.5px”>${ciEsc(s.country||””)}</span>
+  const supHtml=sups.length?sups.map(s=>`<div class="card" style="padding:14px;margin:0">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+        <h4 style="font-size:15px;color:var(--lime);margin:0">${ciEsc(s.name||"—")}</h4>
+        <span style="color:var(--muted);font-size:11.5px">${ciEsc(s.country||"")}</span>
       </div>
-      <p style=”color:#CFCFCF;font-size:13px;line-height:1.55;margin:7px 0 0”>${ciEsc(s.why||””)}</p>
+      <p style="color:#CFCFCF;font-size:13px;line-height:1.55;margin:7px 0 0">${ciEsc(s.why||"")}</p>
       ${critChips(s)}
       ${siteLink(s)}
-      ${s.source?`<p style=”color:var(--muted);font-size:11px;margin:6px 0 0”>Source: ${ciEsc(s.source)}</p>`:””}
-    </div>`).join(“”):`<div class=”card” style=”padding:14px;margin:0;color:var(--muted);font-size:13px;line-height:1.55”>No specific companies surfaced in the live search for this item. Use the supplier types and regions in “Where to look” as your search terms — that's the grounded, reliable starting point.</div>`;
+      ${s.source?`<p style="color:var(--muted);font-size:11px;margin:6px 0 0">Source: ${ciEsc(s.source)}</p>`:""}
+    </div>`).join(""):`<div class="card" style="padding:14px;margin:0;color:var(--muted);font-size:13px;line-height:1.55">No specific companies surfaced in the live search for this item. Use the supplier types and regions in “Where to look” as your search terms — that's the grounded, reliable starting point.</div>`;
   window._srcReport={d,item,crit,at:(typeof miStamp==="function"?miStamp():new Date().toLocaleString("en-GB"))};
   out.innerHTML=`
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
@@ -2114,7 +2102,7 @@ function renderSourcing(d,item,placeholder){
   </div>
   <div class="card" style="margin-top:16px"><div class="eyebrow" style="margin-bottom:6px">Named candidate suppliers</div>
     <p style="color:var(--muted);font-size:12px;line-height:1.5;margin:0 0 12px">Leads found in live web search — <b style="color:var(--text)">verify each independently</b> (capability, certifications, quality systems, trading status) before contacting or relying on them.</p>
-    <div class="grid2" id="src-sup-slot" style="gap:12px;align-items:start">${supHtml}</div>
+    <div class="grid2" style="gap:12px;align-items:start">${supHtml}</div>
   </div>
   <div class="grid2" style="align-items:start;gap:16px;margin-top:16px">
     <div class="card"><div class="eyebrow" style="margin-bottom:10px">Evaluate suppliers on</div>
@@ -2134,40 +2122,6 @@ function renderSourcing(d,item,placeholder){
       <button class="btn btn-lime cta-grow" style="margin-top:14px;width:100%" onclick="sourcingToRFQ()">Generate an RFQ for this →</button>
     </div>
   </div>`;
-}
-function fillSourcingSuppliers(sups){
-  const slot=document.getElementById("src-sup-slot");
-  if(!slot)return;
-  const crit=((window._srcData&&window._srcData.spec)||"").split(/[,;/]| and /i).map(s=>s.trim()).filter(s=>s.length>1).slice(0,6);
-  function critChips(s){
-    if(!crit.length)return"";
-    const ment=(s.mentions||[]).join(" ").toLowerCase();
-    const chips=crit.map(c=>{
-      const hit=ment.includes(c.toLowerCase())||(s.mentions||[]).some(m=>m.toLowerCase().includes(c.toLowerCase()));
-      return hit
-        ?`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--lime);border:1px solid rgba(214,255,0,.4);border-radius:20px;padding:2px 9px;margin:3px 4px 0 0"><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:var(--lime);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12l4 4L19 7"/></svg>${ciEsc(c)}</span>`
-        :`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:2px 9px;margin:3px 4px 0 0" title="Not stated in their listing — confirm with the supplier">${ciEsc(c)} <span style="color:#FFB800">· ask</span></span>`;
-    }).join("");
-    return `<div style="margin-top:10px"><div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Against your requirements <span style="text-transform:none;letter-spacing:0">· per their listing, not verified</span></div>${chips}</div>`;
-  }
-  function siteLink(s){
-    if(!s.url)return"";
-    let u=s.url.trim(); if(!/^https?:\/\//i.test(u))u="https://"+u.replace(/^\/+/,"");
-    return `<a href="${ciEsc(u)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--lime);text-decoration:none;margin-top:8px"><svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:var(--lime);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Visit website to verify →</a>`;
-  }
-  slot.innerHTML=sups.length
-    ?sups.map(s=>`<div class="card" style="padding:14px;margin:0">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
-        <h4 style="font-size:15px;color:var(--lime);margin:0">${ciEsc(s.name||"—")}</h4>
-        <span style="color:var(--muted);font-size:11.5px">${ciEsc(s.country||"")}</span>
-      </div>
-      <p style="color:#CFCFCF;font-size:13px;line-height:1.55;margin:7px 0 0">${ciEsc(s.why||"")}</p>
-      ${critChips(s)}
-      ${siteLink(s)}
-      ${s.source?`<p style="color:var(--muted);font-size:11px;margin:6px 0 0">Source: ${ciEsc(s.source)}</p>`:""}
-    </div>`).join("")
-    :`<div class="card" style="padding:14px;margin:0;color:var(--muted);font-size:13px;line-height:1.55">No specific companies surfaced in the live search for this item. Use the supplier types and regions in "Where to look" as your starting point.</div>`;
-  if(window._srcReport)window._srcReport.d.suppliers=sups;
 }
 function sourcingToRFQ(){
   go("tool-rfq");
