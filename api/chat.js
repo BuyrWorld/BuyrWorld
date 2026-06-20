@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     const wantsWeb = req.body && req.body.web === true;
     const payload = {
       model: "claude-sonnet-4-6",
-      max_tokens: wantsWeb ? 1800 : 2200,
+      max_tokens: wantsWeb ? 3000 : 2200,
       system: SYSTEM,
       messages: clean,
     };

@@ -1751,11 +1751,11 @@ function quoteReportHTML(){
   const d=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"});
   return `<html><head><meta charset="utf-8"><title>BuyrWorld Quote Comparison Review</title>
   <style>body{font-family:Arial,sans-serif;color:#1A1A1A;margin:40px;line-height:1.6;font-size:11pt}
-  .wm{font-size:20pt;font-weight:bold}.wm .w{color:#8FA800}.tag{color:#8C8C8C;font-size:9pt}
+  .tag{color:#8C8C8C;font-size:9pt}
   h1{font-size:17pt;margin:6px 0 2px}.rule{border-bottom:3px solid #5A6B00;margin:10px 0 18px}
   pre{white-space:pre-wrap;font-family:Arial,sans-serif;font-size:10.5pt}
   .foot{margin-top:24px;border-top:1px solid #ccc;padding-top:8px;color:#8C8C8C;font-size:8.5pt}</style></head><body>
-  <div class="wm">BUYR<span class="w">WORLD</span></div><div class="tag">The Home of Modern Procurement · buyrworld.com</div>
+  <img src="${BW_LOGO}" style="height:22px;width:auto;display:block;margin-bottom:6px" alt="BuyrWorld"><div class="tag">The Home of Modern Procurement &middot; buyrworld.com</div>
   <h1>Quote Comparison Review</h1><div class="tag">Prepared ${d} · Files: ${esc(quoteFiles.map(q=>q.name).join(", "))}</div>
   <div class="rule"></div>
   <pre>${esc(window._quoteReport||"")}</pre>
@@ -1854,20 +1854,21 @@ function ciRender(title,text,extraTop="",kind="plain"){
   document.getElementById("ci-out").scrollIntoView({behavior:"smooth"});
 }
 function ciCopy(btn){if(!_cLast)return;navigator.clipboard.writeText(_cLast.text.replace(/\[\[\/?(DEL|INS)\]\]/g,"")).then(()=>{btn.textContent="Copied ✓";setTimeout(()=>btn.textContent="Copy",2000);}).catch(()=>{});}
-function ciShell(title,inner){
+function ciShell(title,inner,footerOverride){
   const d=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"});
+  const foot=footerOverride!==undefined?footerOverride:'Generated with the BuyrWorld Contract Intelligence Agent. Procurement contract intelligence, not legal advice &#8212; verify with qualified legal counsel before reliance or signature. &copy; '+new Date().getFullYear()+' BuyrWorld.';
   return `<html><head><meta charset="utf-8"><title>${ciEsc(title)}</title>
   <style>body{font-family:Arial,sans-serif;color:#1A1A1A;margin:40px;line-height:1.6;font-size:11pt}
-  .wm{font-size:20pt;font-weight:bold}.wm .w{color:#8FA800}.tag{color:#8C8C8C;font-size:9pt}
+  .tag{color:#8C8C8C;font-size:9pt}
   h1{font-size:17pt;margin:6px 0 2px}h2{font-size:12.5pt;margin:18px 0 6px;color:#5A6B00}
   .rule{border-bottom:3px solid #5A6B00;margin:10px 0 18px}
   .body{white-space:pre-wrap;font-size:10.5pt}
   table{border-collapse:collapse;width:100%;margin:8px 0}td,th{border:1px solid #ccc;padding:6px 9px;font-size:10pt;text-align:left}
   .foot{margin-top:24px;border-top:1px solid #ccc;padding-top:8px;color:#8C8C8C;font-size:8.5pt}</style></head><body>
-  <div class="wm">BUYR<span class="w">WORLD</span></div><div class="tag">The Home of Modern Procurement · buyrworld.com</div>
-  <h1>${ciEsc(title)}</h1><div class="tag">Prepared ${d}${_cName?` · Source: ${ciEsc(_cName)}`:""}</div>
+  <img src="${BW_LOGO}" style="height:22px;width:auto;display:block;margin-bottom:6px" alt="BuyrWorld"><div class="tag">The Home of Modern Procurement &middot; buyrworld.com</div>
+  <h1>${ciEsc(title)}</h1><div class="tag">Prepared ${d}${_cName?` &middot; Source: ${ciEsc(_cName)}`:""}</div>
   <div class="rule"></div>${inner}
-  <div class="foot">Generated with the BuyrWorld Contract Intelligence Agent. Procurement contract intelligence, not legal advice — verify with qualified legal counsel before reliance or signature. © ${new Date().getFullYear()} BuyrWorld.</div>
+  <div class="foot">${foot}</div>
   </body></html>`;
 }
 function ciReportHTML(){
@@ -2483,7 +2484,7 @@ function miReportHTML(){
   if(MI.exp){inner+=`<h2>Commodity exposure (${MI.exp.at})</h2><table><tr><th>Commodity / input</th><th style="text-align:right">Exposure</th><th style="text-align:right">Share of spend</th></tr>${MI.exp.expArr.map(([k,v])=>`<tr><td>${ciEsc(k)}</td><td style="text-align:right">${gbp(v)}</td><td style="text-align:right">${(v/MI.exp.total*100).toFixed(1)}%</td></tr>`).join("")}</table><p style="font-size:9pt;color:#555">AI-estimated cost composition across ${MI.exp.cats.length} categories totalling ${gbp(MI.exp.total)} — directional; refine with supplier cost breakdowns.</p>`;}
   if(MI.sim)inner+=`<h2>Cost shock simulation (${MI.sim.at})</h2><p>Expected annual impact: <b>${MI.sim.totalImpact>0?"+":""}${gbp(MI.sim.totalImpact)}</b> (${(MI.sim.totalImpact/MI.sim.baseTotal*100).toFixed(1)}% of analysed spend)</p><table><tr><th>Input</th><th style="text-align:right">Shock</th><th style="text-align:right">Exposure</th><th style="text-align:right">Annual impact</th></tr>${MI.sim.rows.replace(/var\(--line\)/g,"#ccc").replace(/var\(--lime\)/g,"#5A6B00")}</table>`;
   if(!inner)inner="<p>No intelligence generated yet — generate a briefing, commodity analysis, exposure map or simulation first.</p>";
-  return ciShell("Market Intelligence Report — "+d,inner+`<p style="font-size:8.5pt;color:#8C8C8C;margin-top:14px">Generated on demand from live web sources and AI assessment. Figures should be verified before commercial commitments. Not investment advice.</p>`);
+  return ciShell("Market Intelligence Report — "+d,inner,'Generated on demand from live web sources and AI assessment. Figures should be verified before commercial commitments. Not investment advice. &copy; '+new Date().getFullYear()+' BuyrWorld.');
 }
 function miDownloadDoc(){const b=new Blob(["\ufeff",miReportHTML()],{type:"application/msword"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="BuyrWorld-Market-Intelligence-Report.doc";a.click();URL.revokeObjectURL(a.href);}
 function miPrintReport(){const w=window.open("","_blank");w.document.write(miReportHTML());w.document.close();setTimeout(()=>w.print(),400);}
@@ -2843,12 +2844,12 @@ function spendReportHTML(){
   const recRows=d.recs.map((r,i)=>`<p style="margin:6px 0"><b>${i+1}.</b> ${esc(r)}</p>`).join("");
   return `<html><head><meta charset="utf-8"><title>BuyrWorld Spend Analysis Report</title>
   <style>body{font-family:Arial,sans-serif;color:#1A1A1A;margin:40px;line-height:1.55;font-size:10.5pt}
-  .wm{font-size:20pt;font-weight:bold}.wm .w{color:#8FA800}.tag{color:#8C8C8C;font-size:9pt}
+  .tag{color:#8C8C8C;font-size:9pt}
   h1{font-size:17pt;margin:6px 0 2px}h2{font-size:12.5pt;margin:18px 0 6px;color:#5A6B00}
   .rule{border-bottom:3px solid #5A6B00;margin:10px 0 18px}
   table{border-collapse:collapse;width:100%;margin:6px 0}td,th{border:1px solid #ccc;padding:6px 9px;font-size:9.5pt;text-align:left;vertical-align:middle}
   .foot{margin-top:24px;border-top:1px solid #ccc;padding-top:8px;color:#8C8C8C;font-size:8.5pt}</style></head><body>
-  <div class="wm">BUYR<span class="w">WORLD</span></div><div class="tag">The Home of Modern Procurement · buyrworld.com</div>
+  <img src="${BW_LOGO}" style="height:22px;width:auto;display:block;margin-bottom:6px" alt="BuyrWorld"><div class="tag">The Home of Modern Procurement &middot; buyrworld.com</div>
   <h1>Spend Analysis Report</h1><div class="tag">Prepared ${d.date} · ${d.rows} lines analysed${d.skipped?` · ${d.skipped} skipped`:""}</div>
   <div class="rule"></div>
   <h2>Executive summary</h2>
