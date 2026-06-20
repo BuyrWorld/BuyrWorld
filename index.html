@@ -973,12 +973,13 @@ const PAYMENT_LINKS={
  "Procurement Policy Template":"https://buy.stripe.com/8x2aEQ3wV4oI4WZa5I7wA0f",
  "Pro Membership":""
 };
-function buy(name){const url=PAYMENT_LINKS[name];if(url){window.open(url,"_blank")}else{alert("Checkout for \""+name+"\" is coming soon — add your Stripe Payment Link in the PAYMENT_LINKS section of index.html.")}}
+function buy(name){const url=PAYMENT_LINKS[name];if(url){plausible('Checkout Started',{props:{template:name}});window.open(url,"_blank")}else{alert("Checkout for \""+name+"\" is coming soon — add your Stripe Payment Link in the PAYMENT_LINKS section of index.html.")}}
 
 // ---------- Navigation ----------
 const LINKS=[["home","Home"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Templates"],["academy","Academy"],["pricing","Pricing"],["blog","Blog"],["contact","Contact"]];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});}
+const _TOOL_NAMES={'tool-sourcing':'Supplier Discovery','tool-defender':'Price Increase Defender','tool-sim':'Negotiation Simulator','tool-minutes':'Meeting Minutes','tool-quotes':'Quote Comparator','tool-contract':'Contract Intelligence','tool-rfq':'RFQ Generator','spend':'Spend Analyser'};
+function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});if(_TOOL_NAMES[p])plausible('Tool Opened',{props:{tool:_TOOL_NAMES[p]}});}
 function toggleMenu(){const m=document.getElementById("mobmenu");m.style.display=m.style.display==="flex"?"none":"flex";}
 function renderNav(){
   document.getElementById("desknav").innerHTML=LINKS.map(([k,l])=>`<button class="navlink ${page===k?"on":""}" onclick="go('${k}')">${l}</button>`).join("")+`<button class="btn btn-lime" style="padding:8px 16px;font-size:13px;margin-left:8px" onclick="go('ai')">Start free</button>`;
@@ -1587,6 +1588,7 @@ async function runDefender(){
     const body=text.replace(/^.*JUSTIFICATION STRENGTH:.*$/im,"").trim();
     const col=score===null?"var(--lime)":score>=70?"#FF5C5C":score>=40?"#FFB800":"var(--lime)";
     const verdict=score===null?"":score>=70?"Strong letter — they came with evidence. Negotiate the size, not the principle.":score>=40?"Partially justified — real pressure, inflated number. Attack the gap.":"Weak justification — push back hard. This letter is a hope, not a case.";
+    plausible('Tool Completed',{props:{tool:'Price Increase Defender'}});
     out.innerHTML=`${score!==null?`
       <div style="margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span class="eyebrow">Their justification strength</span><span style="font-family:'Space Grotesk';font-weight:700;color:${col}">${score}/100</span></div>
@@ -1633,6 +1635,7 @@ async function endSim(){
   if(m){
     const s=Math.min(100,parseInt(m[1]));
     const grade=s>=90?"A* · Deal Closer":s>=80?"A · Sharp Operator":s>=70?"B · Solid Buyer":s>=55?"C · Room to Trade":"D · Back to the Planner";
+    plausible('Tool Completed',{props:{tool:'Negotiation Simulator'}});
     document.getElementById("sim-score").innerHTML=`
       <div class="card" style="border-color:var(--lime);display:flex;gap:18px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
         <div style="font-family:'Space Grotesk';font-weight:700;font-size:42px;color:var(--lime)">${s}<span style="font-size:18px;color:var(--muted)">/100</span></div>
@@ -1652,6 +1655,7 @@ async function runMinutes(){
     const text=await callAI(`You are the BuyrWorld Meeting Summariser. Turn these raw meeting notes into clean, email-ready minutes in UK English:\n"""${notes.slice(0,6000)}"""\nRules: PLAIN TEXT ONLY — no markdown symbols, no asterisks, no hashes (it will be pasted into an email). Use this exact structure with blank lines between sections:\nSUBJECT: <one-line email subject with meeting name and date if known>\n\nSUMMARY\n- 2 to 4 short bullets using the hyphen character\n\nDECISIONS\n- each decision on one line (write "None recorded" if none)\n\nACTIONS\n- one line per action in the format: <Task> | Owner: <name or TBC> | Dept: <department or TBC> | Due: <date or estimated date or TBC>\nOnly estimate a due date when the notes imply a timeframe (e.g. "by Friday", "this week") — convert it to an actual date where possible; otherwise write TBC. Never invent owners or departments not implied by the notes.\n\nRISKS / PARKING LOT\n- anything raised but not resolved (or "None")\n\nNEXT MEETING\n- date/time if mentioned, otherwise TBC\nKeep the whole thing under 350 words.`);
     window._minutesText=text.trim();
     const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    plausible('Tool Completed',{props:{tool:'Meeting Minutes'}});
     out.innerHTML=`
       <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px;font-size:13.5px;line-height:1.7;color:#CFCFCF;white-space:pre-wrap;font-family:'Inter'">${esc(window._minutesText)}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
@@ -1728,6 +1732,7 @@ async function runComparator(){
     const text=await callAI(`You are the BuyrWorld Quote Comparator, a senior UK procurement analyst. Compare these supplier quotations:\n${corpus}\n${ctx?`Buyer's stated weightings/assumptions: ${ctx}.`:"No weightings given — use price 40%, quality/compliance 25%, lead time 20%, commercial risk 15% and say so."}\nProduce a comprehensive review in UK English, PLAIN TEXT (no markdown symbols), using EXACTLY this structure:\nRECOMMENDATION: <supplier> — <one decisive line>\n\n1. QUOTE SUMMARY\nOne block per supplier: Supplier | Unit price & volume basis | Currency | Incoterms | Payment terms | Lead time | Validity | Tooling/extras | Anything unusual\n\n2. NORMALISED COMPARISON\nAdjust to like-for-like landed cost: currency, Incoterms (estimate freight ONLY if needed and flag it as an assumption), payment-terms value (state the cost of capital used), tooling amortised over stated volume. Show the working line by line per supplier, then a final comparable cost per unit.\n\n3. WEIGHTED SCORING\nScore each supplier per criterion out of 5 with one-line justification, then weighted totals.\n\n4. RISKS AND GAPS\nPer supplier: missing information, compliance gaps, commercial risks.\n\n5. QUESTIONS TO ASK\n2-3 sharp clarification questions per supplier before award.\n\n6. RECOMMENDATION AND NEGOTIATION ANGLE\nWho, why, and the lever to use with the chosen supplier and the runner-up.\nFlag every assumption explicitly. If data is missing, say TBC rather than inventing it. Under 800 words.`);
     window._quoteReport=text.trim();
     const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    plausible('Tool Completed',{props:{tool:'Quote Comparator'}});
     out.innerHTML=`
       <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px;font-size:13.5px;line-height:1.7;color:#CFCFCF;white-space:pre-wrap">${esc(window._quoteReport)}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
@@ -1894,6 +1899,7 @@ async function runContractReview(){
   try{
     const text=await callAI(`You are the BuyrWorld Contract Intelligence Agent — a senior UK procurement specialist reviewing a supplier contract from the BUYER'S perspective. Contract text:\n"""${t}"""\nProduce a review in UK English, PLAIN TEXT only (no markdown symbols), with EXACTLY these numbered sections:\n1. EXECUTIVE SUMMARY (3-4 sentences, plain English)\n2. OVERALL RISK RATING: Low / Medium / High — one line why\n3. CONTRACT HEALTH SCORE: NN/100\n4. KEY COMMERCIAL RISKS (the money: price mechanisms, indexation, payment, volume commitments)\n5. PROBLEM CLAUSES (quote or reference the clause, explain the issue in plain English)\n6. MISSING CLAUSES (what a buyer would expect that isn't there)\n7. SUPPLIER-FAVOURABLE LANGUAGE (one-sided wording to flag)\n8. PROCUREMENT NEGOTIATION POINTS (ranked, with rationale)\n9. SUGGESTED REPLACEMENT WORDING (buyer-friendly alternatives for the 2-3 worst clauses)\n10. PRIORITY ACTIONS BEFORE SIGNING\n11. DISCLAIMER: state this is procurement contract intelligence, not legal advice, and should be reviewed by a qualified legal professional where required.\nMark anything you cannot determine as TBC rather than inventing it. Under 850 words.\\nFORMATTING (critical): every section header on its OWN line in CAPITALS; every numbered point starts on a NEW line; never use asterisks, hashes or --- separators.`);
     _cReview=text.trim();
+    plausible('Tool Completed',{props:{tool:'Contract Intelligence'}});
     ciRender("BuyrWorld Contract Review",_cReview,
       `<div class="card" style="border-color:var(--lime);margin-bottom:14px;padding:14px 18px;font-size:13.5px">Review complete. Next step: <b>Generate a Better Contract</b> turns these findings into buyer-friendly counter-wording.</div>`);
   }catch(e){document.getElementById("ci-out").innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
@@ -1903,6 +1909,7 @@ async function runContractGenerate(){
   ciBusy(["Reading the contract…","Marking up contested wording…","Inserting buyer-friendly terms…","Writing the cover note…"]);
   try{
     const text=await callAI(`You are the BuyrWorld Contract Intelligence Agent. Rewrite this supplier contract from the BUYER'S side as a redlined draft.\nContract:\n"""${t}"""\n${_cReview?`Prior review findings:\n"""${_cReview.slice(0,3000)}"""`:""}\nMARKUP RULES (critical): wrap every piece of wording we contest or remove in [[DEL]]...[[/DEL]] and every piece of proposed buyer wording in [[INS]]...[[/INS]]. Use NO other formatting symbols.\nOutput in UK English, PLAIN TEXT with the markers, in EXACTLY these sections:\n1. REDLINED CONTRACT\nGo through the agreement clause by clause IN ORDER. For clauses that are acceptable, write just: Clause <number/title> — unchanged. For every problematic clause, reproduce its text with the contested wording struck out via [[DEL]] and the replacement inserted via [[INS]] inline, so the redline reads like a marked-up contract. Put each clause heading (e.g. Clause 8 — Intellectual Property) on its OWN line, with the clause text starting on the next line. Strike wording we should not accept even where no replacement is proposed.\n2. CHANGE RATIONALE\nOne line per amended clause: why, in commercial terms a supplier will understand.\n3. COVER NOTE\nA short professional email returning the redline to the supplier.\n4. DISCLAIMER\nDraft for negotiation purposes; must be reviewed by qualified legal counsel before issue or signature.\nKeep total under 1,100 words; prioritise the highest-risk clauses if space is tight.\\nFORMATTING (critical): every section header on its OWN line in CAPITALS; every numbered point starts on a NEW line; never use asterisks, hashes or --- separators.`);
+    plausible('Tool Completed',{props:{tool:'Contract Intelligence'}});
     ciRender("BuyrWorld Redlined Contract Draft",text.trim(),
       _cReview?"":`<div class="card" style="margin-bottom:14px;padding:14px 18px;font-size:13.5px;color:var(--muted)">Tip: running <b style="color:var(--text)">Step 1 · Review Contract</b> first gives this rewrite sharper findings to work from.</div>`,
       "redline");
@@ -1953,6 +1960,7 @@ async function runContractHealth(){
       </div>
       <div class="card" style="margin-bottom:14px"><div class="eyebrow" style="margin-bottom:6px">Risk heat map — by dimension</div>${bars}</div>`;
     }
+    plausible('Tool Completed',{props:{tool:'Contract Intelligence'}});
     ciRender("BuyrWorld Contract Health Check",(sm.overall!==undefined?`CONTRACT HEALTH SCORE: ${sm.overall}/100\n\n`:"")+body,dash,sm.overall!==undefined?"health":"plain");
   }catch(e){document.getElementById("ci-out").innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
 }
@@ -1967,6 +1975,7 @@ async function runRFQGen(){
   try{
     const text=await callAI(`Draft a professional Request for Quotation in UK English, PLAIN TEXT, no markdown symbols. Issued by: ${co} (contact: ${nm}${v("rfq-email")?", "+v("rfq-email"):""}). Requirement: ${ti}. Specification/scope: ${v("rfq-spec")||"TBC"}. Material/grade: ${v("rfq-mat")||"TBC"}. Quantity & schedule: ${v("rfq-qty")||"TBC"}. Delivery & Incoterms: ${v("rfq-del")||"TBC"}. Quality requirements: ${v("rfq-qual")||"TBC"}. Payment terms: ${v("rfq-pay")||"TBC"}. Currency & validity: ${v("rfq-cur")||"TBC"}. Response deadline: ${v("rfq-dead")||"TBC"}. Additional: ${v("rfq-extra")||"none"}.\nUse EXACTLY these numbered sections, each header in CAPITALS on its own line: 1. INTRODUCTION (one short paragraph issued on behalf of ${co}) 2. SCOPE AND SPECIFICATION 3. QUANTITY AND DELIVERY SCHEDULE 4. COMMERCIAL REQUIREMENTS (pricing format, currency, quote validity, proposed payment terms, Incoterms) 5. QUALITY AND COMPLIANCE 6. EVALUATION CRITERIA (weighted percentages) 7. RESPONSE INSTRUCTIONS (deadline ${v("rfq-dead")||"TBC"}, submit to ${nm}${v("rfq-email")?" at "+v("rfq-email"):""}) 8. GENERAL TERMS (no commitment to award, confidentiality). CRITICAL RULES: do NOT add your own title block, reference number or date - start directly at section 1. Use the buyer's details exactly as given. Write TBC ONLY where a field above says TBC - never add TBC lines for details that were not asked about, and never invent specifics the buyer did not state. Where something is TBC, say once that it will be confirmed prior to award rather than listing TBC bullet lines. Under 700 words.`);
     window._rfq={text:ciClean(text),co,nm,ti,email:v("rfq-email")};
+    plausible('Tool Completed',{props:{tool:'RFQ Generator'}});
     out.innerHTML=`${miBox(window._rfq.text)}
       <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
         <button class="btn btn-lime" onclick="rfqPDF()">Download RFQ (PDF)</button>
@@ -2007,11 +2016,13 @@ ${spec?`- For each supplier's "mentions" array, check ONLY against these buyer r
     let d;try{d=JSON.parse(text.replace(/```json|```/g,"").trim());}catch(e){
       // fallback: if not valid JSON, show as plain text rather than failing
       stopLoader();
+      plausible('Tool Completed',{props:{tool:'Supplier Discovery'}});
       out.innerHTML=`${miBox(text)}<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn btn-lime" onclick="sourcingToRFQ()">Generate an RFQ for this →</button></div>`;
       window._srcItem=item;return;
     }
     window._srcItem=item;
     stopLoader();
+    plausible('Tool Completed',{props:{tool:'Supplier Discovery'}});
     renderSourcing(d,item);
   }catch(e){stopLoader();out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
 }
@@ -2670,6 +2681,7 @@ function analyseSpend(){
     if(amt>maxLine){maxLine=amt;maxLineDesc=s;}
   }
   if(!rows){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t find any amounts — check the data is comma-separated with a numeric amount column.</p>';return;}
+  plausible('Tool Completed',{props:{tool:'Spend Analyser'}});
   const topS=Object.entries(sup).sort((a,b)=>b[1]-a[1]);
   const topC=Object.entries(cat).sort((a,b)=>b[1]-a[1]);
   const top1=topS[0][1]/total;
