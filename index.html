@@ -2928,7 +2928,8 @@ async function send(id,text){
   HIST[id].push({role:"user",content:q});
   log.insertAdjacentHTML("beforeend",`<div class="msg user"><div class="bub"></div></div>`);
   log.lastElementChild.querySelector(".bub").textContent=q;
-  log.insertAdjacentHTML("beforeend",`<div class="msg ai" id="${id}-typing"><div class="bub" style="color:var(--lime);font-family:'Space Grotesk';font-size:13px">Buyr AI is drafting…</div></div>`);
+  log.insertAdjacentHTML("beforeend",`<div class="msg ai"><div class="bub" style="color:var(--lime);font-family:'Space Grotesk';font-size:13px">Buyr AI is drafting…</div></div>`);
+  const typingEl=log.lastElementChild;
   log.scrollTop=log.scrollHeight;
   let reply="";
   try{
@@ -2937,10 +2938,10 @@ async function send(id,text){
     const d=await r.json();
     reply=md(d.text||"Sorry — I couldn't draft that. Try again.");
   }catch(e){
-    reply=route(q); // demo fallback if the AI backend isn't configured yet
+    reply="Sorry — Buyr AI couldn't reach its servers just now. Try again in a moment.";
   }
   HIST[id].push({role:"assistant",content:reply.replace(/<[^>]+>/g,"")});
-  document.getElementById(id+"-typing").remove();
+  typingEl.remove();
   log.insertAdjacentHTML("beforeend",`<div class="msg ai"><div class="bub">${reply}</div></div>`);
   log.scrollTop=log.scrollHeight;
 }
