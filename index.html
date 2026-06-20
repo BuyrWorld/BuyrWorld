@@ -2108,7 +2108,7 @@ function renderSourcing(d,item,placeholder){
     let u=s.url.trim(); if(!/^https?:\/\//i.test(u))u="https://"+u.replace(/^\/+/,"");
     return `<a href="${ciEsc(u)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--lime);text-decoration:none;margin-top:8px"><svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:var(--lime);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Visit website to verify →</a>`;
   }
-  const supHtml=placeholder?'<div style="color:var(--muted);font-size:13.5px;padding:4px 0">Searching for named suppliers, please wait...</div>':sups.length?sups.map(s=>`<div class="card" style="padding:14px;margin:0">
+  const supHtml=placeholder?'<div class="bw-loader" style="padding:10px 0"><div class="bw-loader-msg">Still searching for suppliers...</div><div class="bw-loader-track"></div></div>':sups.length?sups.map(s=>`<div class="card" style="padding:14px;margin:0">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
         <h4 style="font-size:15px;color:var(--lime);margin:0">${ciEsc(s.name||"—")}</h4>
         <span style="color:var(--muted);font-size:11.5px">${ciEsc(s.country||"")}</span>

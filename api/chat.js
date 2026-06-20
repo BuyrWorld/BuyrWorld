@@ -71,7 +71,7 @@ export default async function handler(req, res) {
       messages: clean,
     };
     if (wantsWeb) {
-      payload.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }];
+      payload.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 6 }];
     }
     const controller = new AbortController();
     abortTimer = setTimeout(() => controller.abort(), 270_000);
