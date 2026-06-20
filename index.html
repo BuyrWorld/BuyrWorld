@@ -257,6 +257,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 .bw-loader-track{height:4px;background:var(--line);border-radius:3px;margin-top:10px;overflow:hidden;position:relative;max-width:340px}
 .bw-loader-track::after{content:"";position:absolute;top:0;left:0;height:100%;width:40%;background:var(--lime);border-radius:3px;will-change:transform;animation:bwslide 1.3s cubic-bezier(0.4,0,0.2,1) infinite}
 @keyframes bwslide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+.mi-indices{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+@media (max-width:860px){.mi-indices{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:540px){.mi-indices{grid-template-columns:repeat(2,1fr)}}
 </style>
 <!-- Privacy-friendly analytics by Plausible -->
 <script async src="https://plausible.io/js/pa-nAXomdjqO-qa7uizROZAe.js"></script>
@@ -2379,7 +2382,7 @@ async function runBriefing(){
     const bodyHTML=hlIdx>-1
       ?(body.slice(0,hlIdx).trimEnd()?miBox(body.slice(0,hlIdx).trimEnd()):'')+'<p style="font-family:\'Space Grotesk\';font-weight:600;font-size:14px;color:var(--text);margin:20px 0 4px">TOP HEADLINES</p>'+miPills+miBox(body.slice(hlIdx).replace(/TOP HEADLINES[^\n]*/i,'').trimStart())
       :miBox(body);
-    out.innerHTML=`${tiles?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px">${tiles}</div><p style="color:var(--muted);font-size:11px;margin-bottom:12px">AI-assessed indices from live sources at ${MI.brief.at} · 0–100, higher = calmer</p>`:""}${bodyHTML}`;
+    out.innerHTML=`${tiles?`<div class="mi-indices">${tiles}</div><p style="color:var(--muted);font-size:11px;margin-bottom:12px">AI-assessed indices from live sources at ${MI.brief.at} · 0–100, higher = calmer</p>`:""}${bodyHTML}`;
     miShowExports();
   }catch(e){miFail("mi-brief");}
 }
@@ -2483,7 +2486,7 @@ function miReportHTML(){
   const d=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"});
   let inner="";
   if(MI.brief){const dims=[["Market sentiment","sentiment"],["Supply chain stress","supply_stress"],["Commodity inflation","commodity_inflation"],["Supplier risk","supplier_risk"],["Geopolitical","geopolitical"],["Logistics","logistics"],["Energy cost","energy"],["Environmental","environmental"],["Regulatory","regulatory"]];
-    const cells=dims.filter(([,k])=>MI.brief.sm[k]!==undefined).map(([lab,k])=>{const v=MI.brief.sm[k];const bg=v>=70?"#C6EFCE":v>=45?"#FFEB9C":"#FFC7CE";return `<td style="background:${bg};text-align:center"><b>${v}</b><br><span style="font-size:8pt">${lab}</span></td>`;}).join("");
+    const cells=dims.filter(([,k])=>MI.brief.sm[k]!==undefined).map(([lab,k])=>{const v=MI.brief.sm[k];const bg=v>=70?"#C6EFCE":v>=45?"#FFEB9C":"#FFC7CE";const tc=v>=70?"#1E6622":v>=45?"#7D5A00":"#922B21";const word=v>=70?"CALM":v>=45?"WATCH":"ELEVATED";return `<td style="background:${bg};text-align:center;padding:8px 4px;vertical-align:top"><div style="font-size:16pt;font-weight:700;color:#1A1A1A;line-height:1">${v}</div><div style="font-size:7pt;font-weight:700;color:${tc};margin:2px 0 4px;letter-spacing:.05em">${word}</div><div style="font-size:7.5pt;color:#555">${lab}</div></td>`;}).join("");
     const exportCats=[['P&T','Political & Trade'],['ECO','Economic'],['ENV','Environmental & Climate'],['L&C','Legal & Compliance'],['TEC','Technology & Innovation'],['SOC','Social & Labour']];
     const exportPills='<div style="display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 14px">'+exportCats.map(([c,l])=>'<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid #ccc;border-radius:12px;padding:2px 8px 2px 6px;font-size:8.5pt"><b style="color:#5A6B00">['+c+']</b><span style="color:#555;margin-left:2px">'+l+'</span></span>').join('')+'</div>';
     const bfHlIdx=MI.brief.body.search(/TOP HEADLINES/i);
