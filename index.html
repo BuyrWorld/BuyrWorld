@@ -2378,9 +2378,10 @@ async function runBriefing(){
     const miCats=[['P&T','Political & Trade'],['ECO','Economic'],['ENV','Environmental & Climate'],['L&C','Legal & Compliance'],['TEC','Technology & Innovation'],['SOC','Social & Labour']];
     const miPills='<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px">'+miCats.map(([c,l])=>'<span style="display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:3px 10px 3px 8px;font-size:11.5px"><b style="font-family:\'Space Grotesk\';font-size:11px;font-weight:700;color:var(--lime)">['+c+']</b><span style="color:var(--muted);font-size:11px;margin-left:1px">'+l+'</span></span>').join('')+'</div>';
     const hlIdx=body.search(/TOP HEADLINES/i);
+    const miWrap=function(t){return '<div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px">'+miBodyDark(t)+'</div>';};
     const bodyHTML=hlIdx>-1
-      ?(body.slice(0,hlIdx).trimEnd()?miBox(body.slice(0,hlIdx).trimEnd()):'')+'<p style="font-family:\'Space Grotesk\';font-weight:600;font-size:14px;color:var(--text);margin:20px 0 4px">TOP HEADLINES</p>'+miPills+miHlsDark(body.slice(hlIdx).replace(/TOP HEADLINES[^\n]*/i,'').trimStart())
-      :miBox(body);
+      ?(body.slice(0,hlIdx).trimEnd()?miWrap(body.slice(0,hlIdx).trimEnd()):'')+'<p style="font-family:\'Space Grotesk\';font-weight:600;font-size:14px;color:var(--text);margin:20px 0 4px">TOP HEADLINES</p>'+miPills+miHlsDark(body.slice(hlIdx).replace(/TOP HEADLINES[^\n]*/i,'').trimStart())
+      :miWrap(body);
     out.innerHTML=`${tiles?`<div class="mi-indices">${tiles}</div><p style="color:var(--muted);font-size:11px;margin-bottom:12px">AI-assessed indices from live sources at ${MI.brief.at} · 0–100, higher = calmer</p>`:""}${bodyHTML}`;
     miShowExports();
   }catch(e){miFail("mi-brief");}
@@ -2481,6 +2482,44 @@ function runSim(){
   miShowExports();
 }
 // ---- Exports ----
+function miGlossTable(raw){
+  var pts=raw.split(/\b([A-Z][A-Z0-9&\-]{1,14})\s*:\s*/),items=[];
+  for(var i=1;i+1<pts.length;i+=2){var d=pts[i+1].replace(/\.\s*$/,'').trim();if(d)items.push([pts[i],d]);}
+  if(!items.length)return '<p style="margin:7px 0">'+ciEsc(raw)+'</p>';
+  return '<table style="border-collapse:collapse;width:100%;margin:4px 0 10px">'+items.map(function(x){return '<tr><td style="font-weight:700;color:#5A6B00;padding:3px 12px 3px 0;width:80px;vertical-align:top;font-size:10.5pt;white-space:nowrap">'+ciEsc(x[0])+'</td><td style="padding:3px 0;font-size:10.5pt;color:#333">'+ciEsc(x[1])+'</td></tr>';}).join('')+'</table>';
+}
+function miGlossDark(raw){
+  var pts=raw.split(/\b([A-Z][A-Z0-9&\-]{1,14})\s*:\s*/),items=[];
+  for(var i=1;i+1<pts.length;i+=2){var d=pts[i+1].replace(/\.\s*$/,'').trim();if(d)items.push([pts[i],d]);}
+  if(!items.length)return '<p style="color:var(--muted);font-size:13px">'+ciEsc(raw)+'</p>';
+  return '<div style="margin:6px 0 12px">'+items.map(function(x){return '<div style="display:flex;gap:12px;margin:5px 0;font-size:12.5px;line-height:1.5"><span style="color:var(--lime);font-weight:700;font-family:\'Space Grotesk\';min-width:64px;flex-shrink:0">'+ciEsc(x[0])+'</span><span style="color:var(--muted)">'+ciEsc(x[1])+'</span></div>';}).join('')+'</div>';
+}
+function miBodyExport(text){
+  var inG=false,gBuf='',out='';
+  ciClean(text).split('\n').forEach(function(l){
+    l=l.trim();if(!l)return;
+    var bare=l.replace(/^\d{1,2}\.\s*/,'');
+    var isH=bare.length>5&&bare===bare.toUpperCase()&&/^[A-Z0-9 &\/\-—:()5]+$/.test(bare);
+    if(isH){if(inG&&gBuf){out+=miGlossTable(gBuf);gBuf='';inG=false;}inG=/GLOSSARY|ACRONYM/i.test(bare);out+='<h2>'+ciEsc(bare)+'</h2>';}
+    else if(inG){gBuf+=(gBuf?' ':'')+l;}
+    else{out+=(/^\d{1,2}\.\s/.test(l)?'<p style="margin:3px 0 9px 16px">':'<p style="margin:7px 0">')+ciEsc(l)+'</p>';}
+  });
+  if(inG&&gBuf)out+=miGlossTable(gBuf);
+  return out;
+}
+function miBodyDark(text){
+  var inG=false,gBuf='',out='';
+  ciClean(text).split('\n').forEach(function(l){
+    l=l.trim();if(!l)return;
+    var bare=l.replace(/^\d{1,2}\.\s*/,'');
+    var isH=bare.length>5&&bare===bare.toUpperCase()&&/^[A-Z0-9 &\/\-—:()5]+$/.test(bare);
+    if(isH){if(inG&&gBuf){out+=miGlossDark(gBuf);gBuf='';inG=false;}inG=/GLOSSARY|ACRONYM/i.test(bare);out+='<p style="font-family:\'Space Grotesk\';font-weight:700;font-size:13px;color:var(--text);margin:18px 0 4px">'+ciEsc(bare)+'</p>';}
+    else if(inG){gBuf+=(gBuf?' ':'')+l;}
+    else{out+='<p style="margin:5px 0;color:var(--muted);font-size:13px;line-height:1.6">'+ciEsc(l)+'</p>';}
+  });
+  if(inG&&gBuf)out+=miGlossDark(gBuf);
+  return out;
+}
 function miHlsExport(text){
   const C={'P&T':'Political & Trade','ECO':'Economic','ENV':'Environmental & Climate','L&C':'Legal & Compliance','TEC':'Technology & Innovation','SOC':'Social & Labour'};
   return ciClean(text).split('\n').map(function(l){
@@ -2516,8 +2555,8 @@ function miReportHTML(){
     const exportPills='<div style="display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 14px">'+exportCats.map(([c,l])=>'<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid #ccc;border-radius:12px;padding:2px 8px 2px 6px;font-size:8.5pt"><b style="color:#5A6B00">['+c+']</b><span style="color:#555;margin-left:2px">'+l+'</span></span>').join('')+'</div>';
     const bfHlIdx=MI.brief.body.search(/TOP HEADLINES/i);
     const briefExportHTML=bfHlIdx>-1
-      ?ciBodyHTML(MI.brief.body.slice(0,bfHlIdx).trimEnd())+'<h2>TOP HEADLINES</h2>'+exportPills+miHlsExport(MI.brief.body.slice(bfHlIdx).replace(/TOP HEADLINES[^\n]*/i,'').trimStart())
-      :ciBodyHTML(MI.brief.body);
+      ?miBodyExport(MI.brief.body.slice(0,bfHlIdx).trimEnd())+'<h2>TOP HEADLINES</h2>'+exportPills+miHlsExport(MI.brief.body.slice(bfHlIdx).replace(/TOP HEADLINES[^\n]*/i,'').trimStart())
+      :miBodyExport(MI.brief.body);
     inner+=`<h2>Market indices (AI-assessed, ${MI.brief.at})</h2><table><tr>${cells}</tr></table><h2>Today's procurement briefing</h2>${briefExportHTML}`;}
   if(MI.ai)inner+=`<h2>AI-economy procurement briefing (${MI.ai.at})</h2>${ciBodyHTML(MI.ai.text)}`;
   if(MI.lab)inner+=`<h2>Labour market check — ${ciEsc(MI.lab.country)} (${MI.lab.at})</h2>${ciBodyHTML(MI.lab.text)}`;
@@ -2525,7 +2564,7 @@ function miReportHTML(){
   if(MI.exp){inner+=`<h2>Commodity exposure (${MI.exp.at})</h2><table><tr><th>Commodity / input</th><th style="text-align:right">Exposure</th><th style="text-align:right">Share of spend</th></tr>${MI.exp.expArr.map(([k,v])=>`<tr><td>${ciEsc(k)}</td><td style="text-align:right">${gbp(v)}</td><td style="text-align:right">${(v/MI.exp.total*100).toFixed(1)}%</td></tr>`).join("")}</table><p style="font-size:9pt;color:#555">AI-estimated cost composition across ${MI.exp.cats.length} categories totalling ${gbp(MI.exp.total)} — directional; refine with supplier cost breakdowns.</p>`;}
   if(MI.sim)inner+=`<h2>Cost shock simulation (${MI.sim.at})</h2><p>Expected annual impact: <b>${MI.sim.totalImpact>0?"+":""}${gbp(MI.sim.totalImpact)}</b> (${(MI.sim.totalImpact/MI.sim.baseTotal*100).toFixed(1)}% of analysed spend)</p><table><tr><th>Input</th><th style="text-align:right">Shock</th><th style="text-align:right">Exposure</th><th style="text-align:right">Annual impact</th></tr>${MI.sim.rows.replace(/var\(--line\)/g,"#ccc").replace(/var\(--lime\)/g,"#5A6B00")}</table>`;
   if(!inner)inner="<p>No intelligence generated yet — generate a briefing, commodity analysis, exposure map or simulation first.</p>";
-  const miRunHeadCSS='<style>@media print{@page{margin:0}body{margin:0;padding:46px 40px 40px}.mi-rh{position:fixed;top:0;left:0;right:0;height:28px;line-height:28px;background:#fff;padding:0 40px;border-bottom:1px solid #e0e0e0;font-family:Arial,sans-serif;font-size:8pt;color:#8C8C8C}}@media screen{.mi-rh{display:none}}</style>';
+  const miRunHeadCSS='<style>@media print{@page{margin:36px 0 0}body{margin:0;padding:0 40px 40px}.mi-rh{position:fixed;top:0;left:0;right:0;height:28px;line-height:28px;background:#fff;padding:0 40px;border-bottom:1px solid #e0e0e0;font-family:Arial,sans-serif;font-size:8pt;color:#8C8C8C}}@media screen{.mi-rh{display:none}}</style>';
   inner='<div class="mi-rh">BuyrWorld — Market Intelligence Report — '+d+'</div>'+inner;
   return ciShell("Market Intelligence Report — "+d,inner,'Generated on demand from live web sources and AI assessment. Figures should be verified before commercial commitments. Not investment advice. &copy; '+new Date().getFullYear()+' BuyrWorld.',miRunHeadCSS);
 }
