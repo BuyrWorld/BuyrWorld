@@ -19,6 +19,8 @@ CRITICAL there means "enterprise trust blocker", not a confirmed breach.
 | LOW | Unreferenced archive served from the site root | `buyrworld-phase2.zip` removed from the tree. |
 | HIGH | Filename DOM XSS in the contract upload path | Filenames are now set with `textContent` via `fileChip()`; no filename is interpolated into `innerHTML` anywhere. |
 | HIGH | `ciEsc` output used inside `href` attributes | Both sites now use `attrEsc` (which escapes quotes) and `safeUrl` (http/https only). |
+| MEDIUM | CDN libraries without Subresource Integrity | All six are now pinned by SHA-512. Each hash was computed from the bytes the CDN served and checked against the hash it publishes. `loadScript` fails closed: an unpinned URL is refused rather than loaded unverified. The pdf.js worker, which the library fetches itself and which `integrity` cannot reach, is fetched, digested and verified in code before it runs. |
+| MEDIUM | Prompt injection from uploaded documents | One shared `untrusted()` wrapper now fences every document-bearing prompt — supplier letter, contract (three tools), quote files and meeting notes. An injected copy of the fence is stripped, so a document cannot close its own block, and the rule is restated after the content so a long document cannot bury it. |
 | MEDIUM | No file size limit before parser operations | `extractFile` refuses anything over 8MB before allocating a buffer. |
 | HIGH | `/api/chat` had no origin check or rate limit | Origin allowlist plus a per-IP token bucket (12/minute), both checked before any model call. See the caveat below. |
 | MEDIUM | No security headers | `vercel.json` sets CSP, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy`. |
@@ -38,9 +40,7 @@ that labelling.
 |---|---|---|
 | HIGH | The rate limit is per warm instance, not global | It lives in module scope, so a distributed client gets one bucket per instance. Real limiting needs shared state. It raises the cost of casual abuse; it is not a defence against a determined one. |
 | MEDIUM | `script-src` still needs `'unsafe-inline'` | 120+ inline `onclick`-style handlers make a nonce impossible today. The other CSP directives are locked down; this one is honest rather than absent. A test asserts the handler count so the weakness stays visible. |
-| MEDIUM | CDN libraries without Subresource Integrity | jsPDF, ExcelJS and the document parsers load from a public CDN. |
 | — | Spreadsheet formula injection | **Not applicable.** The audit listed this as a risk class, but this codebase has no CSV or XLSX export path — XLSX is read only, and exports are HTML-as-`.doc` and jsPDF. Re-check if a spreadsheet export is ever added. |
-| MEDIUM | Prompt injection in the tools other than claim review | The claim-review prompt labels the letter as untrusted data; the quote, contract and minutes prompts do not yet. |
 | LOW | No dependency manifest, lockfile, scanning or CI | Nothing pins or audits the CDN versions. |
 
 ## Outstanding owner actions
