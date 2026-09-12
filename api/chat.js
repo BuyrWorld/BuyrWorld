@@ -31,6 +31,14 @@ You are skilled but disciplined — the value you add is good questions, sound s
 // Must be set explicitly — the default is 10s, which is too short for web search.
 export const config = { maxDuration: 300 };
 
+const MODEL = "claude-sonnet-4-6";
+
+// Content-free request telemetry. Never log prompt text, document text or any
+// user input — metadata only. See CLAUDE.md, post-audit rules.
+function telemetry(fields) {
+  console.log("REQ", JSON.stringify(fields));
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
@@ -44,28 +52,27 @@ export default async function handler(req, res) {
     .filter(m => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
     .map(m => ({ role: m.role, content: m.content.slice(0, 18000) }));
 
-  // ---- Prompt logging (owner analytics) ----
-  // 1) Always: visible live in Vercel → project → Logs
-  // 2) If Upstash env vars are set: stored permanently per day, viewable via /api/logs?key=ADMIN_KEY&day=YYYY-MM-DD
-  try {
-    const lastUser = [...clean].reverse().find(m => m.role === "user");
-    if (lastUser) {
-      const entry = { t: new Date().toISOString(), prompt: lastUser.content.slice(0, 600) };
-      console.log("PROMPT_LOG", JSON.stringify(entry));
-      const U = process.env.UPSTASH_REDIS_REST_URL, T = process.env.UPSTASH_REDIS_REST_TOKEN;
-      if (U && T) {
-        const day = entry.t.slice(0, 10);
-        fetch(`${U}/rpush/prompts:${day}/${encodeURIComponent(JSON.stringify(entry))}`,
-          { headers: { Authorization: `Bearer ${T}` } }).catch(() => {});
-      }
-    }
-  } catch (_) {}
+  // ---- Request telemetry (metadata only, never content) ----
+  const reqId = globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2);
+  const started = Date.now();
+  const wantsWeb = req.body && req.body.web === true;
+  const inputChars = clean.reduce((n, m) => n + m.content.length, 0);
+  const log = (status, extra) => telemetry({
+    id: reqId,
+    t: new Date().toISOString(),
+    tool: wantsWeb ? "web" : "chat",
+    model: MODEL,
+    turns: clean.length,
+    chars: inputChars,
+    ms: Date.now() - started,
+    status,
+    ...extra,
+  });
 
   let abortTimer;
   try {
-    const wantsWeb = req.body && req.body.web === true;
     const payload = {
-      model: "claude-sonnet-4-6",
+      model: MODEL,
       max_tokens: wantsWeb ? 3000 : 2200,
       system: SYSTEM,
       messages: clean,
@@ -90,17 +97,19 @@ export default async function handler(req, res) {
 
     const data = await r.json();
     if (!r.ok) {
-      console.error("Anthropic error:", data);
+      log(502, { err: data?.error?.type || "upstream_error" });
       return res.status(502).json({ error: "AI request failed" });
     }
     const text = (data.content || []).map(c => c.text || "").join("\n").trim();
+    log(200, { out: text.length });
     return res.status(200).json({ text });
   } catch (err) {
     clearTimeout(abortTimer);
     if (err.name === "AbortError") {
+      log(504, { err: "AbortError" });
       return res.status(504).json({ error: "That search took too long — try a narrower search or a simpler question." });
     }
-    console.error(err);
+    log(500, { err: err?.name || "Error" });
     return res.status(500).json({ error: "Server error" });
   }
 }
