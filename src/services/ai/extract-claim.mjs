@@ -15,7 +15,7 @@
  */
 
 import { PROMPT_VERSION } from "./adapter.mjs";
-import { evidence, EVIDENCE_KIND, noEvidence } from "../../calc/evidence.mjs";
+import { grounder, confirmField, normalise } from "./grounding.mjs";
 
 /** What we ask for, and what we will accept. */
 export const FIELD_RULES = Object.freeze({
@@ -35,15 +35,6 @@ export const DRIVER_RULES = Object.freeze({
   movementPercent:  { type: "percent", label: "Claimed movement" },
   indexName:        { type: "text",    label: "Index named" },
 });
-
-const CHECK = {
-  text:    (v) => (typeof v === "string" && v.trim().length > 0 && v.length <= 200 ? null : "not a short piece of text"),
-  ccy:     (v) => (/^[A-Z]{3}$/.test(String(v)) ? null : "not a three-letter currency code"),
-  money:   (v) => (/^\d+(\.\d{1,2})?$/.test(String(v)) ? null : "not a plain amount like 100.00"),
-  percent: (v) => (/^-?\d+(\.\d{1,4})?$/.test(String(v)) ? null : "not a plain number like 9 or 4.5"),
-  integer: (v) => (/^\d+$/.test(String(v).replace(/[,\s]/g, "")) ? null : "not a whole number"),
-  period:  (v) => (/^\d{4}-(0[1-9]|1[0-2])$/.test(String(v)) ? null : "not a YYYY-MM period"),
-};
 
 /** Build the prompt. The letter is fenced as untrusted data by the caller's wrapper. */
 export function buildExtractionPrompt(letter, fence) {
@@ -76,49 +67,11 @@ export function buildExtractionPrompt(letter, fence) {
  * @returns {{fields: object, drivers: Array, rejected: Array, grounded: number, claimed: number}}
  */
 export function validateExtraction(data, letter) {
-  const source = normalise(letter);
+  const g = grounder(letter, "supplier letter");
   const fields = {};
-  const rejected = [];
-  let claimed = 0;
-  let grounded = 0;
-
-  const take = (key, rule, entry, where) => {
-    if (!entry || typeof entry !== "object") return null;
-    const { value, quote } = entry;
-    if (value === null || value === undefined || value === "") return null;
-    claimed++;
-
-    const problem = CHECK[rule.type](value);
-    if (problem) {
-      rejected.push({ field: where, value: String(value), reason: `${rule.label} is ${problem}` });
-      return null;
-    }
-    if (typeof quote !== "string" || quote.trim() === "") {
-      rejected.push({ field: where, value: String(value), reason: "no supporting quote was given" });
-      return null;
-    }
-    if (!source.includes(normalise(quote))) {
-      // The single most valuable check here. An invented quote is detectable;
-      // an invented figure is not.
-      rejected.push({
-        field: where,
-        value: String(value),
-        reason: "the quoted words do not appear in the letter, so the value is not grounded",
-        quote: quote.slice(0, 120),
-      });
-      return null;
-    }
-    grounded++;
-    return {
-      value: String(value).trim(),
-      provenance: "ai-inferred",
-      confirmedBy: null,
-      evidence: evidence(EVIDENCE_KIND.DOCUMENT, { label: "supplier letter", quote: quote.trim() }),
-    };
-  };
 
   for (const [key, rule] of Object.entries(FIELD_RULES)) {
-    const got = take(key, rule, data[key], key);
+    const got = g.take(data[key], rule, key);
     if (got) fields[key] = got;
   }
 
@@ -126,17 +79,16 @@ export function validateExtraction(data, letter) {
   if (Array.isArray(data.drivers)) {
     data.drivers.slice(0, 12).forEach((d, i) => {
       if (!d || typeof d !== "object") return;
-      const row = {};
-      for (const [key, rule] of Object.entries(DRIVER_RULES)) {
-        const got = take(key, rule, { value: d[key], quote: d.quote }, `drivers[${i}].${key}`);
-        if (got) row[key] = got;
-      }
+      const row = g.takeAll(d, DRIVER_RULES, `drivers[${i}].`);
       // A driver with no weight and no movement is not a driver.
       if (row.weightPercent || row.movementPercent) drivers.push(row);
     });
   }
 
-  return Object.freeze({ fields, drivers, rejected, grounded, claimed });
+  return Object.freeze({
+    fields, drivers,
+    rejected: g.rejected, grounded: g.grounded, claimed: g.claimed,
+  });
 }
 
 /**
@@ -184,14 +136,4 @@ export async function extractClaim({ letter, adapter, fence }) {
   });
 }
 
-/** Mark a field confirmed. Only a confirmed field may enter a calculation. */
-export function confirmField(field, by) {
-  if (!field) return field;
-  if (!by) throw new TypeError("Confirming a field needs to record who confirmed it");
-  return Object.freeze({ ...field, confirmedBy: { by, at: new Date().toISOString().slice(0, 10) } });
-}
-
-/** Whitespace and case are not meaningful when checking a quote against a source. */
-function normalise(s) {
-  return String(s).replace(/\s+/g, " ").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').trim().toLowerCase();
-}
+export { confirmField, normalise };

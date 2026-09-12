@@ -94,7 +94,9 @@ describe("grounding: a quote must exist in the letter", () => {
     assert.equal(r.ok, true);
     assert.equal(r.fields.unitPrice, undefined, "an ungrounded field must not be accepted");
     const why = r.rejected.find((x) => x.field === "unitPrice");
-    assert.match(why.reason, /do not appear in the letter/);
+    // The message names the document it checked against, so the same shared
+    // grounder reads correctly for a letter, a contract or a quotation.
+    assert.match(why.reason, /do not appear in the supplier letter/);
   });
 
   test("a real figure with no quote at all is rejected", async () => {

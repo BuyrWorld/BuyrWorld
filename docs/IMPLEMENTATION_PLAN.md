@@ -27,7 +27,7 @@ Status against the seven phases. Honest about what is done and what is not.
 | `src/services/outcome-store.mjs` | Local-first storage. BigInt-safe, and every browser failure mode handled. |
 | `src/render/decision-pack-html.mjs` | Print-clean output, everything escaped. |
 
-266 tests, 21 ProcureBench calculation cases, 18 extraction golden cases, and
+289 tests, 21 ProcureBench calculation cases, 18 extraction golden cases, and
 six verification checks, all run by CI.
 
 ---
@@ -98,16 +98,21 @@ hosting project has no build step, and adding a `package.json` can change how it
 builds and deploys. Check the project's framework settings first. CI fails
 deliberately if a manifest appears, so this cannot happen by accident.
 
-### 6. Extraction beyond the claim letter
+### 6. Extraction beyond the three document classes
 
 **Claim extraction is built.** A supplier letter now populates the case: the
 model proposes fields, each arrives with the passage it was read from, a value
 whose quote is not found in the letter is discarded before it is shown, and
 nothing reaches the calculator until a person confirms it.
 
-What remains is the same treatment for the other document tools — quotes and
-contracts still produce prose for a human to read rather than fields for the
-engine to consume.
+Quotations and contracts now do the same. A contract's provisions extract with
+clause references and become ContractConstraint records once confirmed, which
+is what makes contradiction detection work from a document rather than from
+hand-entered data. Quote extraction normalises what each quotation says and
+then reports every reason the resulting ranking might be wrong.
+
+What remains is the Market Intelligence and RFQ tools, which still return prose.
+Neither feeds a calculation, so neither carries the same risk.
 
 ---
 

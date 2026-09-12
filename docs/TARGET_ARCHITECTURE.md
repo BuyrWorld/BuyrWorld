@@ -140,7 +140,8 @@ price found it immediately.
 
 ## AI layer
 
-**Status: built for extraction; the other tools still return prose.**
+**Status: built. Three document classes extract into typed fields; the
+remaining tools still return prose.**
 
 - Structured JSON output, validated at runtime; invalid JSON is an error state,
   never a silent fallback — **built** in `services/ai/adapter.mjs`, with five
