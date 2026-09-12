@@ -14,7 +14,13 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, extname, relative } from "node:path";
 
 const ROOT = process.cwd();
-const SKIP_DIRS = new Set([".git", "node_modules", "scripts", "docs", "September 2026 Progress"]);
+// Development-only directories. These are excluded from deployment by
+// .vercelignore, and they legitimately name retired vendors inside assertions
+// that those vendors are ABSENT — scanning them would flag the very tests that
+// prove the removal held.
+const SKIP_DIRS = new Set([
+  ".git", "node_modules", "scripts", "docs", "tests", "September 2026 Progress",
+]);
 const TEXT_EXT = new Set([".html", ".js", ".mjs", ".css", ".json", ".txt", ".xml", ".md", ".webmanifest", ".svg"]);
 
 /** Phrases that are legitimate precisely because they are denials. */
