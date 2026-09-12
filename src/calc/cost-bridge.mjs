@@ -15,7 +15,7 @@
 
 import {
   ONE, ratioMul, scaleDiv, SCALE,
-  money, moneyApplyChange, moneySub, moneyTimesQuantity, assertSameCurrency,
+  money, moneyApplyChange, moneySub, moneyTimesQuantity, moneyScale, assertSameCurrency,
 } from "./exact.mjs";
 
 /** Where a value came from. Anything ai-inferred must be confirmed first. */
@@ -147,30 +147,42 @@ export function costBridge(input) {
   const unsupportedDelta = moneySub(requestedUnitPrice, warrantedUnitPrice);
 
   // --- 4. Exposure ----------------------------------------------------------
+  // Round ONCE, at the total. Rounding the per-unit delta to 2dp and then
+  // multiplying by volume amplifies the rounding error by the volume: a unit
+  // price of 0.84 rising 7.5% is exactly 0.903, but forced to 0.90 it
+  // understates a 4.2m-unit line by GBP 12,600 a year. So exposure is computed
+  // from the exact product (unit x quantity) x change.
+  //
+  // The per-unit deltas above remain 2dp because that is what a price list
+  // shows; they are for display, not for multiplying.
   const vol = BigInt(baseline.annualVolume);
+  const exposureFor = (quantity, changeRatio) =>
+    moneyScale(moneyTimesQuantity(unit, quantity), changeRatio);
+
   const annual = {
-    requested: moneyTimesQuantity(requestedDelta, vol),
-    warranted: moneyTimesQuantity(warrantedDelta, vol),
-    unsupported: moneyTimesQuantity(unsupportedDelta, vol),
+    requested: exposureFor(vol, requestedChange),
+    warranted: exposureFor(vol, warranted),
+    unsupported: exposureFor(vol, unsupportedChange),
   };
 
+  const lifeVol = vol * BigInt(lifetimeYears);
   const lifetime = {
-    requested: moneyTimesQuantity(requestedDelta, vol * BigInt(lifetimeYears)),
-    warranted: moneyTimesQuantity(warrantedDelta, vol * BigInt(lifetimeYears)),
-    unsupported: moneyTimesQuantity(unsupportedDelta, vol * BigInt(lifetimeYears)),
+    requested: exposureFor(lifeVol, requestedChange),
+    warranted: exposureFor(lifeVol, warranted),
+    unsupported: exposureFor(lifeVol, unsupportedChange),
   };
 
   // Retrospective application: volume already delivered under the old price.
   let retrospective = null;
   if (period.retrospectiveMonths) {
     const months = BigInt(period.retrospectiveMonths);
-    const retroVol = scaleDiv(vol * months * SCALE, 12n * SCALE);
+    const retroVol = scaleDiv(vol * months, 12n);
     retrospective = {
       months: period.retrospectiveMonths,
       units: retroVol,
-      requested: moneyTimesQuantity(requestedDelta, retroVol),
-      warranted: moneyTimesQuantity(warrantedDelta, retroVol),
-      unsupported: moneyTimesQuantity(unsupportedDelta, retroVol),
+      requested: exposureFor(retroVol, requestedChange),
+      warranted: exposureFor(retroVol, warranted),
+      unsupported: exposureFor(retroVol, unsupportedChange),
     };
     assumptions.push({
       id: "retrospective",
@@ -181,6 +193,7 @@ export function costBridge(input) {
   }
 
   return Object.freeze({
+    annualVolume: baseline.annualVolume,
     warrantedChange: warranted,
     warrantedBeforeConstraints,
     requestedChange,
@@ -203,38 +216,35 @@ export function costBridge(input) {
  * Effect of accepting only part of the request.
  * `acceptedChange` is a Ratio: what you are willing to concede.
  */
-export function partialAcceptance(bridge, acceptedChange) {
+export function partialAcceptance(bridge, acceptedChange, annualVolume) {
   const unit = bridge.unitPrice.baseline;
+  const vol = BigInt(annualVolume ?? bridge.annualVolume);
   const accepted = moneyApplyChange(unit, acceptedChange);
-  const delta = moneySub(accepted, unit);
-  const avoidedPerUnit = moneySub(bridge.unitPrice.requested, accepted);
-  const vol = bridge.annual.requested.minor === 0n
-    ? 0n
-    : bridge.annual.requested.minor / (bridge.delta.requested.minor || 1n);
+  const line = moneyTimesQuantity(unit, vol);
   return Object.freeze({
     acceptedChange,
     acceptedUnitPrice: accepted,
-    annualCost: moneyTimesQuantity(delta, vol),
-    annualAvoided: moneyTimesQuantity(avoidedPerUnit, vol),
+    annualCost: moneyScale(line, acceptedChange),
+    annualAvoided: moneyScale(line, bridge.requestedChange - acceptedChange),
     versusWarranted: acceptedChange - bridge.warrantedChange,
   });
 }
-
 /**
  * Effect of delaying implementation by N months — the increase applies to
  * (12 - N)/12 of the year's volume instead of all of it.
  */
 export function delayEffect(bridge, months, annualVolume) {
   if (months < 0 || months > 12) throw new RangeError("Delay must be 0-12 months");
-  const vol = BigInt(annualVolume);
+  const unit = bridge.unitPrice.baseline;
+  const vol = BigInt(annualVolume ?? bridge.annualVolume);
   const affected = scaleDiv(vol * BigInt(12 - months), 12n);
   const avoidedUnits = vol - affected;
   return Object.freeze({
     months,
     affectedUnits: affected,
     avoidedUnits,
-    firstYearCost: moneyTimesQuantity(bridge.delta.requested, affected),
-    firstYearAvoided: moneyTimesQuantity(bridge.delta.requested, avoidedUnits),
+    firstYearCost: moneyScale(moneyTimesQuantity(unit, affected), bridge.requestedChange),
+    firstYearAvoided: moneyScale(moneyTimesQuantity(unit, avoidedUnits), bridge.requestedChange),
   });
 }
 

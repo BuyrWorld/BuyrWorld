@@ -256,3 +256,46 @@ describe("options", () => {
     assert.throws(() => delayEffect(r, 13, 50_000), /0-12 months/);
   });
 });
+
+describe("rounding: round once, at the total", () => {
+  test("a sub-penny unit delta is not lost across a large volume", () => {
+    // Found by ProcureBench PB-14. 0.84 +7.5% is exactly 0.903, but a 2dp unit
+    // price forces 0.90. Rounding per unit and then multiplying understated a
+    // 4.2m-unit line by GBP 12,600 a year.
+    const r = costBridge({
+      baseline: { unitPrice: gbp("0.84"), annualVolume: 4_200_000 },
+      requestedChange: p("7.5"),
+      drivers: [{ id: "m", label: "Polymer", weight: p("55"), indexMovement: p("9") }],
+    });
+    assert.equal(str(r.annual.requested), "264600.00", "exact: 3,528,000 x 7.5%");
+    assert.notEqual(str(r.annual.requested), "252000.00", "the per-unit-rounded figure");
+    assert.equal(str(r.annual.warranted), "174636.00");
+    assert.equal(str(r.annual.unsupported), "89964.00");
+  });
+
+  test("the displayed per-unit delta is still 2dp, because a price list is", () => {
+    const r = costBridge({
+      baseline: { unitPrice: gbp("0.84"), annualVolume: 4_200_000 },
+      requestedChange: p("7.5"),
+      drivers: [{ id: "m", label: "Polymer", weight: p("55"), indexMovement: p("9") }],
+    });
+    assert.equal(str(r.delta.requested), "0.06", "display value rounds to a price-list penny");
+    // ...but exposure was NOT computed from it. Had it been, we would see this:
+    const naive = r.delta.requested.minor * 4_200_000n;
+    assert.notEqual(r.annual.requested.minor, naive,
+      "exposure must not be the rounded per-unit delta times volume");
+    assert.equal(r.annual.requested.minor - naive, 1_260_000n,
+      "the difference is exactly the GBP 12,600 that rounding would have lost");
+  });
+
+  test("exposure and options agree with each other", () => {
+    const r = costBridge({
+      baseline: { unitPrice: gbp("0.84"), annualVolume: 4_200_000 },
+      requestedChange: p("7.5"),
+      drivers: [{ id: "m", label: "Polymer", weight: p("55"), indexMovement: p("9") }],
+    });
+    const opt = partialAcceptance(r, r.warrantedChange);
+    assert.equal(str(opt.annualCost), str(r.annual.warranted));
+    assert.equal(str(opt.annualAvoided), str(r.annual.unsupported));
+  });
+});

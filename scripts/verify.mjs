@@ -18,6 +18,11 @@ const steps = [
     args: ["--test", "tests/**/*.test.mjs"],
   },
   {
+    name: "ProcureBench evaluation",
+    cmd: process.execPath,
+    args: ["scripts/eval.mjs"],
+  },
+  {
     name: "Prohibited content (commercial + personal)",
     cmd: process.execPath,
     args: ["scripts/verify-content.mjs"],
