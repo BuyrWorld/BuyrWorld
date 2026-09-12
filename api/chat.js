@@ -57,6 +57,8 @@ export default async function handler(req, res) {
   const started = Date.now();
   const wantsWeb = req.body && req.body.web === true;
   const inputChars = clean.reduce((n, m) => n + m.content.length, 0);
+  // Did the 18k per-message cap above actually bite? Observable, not silent.
+  const inputCut = messages.some(m => typeof m.content === "string" && m.content.length > 18000);
   const log = (status, extra) => telemetry({
     id: reqId,
     t: new Date().toISOString(),
@@ -64,6 +66,7 @@ export default async function handler(req, res) {
     model: MODEL,
     turns: clean.length,
     chars: inputChars,
+    cut: inputCut,
     ms: Date.now() - started,
     status,
     ...extra,

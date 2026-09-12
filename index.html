@@ -1592,7 +1592,7 @@ async function runDefender(){
     const col=score===null?"var(--lime)":score>=70?"#FF5C5C":score>=40?"#FFB800":"var(--lime)";
     const verdict=score===null?"":score>=70?"Strong letter — they came with evidence. Negotiate the size, not the principle.":score>=40?"Partially justified — real pressure, inflated number. Attack the gap.":"Weak justification — push back hard. This letter is a hope, not a case.";
     plausible('Tool Completed',{props:{tool:'Price Increase Defender'}});
-    out.innerHTML=`${score!==null?`
+    out.innerHTML=cutNote(letter.length,3000,'of the supplier letter')+`${score!==null?`
       <div style="margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span class="eyebrow">Their justification strength</span><span style="font-family:'Space Grotesk';font-weight:700;color:${col}">${score}/100</span></div>
         <div style="height:8px;background:var(--line);border-radius:4px"><div style="height:8px;width:${score}%;background:${col};border-radius:4px"></div></div>
@@ -1659,7 +1659,7 @@ async function runMinutes(){
     window._minutesText=text.trim();
     const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     plausible('Tool Completed',{props:{tool:'Meeting Minutes'}});
-    out.innerHTML=`
+    out.innerHTML=cutNote(notes.length,6000,'of your notes')+`
       <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px;font-size:13.5px;line-height:1.7;color:#CFCFCF;white-space:pre-wrap;font-family:'Inter'">${esc(window._minutesText)}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
         <button class="btn btn-lime" onclick="copyMinutes(this)">Copy for email</button>
@@ -1720,7 +1720,7 @@ async function addQuoteFiles(inp){
       const text=(await extractFile(f)).replace(/\s+\n/g,"\n").trim();
       if(text.length<30){chip.textContent=`${f.name} — ✗ no readable text (scanned PDF?)`;chip.style.color="#FF5C5C";continue;}
       quoteFiles.push({name:f.name,text:text.slice(0,5500)});
-      chip.textContent=`${f.name} ✓ (${Math.round(text.length/1000)}k chars)`;chip.style.color="var(--lime)";chip.style.borderColor="var(--lime)";
+      chip.textContent=`${f.name} ✓ (${Math.round(text.length/1000)}k chars${text.length>5500?", first 5.5k analysed":""})`;chip.style.color="var(--lime)";chip.style.borderColor="var(--lime)";
     }catch(e){chip.textContent=`${f.name} — ✗ couldn't read`;chip.style.color="#FF5C5C";}
   }
   inp.value="";
@@ -1792,11 +1792,18 @@ async function loadContractFile(inp){
 }
 function ciText(){
   const pasted=document.getElementById("ci-paste").value.trim();
-  return pasted.length>50?pasted.slice(0,13000):_cText;
+  if(pasted.length>50){window._ciCut=pasted.length;return pasted.slice(0,13000);}
+  window._ciCut=0;return _cText;
 }
 function ciBusy(msgs){startLoader("ci-out", Array.isArray(msgs)?msgs:[msgs], 25);}
 function ciNeedText(){document.getElementById("ci-out").innerHTML='<p style="color:var(--muted);font-size:14px">Upload a contract or paste its text first.</p>';}
 const CI_DISCLAIMER='<p style="color:var(--muted);font-size:12px;margin-top:10px">Procurement contract intelligence, not legal advice. AI-generated analysis can be incomplete or wrong — have outputs checked by qualified legal counsel before reliance or signature.</p>';
+// No silent truncation: when input is cut, say how much was actually read.
+function cutNote(fullLen,limit,what){
+  if(!fullLen||fullLen<=limit)return"";
+  const k=x=>x>=1000?Math.round(x/1000)+"k":String(x);
+  return '<p style="color:#FFB800;font-size:12.5px;margin:0 0 10px">Only the first '+k(limit)+' of '+k(fullLen)+' characters '+(what||"of your input")+' were analysed. Shorten or split it to cover the rest.</p>';
+}
 function ciEsc(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function ciClean(t){
   let s=t.replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/^---+\s*$/gm,"").replace(/\s*---\s*/g,"\n\n");
@@ -1846,7 +1853,7 @@ function ciRender(title,text,extraTop="",kind="plain"){
   let html=kind==="redline"?convertMarks(text,false):ciEsc(text);
   if(kind==="redline")html=html.replace(/^(Clause\s+\d+[A-Za-z]?\s*[—–-][^\n<]{0,80})$/gm,'<span style="display:block;font-family:\'Space Grotesk\';font-weight:700;color:var(--text);margin-top:8px">$1</span>');
   const legend=kind==="redline"?`<div style="display:flex;gap:18px;font-size:12.5px;color:var(--muted);margin-bottom:10px"><span><s style="color:#FF5C5C">struck out</s> = contested / removed</span><span><span style="color:var(--lime);text-decoration:underline;font-weight:600">underlined</span> = proposed buyer wording</span></div>`:"";
-  document.getElementById("ci-out").innerHTML=`${extraTop}${legend}
+  document.getElementById("ci-out").innerHTML=cutNote(window._ciCut,13000,"of the pasted contract")+`${extraTop}${legend}
     <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px;font-size:13.5px;line-height:1.7;color:#CFCFCF;white-space:pre-wrap">${html}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
       <button class="btn btn-lime" onclick="ciCopy(this)">Copy</button>
@@ -2425,7 +2432,7 @@ async function runCommodity(){
 function miUseSample(){loadSampleSpend&&loadSampleSpend();document.getElementById("mi-paste").value=document.getElementById("spend-paste")?document.getElementById("spend-paste").value:document.getElementById("mi-paste").value;if(!document.getElementById("mi-paste").value){document.getElementById("mi-paste").value="supplier,category,amount\nAlpha Castings Ltd,Aluminium Castings,42000\nBravo Fasteners,Steel Fasteners,8100\nPackRight Ltd,Packaging,12750\nDelta Logistics,Freight,15400\nEcho Coatings,Surface Treatment,6200\nVolt Energy,Site Electricity,18000\nPolyParts,Injection Mouldings,21000";}}
 async function miLoadFile(inp){
   const f=inp.files[0]; if(!f)return;
-  try{const t=await extractFile(f);document.getElementById("mi-paste").value=t.slice(0,200000);}catch(e){alert("Couldn't read that file — paste the data instead.");}
+  try{const t=await extractFile(f);document.getElementById("mi-paste").value=t.slice(0,200000);if(t.length>200000)alert("That file is "+Math.round(t.length/1000)+"k characters. Only the first 200k were loaded — the rest is not included in the analysis.");}catch(e){alert("Couldn't read that file — paste the data instead.");}
   inp.value="";
 }
 function miParse(raw){
@@ -2771,7 +2778,7 @@ function loadLiveChart(group,sym){
 function loadSpendFile(inp){
   const f=inp.files[0]; if(!f)return;
   const r=new FileReader();
-  r.onload=()=>{document.getElementById("spend-paste").value=r.result.slice(0,500000);};
+  r.onload=()=>{const v=String(r.result||"");document.getElementById("spend-paste").value=v.slice(0,500000);if(v.length>500000)alert("That file is "+Math.round(v.length/1000)+"k characters. Only the first 500k were loaded — rows beyond that are not included.");};
   r.readAsText(f);
 }
 function loadSampleSpend(){
