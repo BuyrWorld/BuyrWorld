@@ -1,0 +1,61 @@
+name: Verify
+
+# Runs exactly what a developer runs locally: node scripts/verify.mjs.
+#
+# The workflow deliberately calls that script rather than restating its steps.
+# A CI pipeline that lists its own checks drifts from the local ones, and then
+# green means nothing. Everything this project verifies lives in the script;
+# this file only decides when and where it runs.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22 is the floor the project supports; 24 is what it is developed on.
+        node: ["22.x", "24.x"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          # No package.json and no dependencies, so there is nothing to install
+          # or cache. That is deliberate: the verification has no supply chain.
+
+      - name: Confirm there is still nothing to install
+        run: |
+          node --version
+          if [ -f package.json ]; then
+            echo "::error::A package.json has appeared. Update this workflow deliberately:"
+            echo "::error::adding a manifest can change how the hosting platform builds this project."
+            exit 1
+          fi
+
+      - name: Verify
+        run: node scripts/verify.mjs
+
+      - name: Confirm verification changed nothing
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Verification modified the working tree. It must be read-only."
+            git status --porcelain
+            git --no-pager diff
+            exit 1
+          fi

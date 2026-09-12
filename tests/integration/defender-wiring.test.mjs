@@ -132,3 +132,37 @@ describe("deployment integrity", () => {
       "the page must never import from fixtures/, which is not deployed");
   });
 });
+
+describe("continuous integration", () => {
+  const wf = readFileSync(".github/workflows/verify.yml", "utf8");
+
+  test("CI runs the same script a developer runs, not its own list of checks", () => {
+    assert.match(wf, /run: node scripts\/verify\.mjs/,
+      "CI must invoke verify.mjs so it cannot drift from the local checks");
+    // If CI ever restates the individual checks, this catches it.
+    for (const restated of ["scripts/eval.mjs", "scripts/verify-content.mjs", "scripts/verify-html.mjs"]) {
+      assert.equal(wf.includes(restated), false,
+        `CI restates ${restated}; it should go through verify.mjs instead`);
+    }
+  });
+
+  test("it runs on every branch and on pull requests", () => {
+    assert.match(wf, /branches: \["\*\*"\]/);
+    assert.match(wf, /pull_request:/);
+  });
+
+  test("it is least-privilege and installs nothing", () => {
+    assert.match(wf, /permissions:\s*\n\s*contents: read/);
+    assert.match(wf, /if \[ -f package\.json \]/,
+      "a manifest appearing should fail the build deliberately, not silently change the deploy");
+  });
+
+  test("verification must not modify the tree", () => {
+    assert.match(wf, /git status --porcelain/);
+  });
+
+  test("the workflow itself is not deployed", () => {
+    const ignored = readFileSync(".vercelignore", "utf8");
+    assert.match(ignored, /\.github\//, ".github/ must not be served as static files");
+  });
+});
