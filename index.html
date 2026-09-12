@@ -457,6 +457,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
       <div class="eyebrow" style="margin-bottom:8px">1 &middot; Baseline and request</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">
+        <label style="font-size:12px;color:var(--muted)">Case reference<input class="bwin" id="def-case" placeholder="SC-001"></label>
+        <label style="font-size:12px;color:var(--muted)">Supplier<input class="bwin" id="def-supplier" placeholder="fictional name only"></label>
         <label style="font-size:12px;color:var(--muted)">Unit price<input class="bwin" id="def-price" value="100.00" inputmode="decimal"></label>
         <label style="font-size:12px;color:var(--muted)">Currency<input class="bwin" id="def-currency" value="GBP" maxlength="3"></label>
         <label style="font-size:12px;color:var(--muted)">Annual volume<input class="bwin" id="def-volume" value="50000" inputmode="numeric"></label>
@@ -488,6 +490,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <button class="btn btn-lime" onclick="defCalc()">Calculate exposure</button>
         <button class="btn btn-ghost" onclick="defLoadExample()">Load synthetic example</button>
         <button class="btn btn-ghost" onclick="runDefender()">Draft the response</button>
+        <button class="btn btn-ghost" onclick="defDecisionPack()">Decision pack</button>
       </div>
       <div id="def-calc" style="margin-top:18px"></div>
       <div id="def-out" style="margin-top:18px"></div>
@@ -1564,6 +1567,7 @@ function defLoadExample(){
     ["Labour","18","5","direct","","","",""],
     ["Energy","8","12","direct","","","",""]
   ];
+  defSet("def-case","SC-001");defSet("def-supplier","Meridian Fabrication Ltd (fictional)");
   defSet("def-price","100.00");defSet("def-currency","GBP");defSet("def-volume","50000");
   defSet("def-request","9");defSet("def-cap","");defSet("def-retro","4");
   defSet("def-fx-to","");defSet("def-fx-base","");defSet("def-fx-base-at","");
@@ -1675,6 +1679,39 @@ function defRender(r,cur){
     +(r.assumptions.length?'<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px"><div class="eyebrow" style="margin-bottom:6px">Assumptions</div><ul style="margin:0;padding-left:18px;color:var(--muted);font-size:12.5px;line-height:1.6">'+r.assumptions.map(function(x){return "<li>"+ciEsc(x.text)+"</li>";}).join("")+'</ul></div>':"")
     +'<p style="color:var(--muted);font-size:11.5px;margin-top:12px">'+ciEsc(r.formula)+'. Computed in exact integer arithmetic; no language model produced these figures.</p>'
     +'</div>';
+}
+
+// Assemble the decision pack and open it print-ready. Everything in it comes
+// from the calculation already on screen; nothing new is computed or invented.
+function defDecisionPack(){
+  if(!_defResult)defCalc();
+  if(!_defResult){
+    document.getElementById("def-out").innerHTML='<p style="color:var(--muted);font-size:14px">Calculate the exposure first — the pack is assembled from those figures.</p>';
+    return;
+  }
+  var pack,html;
+  try{
+    pack=window.BW.buildDecisionPack({
+      meta:{
+        caseId:(document.getElementById("def-case")||{}).value||null,
+        supplier:(document.getElementById("def-supplier")||{}).value||null,
+        synthetic:true
+      },
+      bridge:_defResult,
+      generatedAt:new Date().toISOString().slice(0,16).replace("T"," ")
+    });
+    html=window.BW.renderDecisionPackHTML(pack);
+  }catch(e){
+    document.getElementById("def-out").innerHTML='<div class="card" style="border-color:#FF5C5C;margin:0"><b style="color:#FF5C5C">Could not build the pack.</b><div style="color:var(--muted);font-size:14px;margin-top:6px">'+ciEsc(String(e.message||e))+'</div></div>';
+    return;
+  }
+  var w=window.open("","_blank");
+  if(!w){
+    document.getElementById("def-out").innerHTML='<p style="color:#FFB800;font-size:14px">The pack opens in a new tab — allow pop-ups for this site and try again.</p>';
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
 }
 
 // The currency split. A rate move is not a cost move, and this is where the
@@ -3312,10 +3349,13 @@ async function send(id,text){
   import { createSeries, movementBetween } from "./src/calc/index-series.mjs";
   import { assessEvidence, formatWeight } from "./src/calc/evidence.mjs";
   import { fxRate } from "./src/calc/fx.mjs";
+  import { buildDecisionPack } from "./src/calc/decision-pack.mjs";
+  import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { costBridge, partialAcceptance, delayEffect, formatPercent,
                 pc: ratioFromPercent, moneyFromDecimal, moneyToDecimalString,
                 createSeries, movementBetween, assessEvidence, formatWeight, fxRate,
+                buildDecisionPack, renderDecisionPackHTML,
                 SAMPLE_INDEX: STEEL_A };
   if (typeof defRenderDrivers === "function") defRenderDrivers();
 </script>
