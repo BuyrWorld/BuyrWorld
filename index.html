@@ -1726,7 +1726,20 @@ function loadScript(src){
   return _scripts[src];
 }
 let quoteFiles=[];
+// Parsers are the most dangerous thing here: a small archive can expand to
+// gigabytes. Refuse oversized input before allocating a buffer for it.
+const MAX_FILE_MB=8;
+function fileSizeOk(f,chipEl){
+  if(f.size<=MAX_FILE_MB*1024*1024)return true;
+  const mb=(f.size/1024/1024).toFixed(1);
+  if(chipEl)fileChip(chipEl,f.name," — "+mb+"MB exceeds the "+MAX_FILE_MB+"MB limit","#FF5C5C");
+  else alert("That file is "+mb+"MB. The limit is "+MAX_FILE_MB+"MB.");
+  return false;
+}
 async function extractFile(f){
+  if(f.size>MAX_FILE_MB*1024*1024){
+    throw new Error("File is "+(f.size/1024/1024).toFixed(1)+"MB; the limit is "+MAX_FILE_MB+"MB.");
+  }
   const name=f.name.toLowerCase();
   const buf=await f.arrayBuffer();
   if(/\.(xlsx|xls)$/.test(name)){
@@ -1819,16 +1832,26 @@ function printQuoteReport(){
 
 // ---------- Contract Intelligence Agent ----------
 let _cText="",_cName="",_cReview="",_cLast=null;
+// A filename is attacker-controlled. It is set as text, never parsed as HTML.
+function fileChip(el,name,suffix,colour){
+  el.textContent="";
+  const span=document.createElement("span");
+  span.className="tag";
+  if(colour){span.style.color=colour;span.style.borderColor=colour;}
+  span.textContent=name+suffix;        // textContent, so markup cannot execute
+  el.appendChild(span);
+}
 async function loadContractFile(inp){
   const f=inp.files[0]; if(!f)return;
   const chip=document.getElementById("ci-chip");
-  chip.innerHTML=`<span class="tag">${f.name} — reading…</span>`;
+  if(!fileSizeOk(f,chip))  {inp.value="";return;}
+  fileChip(chip,f.name," — reading…");
   try{
     const t=(await extractFile(f)).replace(/\s+\n/g,"\n").trim();
-    if(t.length<50){chip.innerHTML=`<span class="tag" style="color:#FF5C5C">${f.name} — ✗ no readable text (scanned PDF?)</span>`;return;}
+    if(t.length<50){fileChip(chip,f.name," — could not read any text (scanned PDF?)","#FF5C5C");return;}
     _cText=t.slice(0,13000);_cName=f.name;
-    chip.innerHTML=`<span class="tag" style="color:var(--lime);border-color:var(--lime)">${f.name} ✓ (${Math.round(t.length/1000)}k chars${t.length>13000?", first 13k used":""})</span>`;
-  }catch(e){chip.innerHTML=`<span class="tag" style="color:#FF5C5C">${f.name} — ✗ couldn't read</span>`;}
+    fileChip(chip,f.name," ✓ ("+Math.round(t.length/1000)+"k chars"+(t.length>13000?", first 13k analysed":"")+")","var(--lime)");
+  }catch(e){fileChip(chip,f.name," — could not read","#FF5C5C");}
   inp.value="";
 }
 function ciText(){
@@ -2095,7 +2118,7 @@ RULES (critical):
           h+='<span style="color:var(--muted);font-size:11.5px">'+ciEsc(s.country||'')+'</span>';
           h+='</div>';
           h+='<p style="color:#CFCFCF;font-size:13px;line-height:1.55;margin:7px 0 0">'+ciEsc(s.why||'')+'</p>';
-          if(u)h+='<a href="'+ciEsc(u)+'" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--lime);text-decoration:none;margin-top:8px">Visit website to verify</a>';
+          u=safeUrl(u); if(u)h+='<a href="'+attrEsc(u)+'" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--lime);text-decoration:none;margin-top:8px">Visit website to verify</a>';
           if(s.source)h+='<p style="color:var(--muted);font-size:11px;margin:6px 0 0">Source: '+ciEsc(s.source)+'</p>';
           h+='</div>';
         });
@@ -2153,7 +2176,8 @@ function renderSourcing(d,item,placeholder){
   function siteLink(s){
     if(!s.url)return"";
     let u=s.url.trim(); if(!/^https?:\/\//i.test(u))u="https://"+u.replace(/^\/+/,"");
-    return `<a href="${ciEsc(u)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--lime);text-decoration:none;margin-top:8px"><svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:var(--lime);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Visit website to verify →</a>`;
+    u=safeUrl(u); if(!u)return"";   // http/https only, and quote-safe below
+    return `<a href="${attrEsc(u)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--lime);text-decoration:none;margin-top:8px"><svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:var(--lime);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Visit website to verify →</a>`;
   }
   const supHtml=placeholder?'<div class="bw-loader" style="padding:10px 0"><div class="bw-loader-msg">Still searching for suppliers...</div><div class="bw-loader-track"></div></div>':sups.length?sups.map(s=>`<div class="card" style="padding:14px;margin:0">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">

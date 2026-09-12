@@ -17,27 +17,27 @@ CRITICAL there means "enterprise trust blocker", not a confirmed breach.
 | MEDIUM | Web search failures invisible | They arrive as HTTP 200 with an error object, so nothing threw and the tool answered from the model's own priors. Now detected and surfaced. |
 | MEDIUM | Privacy policy materially inaccurate | Rewritten to describe actual processing. |
 | LOW | Unreferenced archive served from the site root | `buyrworld-phase2.zip` removed from the tree. |
+| HIGH | Filename DOM XSS in the contract upload path | Filenames are now set with `textContent` via `fileChip()`; no filename is interpolated into `innerHTML` anywhere. |
+| HIGH | `ciEsc` output used inside `href` attributes | Both sites now use `attrEsc` (which escapes quotes) and `safeUrl` (http/https only). |
+| MEDIUM | No file size limit before parser operations | `extractFile` refuses anything over 8MB before allocating a buffer. |
 
 ## Partially addressed
 
-**Unsafe rendering.** Rendering added in this work is safe: `attrEsc()` escapes
-quotes, which the pre-existing `ciEsc()` does not, and `safeUrl()` admits only
-`http` and `https`. Verified against hostile input — a `javascript:` URL is
-dropped, injected markup in a title is escaped, ampersands encode correctly, and
-`rel="noopener noreferrer"` is set. **The pre-existing defect remains:**
-`loadContractFile()` interpolates raw filenames into `innerHTML` at four points,
-and `ciEsc()` output is used inside `href` and `data-name` attributes.
+**Prompt injection.** The claim-review path is structurally safe: the arithmetic
+runs to completion before the model is called, and the supplier letter enters
+the prompt as explicitly labelled untrusted data that must not be followed as
+instructions. An injected instruction cannot alter a figure, because no figure
+comes from the model. The other tools that accept documents do not yet carry
+that labelling.
 
 ## Open
 
 | Sev | Issue | Note |
 |---|---|---|
-| HIGH | Filename DOM XSS in the contract upload path | Fix is small — switch to `textContent`. The quote-upload path 60 lines away already does this correctly and is the pattern to copy. |
 | HIGH | `/api/chat` has no identity, rate limit, quota or origin check | A public endpoint spending real model credits. |
 | MEDIUM | CDN libraries without Subresource Integrity | jsPDF, ExcelJS and the document parsers load from a public CDN. |
 | MEDIUM | No Content-Security-Policy, `frame-ancestors`, `Referrer-Policy` or `Permissions-Policy` | HSTS is present. |
-| MEDIUM | No file size, page or row limits before parser operations | Decompression bombs and malformed files untested. |
-| MEDIUM | No formula-injection escaping in spreadsheet exports | A cell beginning `=`, `+`, `-` or `@` executes when the file is opened. |
+| — | Spreadsheet formula injection | **Not applicable.** The audit listed this as a risk class, but this codebase has no CSV or XLSX export path — XLSX is read only, and exports are HTML-as-`.doc` and jsPDF. Re-check if a spreadsheet export is ever added. |
 | MEDIUM | Prompt injection from uploaded documents | Document text is delimited in some prompts but never labelled as untrusted data that cannot change instructions. |
 | LOW | No dependency manifest, lockfile, scanning or CI | Nothing pins or audits the CDN versions. |
 
