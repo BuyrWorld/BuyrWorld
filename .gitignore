@@ -1,0 +1,11 @@
+# Private strategic analysis — must never be committed or deployed.
+# There is no vercel.json, so anything committed here is served as a static
+# file from buyrworld.com. This audit contains the security severity register,
+# commercial analysis and employment-conflict assessment.
+September 2026 Progress/
+*.pdf
+
+# Local and editor noise
+.DS_Store
+Thumbs.db
+.vercel/
