@@ -62,7 +62,27 @@ separate decision for the owner:
 - **Git history.** Every removed file and personal reference remains in earlier
   commits, and the repository is **public**. History was not rewritten, as
   instructed.
-- **Commit authorship.** Author name and email appear on every commit.
+- **Commit authorship.** Measured 2026-09-13: the personal email appears on
+  **all 243 commits**, and "Josh Frost" as the author name on 45 of them. From
+  this point commits are authored as `BuyrWorld` with a GitHub noreply address,
+  set in the repo-local git config. That is forward-only; it changes nothing
+  already pushed.
+- **The photograph is still retrievable.** `founder.jpg` was fetched from
+  `raw.githubusercontent.com` at an old commit on 2026-09-13 and returned HTTP
+  200, 75,106 bytes. Deleting a file removes it from the tree, not from history.
+- **188 commits** have the name or email inside file content.
+- **The company number is the vector that survives everything else.** The legal
+  page names BUYRWORLD LTD and company number 17289466, and Companies House
+  publishes director names. No amount of repository work closes that; it is a
+  structural decision, not a code one.
+
+  **Options, in order of leverage.** Making the repository private closes
+  authorship, file history and the photograph at once, keeps Vercel deploying,
+  and is reversible — at the cost of the portfolio value. Rewriting history with
+  `git filter-repo` works but is irreversible, changes every SHA, may leave
+  objects in forks and caches, and contradicts the audit's instruction to
+  preserve rather than destroy evidence while the employment position is
+  unresolved. The forward-only identity change above is free and has been done.
 - **Repository ownership.** The hosting account name is visible.
 - **Domain registration** and hosting account details.
 - **The legal notice.** The registered company name, company number and

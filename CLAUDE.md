@@ -53,6 +53,12 @@ Deploys are GitHub → Vercel. Pushing to `main` deploys production.
 - Space Grotesk for headings, Inter for body.
 - Dark cards, consistent product naming. Don't introduce a second design system or a CSS framework.
 
+## Identity
+
+- **Commits from this repository are authored as `BuyrWorld`**, not as a person. The repo-local git config sets `user.name` and a GitHub noreply `user.email`; the global config is untouched, so other projects are unaffected. Check with `git var GIT_AUTHOR_IDENT` before committing if anything seems off.
+- **No personal name, photograph or email in the tree or the served site.** `scripts/verify-content.mjs` fails the build if one reappears.
+- **This does not retroactively change history.** 243 earlier commits carry a personal email and the repository is public. See `docs/SECURITY_REVIEW.md` for what remains externally visible and the options for it.
+
 ## Working style
 
 - One phase per session. Commit at the end of each.
