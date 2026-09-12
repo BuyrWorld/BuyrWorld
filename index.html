@@ -515,7 +515,12 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <button class="btn btn-ghost" style="margin-top:8px;padding:7px 13px;font-size:13px" onclick="defAddDriver()">+ Add driver</button>
 
       <div class="eyebrow" style="margin:18px 0 8px">4 &middot; Their letter (optional &mdash; used only to draft the reply)</div>
-      <textarea class="bwin" id="def-letter" rows="4" placeholder="Paste the supplier letter here. It is not used to produce any figure." aria-label="Paste the supplier letter here. It is not used to produce any figure"></textarea>
+      <textarea class="bwin" id="def-letter" rows="4" aria-label="Supplier letter" placeholder="Paste the supplier letter here."></textarea>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;align-items:center">
+        <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="defExtract()">Read the letter</button>
+        <span style="color:var(--muted);font-size:12px">Proposes values for the fields above. Nothing is used until you confirm it.</span>
+      </div>
+      <div id="def-extract" style="margin-top:12px"></div>
       <input class="bwin" id="def-context" style="margin-top:10px" placeholder="Optional context: alternatives available, switching cost, contract notice period" aria-label="Optional context: alternatives available, switching cost, contract notic">
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
@@ -1772,6 +1777,127 @@ function defRender(r,cur){
     +(r.assumptions.length?'<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px"><div class="eyebrow" style="margin-bottom:6px">Assumptions</div><ul style="margin:0;padding-left:18px;color:var(--muted);font-size:12.5px;line-height:1.6">'+r.assumptions.map(function(x){return "<li>"+ciEsc(x.text)+"</li>";}).join("")+'</ul></div>':"")
     +'<p style="color:var(--muted);font-size:11.5px;margin-top:12px">'+ciEsc(r.formula)+'. Computed in exact integer arithmetic; no language model produced these figures.</p>'
     +'</div>';
+}
+
+/* ---- Reading the letter -----------------------------------------------------
+   A model proposes field values; it does not supply them. Everything it returns
+   arrives unconfirmed and cannot reach the calculator until a person has ticked
+   it. Any value whose supporting quote is not found in the letter is discarded
+   before it is ever shown. ---------------------------------------------------- */
+
+let _defExtract=null;
+
+async function defExtract(){
+  const host=document.getElementById("def-extract");
+  const letter=(document.getElementById("def-letter")||{}).value||"";
+  if(!window.BW){host.innerHTML='<p style="color:#FF5C5C;font-size:13.5px">The extraction engine did not load.</p>';return;}
+  if(letter.trim().length<30){
+    host.innerHTML='<p style="color:var(--muted);font-size:13.5px">Paste the supplier letter first.</p>';return;
+  }
+  host.innerHTML='<p style="color:var(--muted);font-size:13.5px">Reading the letter…</p>';
+  let r;
+  try{
+    r=await window.BW.extractClaim({letter:letter,adapter:window.BW.aiAdapter,fence:untrusted});
+  }catch(e){
+    host.innerHTML='<div class="card" style="border-color:#FF5C5C;margin:0"><b style="color:#FF5C5C">Could not read the letter.</b><div style="color:var(--muted);font-size:14px;margin-top:6px">'+ciEsc(String(e.message||e))+'</div></div>';
+    return;
+  }
+  if(!r.ok){
+    host.innerHTML='<div class="card" style="border-color:#FF5C5C;margin:0"><b style="color:#FF5C5C">Nothing was extracted.</b>'
+      +'<div style="color:var(--muted);font-size:14px;margin-top:6px">'+ciEsc(r.detail||r.failure)+'</div>'
+      +'<p style="color:var(--muted);font-size:11.5px;margin-top:8px">The fields above are unchanged. Enter them by hand.</p></div>';
+    return;
+  }
+  _defExtract=r;
+  defRenderExtract();
+}
+
+function defRenderExtract(){
+  const host=document.getElementById("def-extract"); const r=_defExtract;
+  if(!host||!r)return;
+  const F=window.BW.FIELD_RULES, D=window.BW.DRIVER_RULES;
+  const row=function(path,label,f){
+    const done=!!f.confirmedBy;
+    return '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line)">'
+      +'<div><div style="font-size:13.5px;color:var(--text)">'+ciEsc(label)+': <b>'+ciEsc(f.value)+'</b></div>'
+      +'<div style="color:var(--muted);font-size:11.5px;margin-top:2px">read from: &ldquo;'+ciEsc(f.evidence.quote)+'&rdquo;</div></div>'
+      +(done
+        ? '<span style="color:var(--lime);font-size:12px;white-space:nowrap">confirmed</span>'
+        : '<button class="btn btn-ghost" style="padding:5px 11px;font-size:12px;white-space:nowrap" onclick="defConfirm(\''+path+'\')">Confirm</button>')
+      +'</div>';
+  };
+  let body="";
+  for(const k in r.fields){ if(F[k]) body+=row("f:"+k,F[k].label,r.fields[k]); }
+  r.drivers.forEach(function(d,i){
+    for(const k in d){ if(D[k]) body+=row("d:"+i+":"+k,(d.label?d.label.value:"Driver "+(i+1))+" — "+D[k].label,d[k]); }
+  });
+
+  const rejected=r.rejected.length
+    ? '<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><div class="eyebrow" style="margin-bottom:6px">Discarded</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:#FFB800">'
+      +r.rejected.map(function(x){return "<li>"+ciEsc(x.field)+" = "+ciEsc(x.value)+" — "+ciEsc(x.reason)+"</li>";}).join("")
+      +'</ul></div>'
+    : "";
+
+  const anyLeft=Object.keys(r.fields).some(function(k){return !r.fields[k].confirmedBy;})
+    ||r.drivers.some(function(d){return Object.keys(d).some(function(k){return D[k]&&!d[k].confirmedBy;});});
+
+  host.innerHTML='<div class="card" style="margin:0">'
+    +'<div class="eyebrow" style="margin-bottom:4px">Proposed by Buyr AI — unconfirmed</div>'
+    +'<p style="color:var(--muted);font-size:12.5px;margin-bottom:10px">'+ciEsc(r.note)+' '
+    +ciEsc(r.grounded+" of "+r.claimed+" proposed values were traceable to the letter.")+'</p>'
+    +(body||'<p style="color:var(--muted);font-size:13.5px">Nothing in the letter could be read into a field.</p>')
+    +rejected
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">'
+    +'<button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="defConfirmAll()">Confirm all</button>'
+    +'<button class="btn btn-lime" style="padding:8px 14px;font-size:13px"'+(anyLeft?' disabled title="Confirm every field first"':"")+' onclick="defApplyExtract()">Use these values</button>'
+    +'</div>'
+    +'<p style="color:var(--muted);font-size:11px;margin-top:8px">Prompt '+ciEsc(r.promptVersion)+'. Confirming records that a person checked the value against the letter.</p>'
+    +'</div>';
+}
+
+function defConfirm(path){
+  if(!_defExtract)return;
+  const parts=path.split(":");
+  const who="user";
+  if(parts[0]==="f"){ _defExtract.fields[parts[1]]=window.BW.confirmField(_defExtract.fields[parts[1]],who); }
+  else { const d=_defExtract.drivers[Number(parts[1])]; d[parts[2]]=window.BW.confirmField(d[parts[2]],who); }
+  defRenderExtract();
+}
+function defConfirmAll(){
+  if(!_defExtract)return;
+  if(!window.confirm("Confirm every proposed value? Only do this if you have read the letter and checked them."))return;
+  const D=window.BW.DRIVER_RULES;
+  for(const k in _defExtract.fields) _defExtract.fields[k]=window.BW.confirmField(_defExtract.fields[k],"user");
+  _defExtract.drivers.forEach(function(d){ for(const k in d){ if(D[k]) d[k]=window.BW.confirmField(d[k],"user"); } });
+  defRenderExtract();
+}
+
+function defApplyExtract(){
+  const r=_defExtract; if(!r)return;
+  const f=r.fields;
+  if(f.supplier) defSet("def-supplier",f.supplier.value);
+  if(f.unitPrice) defSet("def-price",f.unitPrice.value);
+  if(f.currency) defSet("def-currency",f.currency.value);
+  if(f.annualVolume) defSet("def-volume",String(f.annualVolume.value).replace(/[^0-9]/g,""));
+  if(f.requestedChange) defSet("def-request",f.requestedChange.value);
+  if(f.effectiveFrom&&f.retrospectiveFrom){
+    const a=f.retrospectiveFrom.value.split("-"), b=f.effectiveFrom.value.split("-");
+    const months=(Number(b[0])-Number(a[0]))*12+(Number(b[1])-Number(a[1]));
+    if(months>0) defSet("def-retro",String(months));
+  }
+  if(r.drivers.length){
+    _defRows=r.drivers.map(function(d){
+      return [d.label?d.label.value:"Driver",
+              d.weightPercent?d.weightPercent.value:"",
+              d.movementPercent?d.movementPercent.value:"",
+              "direct","","","",""];
+    });
+    defRenderDrivers();
+  }
+  defCalc();
+  document.getElementById("def-extract").innerHTML=
+    '<p style="color:var(--lime);font-size:13.5px">Confirmed values applied to the fields above. Check them, then recalculate if you change anything.</p>';
 }
 
 /* ---- Outcome capture -------------------------------------------------------
@@ -3601,6 +3727,8 @@ async function send(id,text){
   import { fxRate } from "./src/calc/fx.mjs";
   import { buildDecisionPack } from "./src/calc/decision-pack.mjs";
   import { recordOutcome, summariseOutcomes } from "./src/calc/outcome.mjs";
+  import { createAdapter, httpTransport } from "./src/services/ai/adapter.mjs";
+  import { extractClaim, confirmField, FIELD_RULES, DRIVER_RULES } from "./src/services/ai/extract-claim.mjs";
   import { saveOutcome, loadOutcomes, clearOutcomes, exportOutcomes } from "./src/services/outcome-store.mjs";
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
@@ -3609,6 +3737,8 @@ async function send(id,text){
                 createSeries, movementBetween, assessEvidence, formatWeight, fxRate,
                 buildDecisionPack, renderDecisionPackHTML,
                 recordOutcome, summariseOutcomes,
+                extractClaim, confirmField, FIELD_RULES, DRIVER_RULES,
+                aiAdapter: createAdapter({ transport: httpTransport() }),
                 saveOutcome, loadOutcomes, clearOutcomes, exportOutcomes,
                 SAMPLE_INDEX: STEEL_A };
   if (typeof defRenderDrivers === "function") defRenderDrivers();

@@ -140,11 +140,13 @@ price found it immediately.
 
 ## AI layer
 
-**Status: partly built.**
+**Status: built for extraction; the other tools still return prose.**
 
 - Structured JSON output, validated at runtime; invalid JSON is an error state,
-  never a silent fallback — *not built; the tools still return prose*
-- Field-level confidence, surfaced in the UI — *not built*
+  never a silent fallback — **built** in `services/ai/adapter.mjs`, with five
+  distinct failure kinds and the raw response kept for diagnosis
+- Field-level provenance, surfaced in the UI — **built**: every extracted field
+  renders with the passage it was read from and a Confirm control
 - Uploaded document text wrapped in explicit delimiters and labelled as
   untrusted data that cannot alter instructions — **built**, one shared
   `untrusted()` wrapper across all six document-bearing prompts
@@ -152,9 +154,9 @@ price found it immediately.
   results rather than a 504 — **built**, except retries
 - No prompt or document content in logs, ever — **built**
 - Every prompt change evaluated against ProcureBench before it ships —
-  *ProcureBench exists but evaluates the calculation layer, not prompts*
-- One adapter interface, one mock implementation, versioned prompts — *not
-  built*
+  *ProcureBench evaluates the calculation layer; extraction has 35 tests of its
+  own against a mock, but no golden-case corpus yet*
+- One adapter interface, one mock implementation, versioned prompts — **built**
 
 The strongest guarantee is structural rather than architectural: in the claim
 review the arithmetic completes before the model is called, and the computed

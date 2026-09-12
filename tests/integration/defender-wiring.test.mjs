@@ -7,6 +7,8 @@ import * as exact from "../../src/calc/exact.mjs";
 import * as indexSeries from "../../src/calc/index-series.mjs";
 import * as evidenceMod from "../../src/calc/evidence.mjs";
 import * as sampleData from "../../src/data/sample-indices.mjs";
+import * as aiAdapter from "../../src/services/ai/adapter.mjs";
+import * as extractMod from "../../src/services/ai/extract-claim.mjs";
 
 const html = readFileSync("index.html", "utf8");
 
@@ -40,7 +42,7 @@ describe("Defender wiring", () => {
   });
 
   test("everything exposed resolves to a real export", () => {
-    const all = { ...bridge, ...exact, ...indexSeries, ...evidenceMod, ...sampleData };
+    const all = { ...bridge, ...exact, ...indexSeries, ...evidenceMod, ...sampleData, ...aiAdapter, ...extractMod };
     const mount = (html.match(/window\.BW\s*=\s*\{([\s\S]*?)\};/) || [])[1] || "";
     // `pc: ratioFromPercent` — check the right-hand side resolves.
     const aliases = [...mount.matchAll(/([a-zA-Z_$][\w$]*)\s*:\s*([a-zA-Z_$][\w$]*)/g)];

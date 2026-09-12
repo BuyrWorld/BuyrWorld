@@ -27,7 +27,7 @@ Status against the seven phases. Honest about what is done and what is not.
 | `src/services/outcome-store.mjs` | Local-first storage. BigInt-safe, and every browser failure mode handled. |
 | `src/render/decision-pack-html.mjs` | Print-clean output, everything escaped. |
 
-231 tests, 21 ProcureBench cases, five verification checks, all run by CI.
+266 tests, 21 ProcureBench cases, five verification checks, all run by CI.
 
 ---
 
@@ -97,12 +97,16 @@ hosting project has no build step, and adding a `package.json` can change how it
 builds and deploys. Check the project's framework settings first. CI fails
 deliberately if a manifest appears, so this cannot happen by accident.
 
-### 6. Document extraction into the typed model
+### 6. Extraction beyond the claim letter
 
-Extraction still produces prose for a human to read rather than fields for the
-engine to consume, so the confirmation step the architecture describes has
-nothing to confirm yet. This is what would let a supplier letter populate a case
-instead of being read alongside one.
+**Claim extraction is built.** A supplier letter now populates the case: the
+model proposes fields, each arrives with the passage it was read from, a value
+whose quote is not found in the letter is discarded before it is shown, and
+nothing reaches the calculator until a person confirms it.
+
+What remains is the same treatment for the other document tools — quotes and
+contracts still produce prose for a human to read rather than fields for the
+engine to consume.
 
 ---
 
