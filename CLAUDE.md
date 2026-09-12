@@ -10,6 +10,10 @@ A dark-mode procurement web product at buyrworld.com. Single-page app served fro
 - `api/chat.js` — the only model endpoint. `maxDuration: 300`.
 - `/previews/` — 8 lowercase-hyphenated JPEGs for the paid templates.
 - Also in root: `buyrworld-social-card.png`, `robots.txt`, `sitemap.xml`.
+- `src/calc/` — the deterministic calculation engine (ES modules). `exact.mjs` is BigInt money and ratio arithmetic; `cost-bridge.mjs` is the supplier-claim decomposition. Imported by `index.html` via one `<script type="module">` that mounts `window.BW`.
+- `tests/` — Node's built-in runner. `node --test "tests/**/*.test.mjs"`.
+- `scripts/verify.mjs` — runs everything. Run it before any deploy.
+- `fixtures/` — synthetic, fictional demonstration cases.
 
 Deploys are GitHub → Vercel. Pushing to `main` deploys production.
 
@@ -22,6 +26,14 @@ Deploys are GitHub → Vercel. Pushing to `main` deploys production.
 - **The Market Intelligence object must always include every slot**, even when empty. Missing slots break the renderer.
 - **`scoreRGB` uses hard colour bands**: red 0–39, amber 40–69, green 70–100. Don't smooth or reinterpolate them.
 - **The account is Vercel Pro: functions cap at 300s**, and `api/chat.js` aborts itself at 270s to stay inside that. Supplier Discovery runs long. Any change that adds latency needs a timeout path that returns a partial result, not a 504.
+
+## Calculation rules (added Sept 2026)
+
+- **Code calculates, the model explains.** No percentage or money figure shown to a user may come from a language model. Computed figures are passed *into* prompts as fixed facts; the model drafts argument around them.
+- **No floating point in `src/calc/`.** Money is integer minor units on BigInt, ratios are scaled by 1e9. Rounding is half-up away from zero and only where it is named.
+- **Mixed currencies raise.** Never convert implicitly — an FX rate needs a date and a source.
+- **A value marked `ai-inferred` cannot enter arithmetic** until a human confirms it. This is enforced in `cost-bridge.mjs`, not left to convention.
+- **Every calculation change needs a test.** `node scripts/verify.mjs` must pass before any commit that touches `src/calc/`.
 
 ## Post-audit rules (added Sept 2026)
 

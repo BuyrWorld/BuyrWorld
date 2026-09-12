@@ -7,8 +7,21 @@
  * unclosed div silently breaks a whole page section, and a nav link to a
  * deleted page throws on click.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { Script } from "node:vm";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const scratch = mkdtempSync(join(tmpdir(), "bw-verify-"));
+
+/** ES modules legally contain `import`, which the classic parser rejects. */
+function checkModuleSyntax(code, label) {
+  const file = join(scratch, `block-${label}.mjs`);
+  writeFileSync(file, code);
+  const r = spawnSync(process.execPath, ["--check", file], { encoding: "utf8" });
+  return r.status === 0 ? null : (r.stderr || "").split("\n").find((l) => l.includes("Error")) || "syntax error";
+}
 
 const html = readFileSync("index.html", "utf8");
 const problems = [];
@@ -24,12 +37,18 @@ while ((m = re.exec(html))) {
   if (type && !/javascript|module/i.test(type)) continue;     // ld+json etc.
   blocks++;
   const line = html.slice(0, m.index).split("\n").length;
-  try {
-    new Script(m[2]);
-  } catch (e) {
-    problems.push(`inline script at line ~${line} does not parse: ${e.message}`);
+  if (/module/i.test(type || "")) {
+    const err = checkModuleSyntax(m[2], String(blocks));
+    if (err) problems.push(`inline module at line ~${line} does not parse: ${err}`);
+  } else {
+    try {
+      new Script(m[2]);
+    } catch (e) {
+      problems.push(`inline script at line ~${line} does not parse: ${e.message}`);
+    }
   }
 }
+rmSync(scratch, { recursive: true, force: true });
 
 /* --- 2. div balance --- */
 const open = (html.match(/<div/g) || []).length;
