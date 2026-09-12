@@ -61,9 +61,24 @@ Generator, Negotiation Simulator, Supplier Discovery, Buyr AI chat.
 - No Content-Security-Policy or related headers.
 - No file size or type limits before parsers run.
 
-## After Phase 1
+## Where it stands now
 
-Commercial and personal content removed. `index.html` is now ~505 KB across 18
-pages, div balance 587/587, every navigation target resolves to a real page, and
-`node scripts/verify-content.mjs` passes. See `SECURITY_REVIEW.md` for the
-security position.
+Phase 1 removed the commercial and personal layers. What followed replaced the
+part that mattered most: the tool that asked a language model to invent
+`JUSTIFICATION STRENGTH: NN/100` now computes a warranted change from weighted
+driver movement, in exact integer arithmetic, with every figure traceable to a
+driver, a formula and a source.
+
+| | Baseline | Now |
+|---|---|---|
+| `index.html` | 522 KB, 20 pages | ~530 KB, 18 pages |
+| Tests | none | 211, plus 21 ProcureBench cases |
+| CI | none | every push, Node 22 and 24 |
+| Calculation modules | none | 7 under `src/`, framework-free |
+| Payment links | 8 | 0 |
+| Analytics events | 13 | 0 |
+| Third-party scripts pinned | 0 of 6 | 6 of 6 |
+
+The weaknesses listed above under "Known weaknesses carried forward" are closed
+except one: the page still carries 130 inline event handlers, which is why the
+CSP cannot yet drop `'unsafe-inline'`. See `IMPLEMENTATION_PLAN.md`.
