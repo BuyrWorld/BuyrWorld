@@ -57,6 +57,11 @@ for (const c of EVALUABLE) {
       const got = actual[k];
       checks.push({ ok: got === want, what: `${k} = ${want}`, got: String(got) });
     }
+    // Named assumptions the reviewer must be shown.
+    for (const id of c.expectAssumptions ?? []) {
+      const found = out.assumptions.some((a) => a.id === id);
+      checks.push({ ok: found, what: `assumption "${id}" surfaced`, got: out.assumptions.map((a) => a.id).join(", ") || "none" });
+    }
     // Every case that expects a gap must actually surface one.
     if (c.expectGaps?.length) {
       const surfaced = out.assumptions.length > 0;

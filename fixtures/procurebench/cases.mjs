@@ -19,6 +19,7 @@
  */
 
 import { ratioFromPercent as pc, moneyFromDecimal as m } from "../../src/calc/exact.mjs";
+import { STEEL_A } from "./indices.mjs";
 
 const GBP = (x) => m(x, "GBP");
 const d = (id, label, weight, move) => ({ id, label, weight: pc(weight), indexMovement: pc(move), provenance: "user-entered" });
@@ -261,20 +262,50 @@ export const CASES = [
 /* ----------------------------------------- needs layers not yet built ---- */
 {
   id: "PB-17",
-  title: "Wrong index base period",
-  why: "A supplier quoting movement from a favourable trough rather than the contractual base date.",
-  notYetEvaluable: "Needs index base-period selection; the engine currently accepts a movement as given.",
-  boundaries: { minAccept: "0%", maxAccept: "recomputed from the contractual base" },
-  mustNotClaim: ["that the supplier's chosen base period is contractual"],
+  title: "Base-period shopping",
+  why: "Same index, same end date, a base chosen to flatter. The cheapest way to inflate a claim, and invisible unless you recompute from the contract.",
+  input: {
+    baseline: { unitPrice: GBP("120.00"), annualVolume: 25_000 },
+    requestedChange: pc("9.79"),
+    drivers: [{
+      id: "material", label: "Steel bar", weight: pc("50"), provenance: "externally-sourced",
+      index: {
+        series: STEEL_A,
+        contractualBasePeriod: "2025-01",
+        claimedBasePeriod: "2025-06",
+        measurePeriod: "2026-06",
+      },
+    }],
+  },
+  expect: { warrantedChange: "5.00%", unsupportedChange: "4.79%" },
+  expectAssumptions: ["base-period-material"],
+  expectGaps: ["the claim measures from a different base than the contract"],
+  boundaries: { minAccept: "0%", maxAccept: "5%" },
+  mustNotClaim: ["that 19.57% movement is contractually applicable", "that the supplier's base period is the contractual one"],
 },
 
 {
   id: "PB-18",
   title: "Index lag ignored",
-  why: "Movement takes months to reach a delivered price; claiming it immediately overstates.",
-  notYetEvaluable: "Needs lag modelling.",
-  boundaries: { minAccept: "0%", maxAccept: "lagged movement only" },
-  mustNotClaim: ["that unlagged movement is immediately recoverable"],
+  why: "Movement takes months to reach a delivered price. Claiming it immediately charges for cost the supplier has not yet incurred.",
+  input: {
+    baseline: { unitPrice: GBP("64.00"), annualVolume: 90_000 },
+    requestedChange: pc("5"),
+    drivers: [{
+      id: "material", label: "Steel bar", weight: pc("50"), provenance: "externally-sourced",
+      index: {
+        series: STEEL_A,
+        contractualBasePeriod: "2025-01",
+        measurePeriod: "2026-06",
+        lagMonths: 3,
+      },
+    }],
+  },
+  expect: { warrantedChange: "2.00%", unsupportedChange: "3.00%" },
+  expectAssumptions: ["index-lag-material"],
+  expectGaps: ["unlagged movement has not reached the delivered price"],
+  boundaries: { minAccept: "0%", maxAccept: "2%" },
+  mustNotClaim: ["that the full 10% movement is recoverable now"],
 },
 
 {

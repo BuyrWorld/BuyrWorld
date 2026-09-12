@@ -17,6 +17,7 @@ import {
   ONE, ratioMul, scaleDiv, SCALE,
   money, moneyApplyChange, moneySub, moneyTimesQuantity, moneyScale, assertSameCurrency,
 } from "./exact.mjs";
+import { movementBetween, compareClaimedBasis, compareLag } from "./index-series.mjs";
 
 /** Where a value came from. Anything ai-inferred must be confirmed first. */
 export const PROVENANCE = Object.freeze({
@@ -73,16 +74,93 @@ export function costBridge(input) {
 
   for (const d of drivers) {
     assertUsable(d, `driver "${d.id}" `);
-    const contribution = ratioMul(d.weight, d.indexMovement);
+
+    // A driver may state its movement directly, or name an index and let the
+    // engine derive it from the contractual base with the contractual lag.
+    // The derived form is the defensible one: it cannot be base-shopped.
+    let movement = d.indexMovement;
+    let lineage = null;
+    let basisNote = null;
+
+    if (d.index) {
+      const spec = d.index;
+      const series = spec.series;
+      if (!series) throw new TypeError(`Driver "${d.id}" names an index but supplies no series`);
+
+      const resolved = movementBetween({
+        series,
+        basePeriod: spec.contractualBasePeriod ?? spec.basePeriod,
+        measurePeriod: spec.measurePeriod,
+        lagMonths: spec.lagMonths ?? 0,
+        lagBase: spec.lagBase ?? false,
+      });
+      movement = resolved.movement;
+      lineage = resolved.lineage;
+
+      // Did the supplier measure from somewhere more flattering?
+      if (spec.claimedBasePeriod && spec.contractualBasePeriod &&
+          spec.claimedBasePeriod !== spec.contractualBasePeriod) {
+        const cmp = compareClaimedBasis({
+          series,
+          claimedBasePeriod: spec.claimedBasePeriod,
+          contractualBasePeriod: spec.contractualBasePeriod,
+          measurePeriod: spec.measurePeriod,
+          lagMonths: spec.lagMonths ?? 0,
+        });
+        basisNote = cmp;
+        assumptions.push({
+          id: `base-period-${d.id}`,
+          text: `${d.label}: the claim measures from ${cmp.claimed.basePeriodUsed} (${pct(cmp.claimed.movement)}), ` +
+                `but the contractual base is ${cmp.contractual.basePeriodUsed} (${pct(cmp.contractual.movement)}). ` +
+                `Using the contractual base removes ${pct(cmp.overstatement)} of claimed movement.`,
+          impact: "reduces warranted change",
+        });
+      }
+
+      // What did the lag take out?
+      if (spec.lagMonths) {
+        const lagCmp = compareLag({
+          series,
+          basePeriod: spec.contractualBasePeriod ?? spec.basePeriod,
+          measurePeriod: spec.measurePeriod,
+          lagMonths: spec.lagMonths,
+        });
+        if (lagCmp.overstatement !== 0n) {
+          assumptions.push({
+            id: `index-lag-${d.id}`,
+            text: `${d.label}: a ${spec.lagMonths}-month lag means movement is measured to ` +
+                  `${lagCmp.lagged.measurePeriodUsed}, not ${spec.measurePeriod}. ` +
+                  `That is ${pct(lagCmp.lagged.movement)} rather than ${pct(lagCmp.unlagged.movement)} — ` +
+                  `a difference of ${pct(lagCmp.overstatement)} not yet reached the delivered price.`,
+            impact: "reduces warranted change",
+          });
+        }
+      }
+    }
+
+    if (typeof movement !== "bigint") {
+      throw new TypeError(`Driver "${d.id}" has neither an indexMovement nor a resolvable index`);
+    }
+
+    const contribution = ratioMul(d.weight, movement);
     warranted += contribution;
     weightTotal += d.weight;
     contributions.push({
       id: d.id,
       label: d.label,
       weight: d.weight,
-      indexMovement: d.indexMovement,
+      indexMovement: movement,
       contribution,
-      source: d.source ?? null,
+      source: d.source ?? (d.index?.series?.name ?? null),
+      lineage,
+      basis: basisNote
+        ? {
+            claimedBase: basisNote.claimed.basePeriodUsed,
+            contractualBase: basisNote.contractual.basePeriodUsed,
+            overstatement: basisNote.overstatement,
+            monthsShifted: basisNote.monthsShifted,
+          }
+        : null,
       provenance: d.provenance ?? PROVENANCE.UNKNOWN,
     });
   }
@@ -268,7 +346,14 @@ function validate(input) {
     if (seen.has(d.id)) throw new RangeError(`Duplicate driver id: ${d.id}`);
     seen.add(d.id);
     if (typeof d.weight !== "bigint") throw new TypeError(`Driver "${d.id}" weight must be a Ratio (BigInt)`);
-    if (typeof d.indexMovement !== "bigint") throw new TypeError(`Driver "${d.id}" indexMovement must be a Ratio (BigInt)`);
+    const hasMovement = typeof d.indexMovement === "bigint";
+    const hasIndex = d.index && d.index.series && d.index.measurePeriod;
+    if (!hasMovement && !hasIndex) {
+      throw new TypeError(
+        `Driver "${d.id}" needs either an indexMovement (Ratio) or an index ` +
+        `{ series, measurePeriod, contractualBasePeriod }`
+      );
+    }
     if (d.weight < 0n) throw new RangeError(`Driver "${d.id}" weight cannot be negative`);
     total += d.weight;
   }
@@ -293,3 +378,6 @@ function pct(r) {
 }
 
 export { pct as formatPercent };
+
+export { movementBetween, compareClaimedBasis, compareLag } from "./index-series.mjs";
+export { createSeries } from "./index-series.mjs";
