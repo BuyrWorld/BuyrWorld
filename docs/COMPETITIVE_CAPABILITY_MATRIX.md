@@ -12,6 +12,20 @@ names appear here and must never appear in customer-facing product copy.
 
 ---
 
+## Delivery status
+
+Priorities below are design intent, not progress. What has actually shipped:
+
+| Capability | Priority | Status |
+|---|---|---|
+| 4. Should-cost and cost-driver decomposition | P0 | **Built and tested.** The cost bridge, index base and lag, currency split. |
+| 7. Clause extraction with source references | P1 | **Partly built.** Contract constraints and contradiction detection exist; extraction still produces prose. |
+| 1. Document ingestion and bid normalisation | P1 | **Not built.** Extraction does not populate typed fields, so there is nothing to confirm. |
+| 6. Fast, actionable commercial intelligence | P1 | **Built.** One click loads a fully worked synthetic case. |
+| 5. Governed data with traceable insight-to-outcome | P2 | **Built.** Outcome capture and aggregation close the loop. |
+| 3. Governed guardrails and human approval | P2 | **Built** for the approval record. Autonomous negotiation remains deliberately unbuilt. |
+| 2. Structured negotiation preparation | P2 | **Not built.** The existing simulator is not yet driven by confirmed case facts. |
+
 ## 1. Document ingestion and bid normalisation
 
 | | |

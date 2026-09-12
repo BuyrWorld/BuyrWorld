@@ -14,9 +14,16 @@ valuable that isn't in the code"**.
 
 In rough order of durability:
 
-1. **The evaluation corpus.** Thirty-plus cases with known-correct answers,
+1. **The evaluation corpus.** A body of cases with known-correct answers,
    including adversarial ones, is months of procurement judgement. It is the
    hardest thing here to reproduce and the easiest to give away by accident.
+
+   Twenty-one cases exist today and all pass. One of them earned its place on
+   the first run: a case built from an awkward unit price and a large volume
+   exposed a rounding defect worth £12,600 a year that every unit test had
+   missed, because the unit tests used round numbers where it is invisible.
+   That is the argument for the corpus in one example — and the reason it is
+   worth more than the code that passes it.
 2. **Outcome records.** What was claimed, what was agreed, what argument worked
    against which supplier position. This compounds with use and cannot be
    derived from reading anything.
