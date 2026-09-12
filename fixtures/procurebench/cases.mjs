@@ -20,6 +20,7 @@
 
 import { ratioFromPercent as pc, moneyFromDecimal as m } from "../../src/calc/exact.mjs";
 import { STEEL_A } from "./indices.mjs";
+import { evidence, EVIDENCE_KIND as K, contractConstraint, supplierClaim } from "../../src/calc/evidence.mjs";
 
 const GBP = (x) => m(x, "GBP");
 const d = (id, label, weight, move) => ({ id, label, weight: pc(weight), indexMovement: pc(move), provenance: "user-entered" });
@@ -319,11 +320,50 @@ export const CASES = [
 
 {
   id: "PB-20",
-  title: "Contradictory evidence between letter and contract",
-  why: "The letter claims a mechanism the contract does not contain.",
-  notYetEvaluable: "Needs contract constraint extraction linked to evidence.",
-  boundaries: { minAccept: "0%", maxAccept: "contractual mechanism only" },
-  mustNotClaim: ["that the letter's mechanism applies without checking the contract"],
+  title: "The letter claims a mechanism the contract does not contain",
+  why: "A supplier asserting quarterly indexation under a contract that allows one annual review. The arithmetic can be flawless and the claim still inapplicable.",
+  input: {
+    baseline: { unitPrice: GBP("100.00"), annualVolume: 50_000 },
+    requestedChange: pc("9"),
+    drivers: [{
+      id: "material", label: "Steel bar", weight: pc("42"),
+      index: { series: STEEL_A, contractualBasePeriod: "2025-01", measurePeriod: "2026-06" },
+      evidence: {
+        weight: evidence(K.DOCUMENT, {
+          label: "supplier cost breakdown",
+          quote: "steel represents approximately 42% of ex-works cost",
+          locator: "p2",
+        }),
+      },
+    }],
+  },
+  evidenceInput: {
+    claims: [supplierClaim({
+      id: "quarterly",
+      mechanism: "quarterly-indexation",
+      quote: "prices are subject to quarterly indexation in line with published steel indices",
+      locator: "p1",
+    })],
+    constraints: [contractConstraint({
+      id: "clause-7-2",
+      governs: "quarterly-indexation",
+      permits: false,
+      note: "clause 7.2 permits one price review per contract year",
+      evidence: evidence(K.CONTRACT, { label: "supply agreement", clause: "7.2" }),
+    })],
+  },
+  expect: { warrantedChange: "4.20%", unsupportedChange: "4.80%" },
+  expectEvidence: {
+    contradictions: 1,
+    coverageOfClaimedWeight: "100.00%",
+    contradictionMatches: /clause 7\.2 does not permit it/,
+  },
+  expectGaps: ["the contract does not contain the mechanism the letter relies on"],
+  boundaries: { minAccept: "0%", maxAccept: "0%" },
+  mustNotClaim: [
+    "that the increase is contractually due this quarter",
+    "a contract clause that was not supplied",
+  ],
 },
 ];
 

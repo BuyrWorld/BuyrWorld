@@ -4,6 +4,9 @@ import { readFileSync } from "node:fs";
 
 import * as bridge from "../../src/calc/cost-bridge.mjs";
 import * as exact from "../../src/calc/exact.mjs";
+import * as indexSeries from "../../src/calc/index-series.mjs";
+import * as evidenceMod from "../../src/calc/evidence.mjs";
+import * as sampleData from "../../src/data/sample-indices.mjs";
 
 const html = readFileSync("index.html", "utf8");
 
@@ -37,12 +40,12 @@ describe("Defender wiring", () => {
   });
 
   test("everything exposed resolves to a real export", () => {
-    const all = { ...bridge, ...exact };
+    const all = { ...bridge, ...exact, ...indexSeries, ...evidenceMod, ...sampleData };
     const mount = (html.match(/window\.BW\s*=\s*\{([\s\S]*?)\};/) || [])[1] || "";
     // `pc: ratioFromPercent` — check the right-hand side resolves.
     const aliases = [...mount.matchAll(/([a-zA-Z_$][\w$]*)\s*:\s*([a-zA-Z_$][\w$]*)/g)];
     for (const [, alias, target] of aliases) {
-      assert.equal(typeof all[target], "function", `alias ${alias} -> ${target} is not an exported function`);
+      assert.notEqual(all[target], undefined, `alias ${alias} -> ${target} is not exported anywhere`);
     }
     const shorthands = ["costBridge", "partialAcceptance", "delayEffect", "formatPercent"];
     for (const name of shorthands) {
@@ -85,7 +88,12 @@ describe("Defender wiring", () => {
     assert.equal(exact.moneyToDecimalString(r.annual.unsupported), "147000.00");
 
     // And the page's defaults match that example, so the shipped demo is honest.
-    assert.match(html, /DEF_DEFAULT_DRIVERS=\[\["Material","42","10"\],\["Labour","18","5"\],\["Energy","8","12"\]\]/);
+    assert.match(html, /\["Material","42","10","direct"/, "shipped defaults must match the worked example");
+    assert.match(html, /\["Labour","18","5","direct"/);
+    assert.match(html, /\["Energy","8","12","direct"/);
+    // The "Load synthetic example" button demonstrates base shopping and lag.
+    assert.match(html, /\["Material","42","10","index","2025-01","2025-06","2026-06","3"\]/,
+      "the example must exercise the contractual base and the lag");
     assert.match(html, /id="def-request" value="9"/);
     assert.match(html, /id="def-volume" value="50000"/);
   });
@@ -95,5 +103,32 @@ describe("Defender wiring", () => {
       "a missing module must say so rather than rendering nothing");
     assert.match(html, /Cannot calculate\./,
       "invalid input must surface the engine's own message");
+  });
+});
+
+describe("deployment integrity", () => {
+  test("every module the page imports is actually deployed", async () => {
+    const { readFileSync, existsSync } = await import("node:fs");
+    const ignored = readFileSync(".vercelignore", "utf8")
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith("#"))
+      .map((l) => l.replace(/\/$/, ""));
+
+    const imports = [...html.matchAll(/from "\.\/([^"]+)"/g)].map((m) => m[1]);
+    assert.ok(imports.length > 0, "the page should import the engine");
+
+    for (const rel of imports) {
+      assert.ok(existsSync(rel), `index.html imports ${rel}, which does not exist`);
+      const top = rel.split("/")[0];
+      assert.equal(ignored.includes(top), false,
+        `index.html imports ${rel}, but .vercelignore excludes ${top}/ — it would 404 in production`);
+    }
+  });
+
+  test("the sample index is served, not a test fixture", () => {
+    assert.match(html, /from "\.\/src\/data\/sample-indices\.mjs"/);
+    assert.equal(html.includes('from "./fixtures/'), false,
+      "the page must never import from fixtures/, which is not deployed");
   });
 });

@@ -152,6 +152,7 @@ export function costBridge(input) {
       indexMovement: movement,
       contribution,
       source: d.source ?? (d.index?.series?.name ?? null),
+      evidence: d.evidence ?? null,
       lineage,
       basis: basisNote
         ? {

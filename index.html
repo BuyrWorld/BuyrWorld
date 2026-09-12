@@ -1507,26 +1507,52 @@ async function callAI(prompt){
    below only reads inputs, calls it and renders the result. No figure shown to
    the user is produced by a language model. ---------------------------------- */
 
-const DEF_DEFAULT_DRIVERS=[["Material","42","10"],["Labour","18","5"],["Energy","8","12"]];
+// A driver row is [label, weight%, movement%, mode, contractualBase, claimedBase, measurePeriod, lagMonths]
+// mode "direct" uses the typed movement; mode "index" derives it from the
+// contractual base period and lag, which is the form a supplier cannot shop.
+const DEF_DEFAULT_DRIVERS=[
+  ["Material","42","10","direct","","","",""],
+  ["Labour","18","5","direct","","","",""],
+  ["Energy","8","12","direct","","","",""]
+];
 let _defRows=DEF_DEFAULT_DRIVERS.map(function(r){return r.slice();});
 let _defResult=null;
 
 function defRenderDrivers(){
   var host=document.getElementById("def-drivers"); if(!host)return;
   host.innerHTML=_defRows.map(function(r,i){
-    return '<div style="display:grid;grid-template-columns:1fr 90px 100px 34px;gap:8px;margin-bottom:6px;align-items:center">'
+    var isIndex=r[3]==="index";
+    var head='<div style="display:grid;grid-template-columns:1fr 90px 100px 88px 34px;gap:8px;margin-bottom:6px;align-items:center">'
       +'<input class="bwin" value="'+attrEsc(r[0])+'" oninput="_defRows['+i+'][0]=this.value" placeholder="Driver">'
       +'<input class="bwin" value="'+attrEsc(r[1])+'" oninput="_defRows['+i+'][1]=this.value" inputmode="decimal" placeholder="weight %">'
-      +'<input class="bwin" value="'+attrEsc(r[2])+'" oninput="_defRows['+i+'][2]=this.value" inputmode="decimal" placeholder="move %">'
+      +(isIndex
+        ? '<input class="bwin" value="derived" disabled title="Derived from the index below" style="opacity:.55">'
+        : '<input class="bwin" value="'+attrEsc(r[2])+'" oninput="_defRows['+i+'][2]=this.value" inputmode="decimal" placeholder="move %">')
+      +'<select class="bwin" onchange="_defRows['+i+'][3]=this.value;defRenderDrivers()">'
+      +'<option value="direct"'+(isIndex?"":" selected")+'>Stated</option>'
+      +'<option value="index"'+(isIndex?" selected":"")+'>From index</option></select>'
       +'<button class="btn btn-ghost" style="padding:6px 9px;font-size:12px" onclick="defRemoveDriver('+i+')" aria-label="Remove driver">&times;</button>'
       +'</div>';
-  }).join("")+'<div style="color:var(--muted);font-size:11.5px">Weight = share of unit cost. Move = index movement over the claim period.</div>';
+    if(!isIndex)return head;
+    return head
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin:-2px 0 10px 0;padding:10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px">'
+      +'<label style="font-size:11px;color:var(--muted)">Contract base<input class="bwin" value="'+attrEsc(r[4])+'" oninput="_defRows['+i+'][4]=this.value" placeholder="2025-01"></label>'
+      +'<label style="font-size:11px;color:var(--muted)">Their base (if different)<input class="bwin" value="'+attrEsc(r[5])+'" oninput="_defRows['+i+'][5]=this.value" placeholder="2025-06"></label>'
+      +'<label style="font-size:11px;color:var(--muted)">Measure to<input class="bwin" value="'+attrEsc(r[6])+'" oninput="_defRows['+i+'][6]=this.value" placeholder="2026-06"></label>'
+      +'<label style="font-size:11px;color:var(--muted)">Lag (months)<input class="bwin" value="'+attrEsc(r[7])+'" oninput="_defRows['+i+'][7]=this.value" inputmode="numeric" placeholder="3"></label>'
+      +'<div style="grid-column:1/-1;color:var(--muted);font-size:11px">Uses the bundled synthetic index (2024-10 to 2026-06). Movement is derived from the <b>contract</b> base, never theirs.</div>'
+      +'</div>';
+  }).join("")+'<div style="color:var(--muted);font-size:11.5px">Weight = share of unit cost. Stated movement is taken on trust; an index-derived one is not.</div>';
 }
-function defAddDriver(){_defRows.push(["","",""]);defRenderDrivers();}
+function defAddDriver(){_defRows.push(["","","","direct","","","",""]);defRenderDrivers();}
 function defRemoveDriver(i){_defRows.splice(i,1);defRenderDrivers();}
 function defSet(id,v){var el=document.getElementById(id); if(el)el.value=v;}
 function defLoadExample(){
-  _defRows=DEF_DEFAULT_DRIVERS.map(function(r){return r.slice();});
+  _defRows=[
+    ["Material","42","10","index","2025-01","2025-06","2026-06","3"],
+    ["Labour","18","5","direct","","","",""],
+    ["Energy","8","12","direct","","","",""]
+  ];
   defSet("def-price","100.00");defSet("def-currency","GBP");defSet("def-volume","50000");
   defSet("def-request","9");defSet("def-cap","");defSet("def-retro","4");
   defSet("def-letter","Due to sustained increases in raw material and energy costs we must apply a 9% increase to all lines with effect from 1 September, applied retrospectively from 1 May.");
@@ -1544,12 +1570,24 @@ function defCalc(){
   var v=function(id){var el=document.getElementById(id);return el?el.value:"";};
   try{
     var drivers=_defRows.filter(function(r){
-      return String(r[1]).trim()!=="" && String(r[2]).trim()!=="";
+      var hasWeight=String(r[1]).trim()!=="";
+      return hasWeight && (r[3]==="index" ? String(r[6]||"").trim()!=="" : String(r[2]).trim()!=="");
     }).map(function(r,i){
-      return {id:"d"+i,label:(r[0]||("Driver "+(i+1))).trim(),
-              weight:window.BW.pc(String(r[1]).trim()),
-              indexMovement:window.BW.pc(String(r[2]).trim()),
-              provenance:"user-entered"};
+      var base={id:"d"+i,label:(r[0]||("Driver "+(i+1))).trim(),
+                weight:window.BW.pc(String(r[1]).trim()),
+                provenance:"user-entered"};
+      if(r[3]==="index"){
+        base.index={
+          series:window.BW.SAMPLE_INDEX,
+          contractualBasePeriod:String(r[4]||"").trim()||undefined,
+          claimedBasePeriod:String(r[5]||"").trim()||undefined,
+          measurePeriod:String(r[6]||"").trim(),
+          lagMonths:parseInt(String(r[7]||"0").trim(),10)||0
+        };
+      }else{
+        base.indexMovement=window.BW.pc(String(r[2]).trim());
+      }
+      return base;
     });
     if(!drivers.length)throw new Error("Add at least one cost driver with both a weight and a movement.");
     var capRaw=String(v("def-cap")).trim();
@@ -1577,7 +1615,8 @@ function defRender(r,cur){
     return '<tr><td style="padding:6px 10px 6px 0">'+ciEsc(c.label)+'</td>'
       +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'+P(c.weight)+'</td>'
       +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'+P(c.indexMovement)+'</td>'
-      +'<td style="text-align:right;padding:6px 0 6px 10px;color:var(--lime);font-variant-numeric:tabular-nums">'+P(c.contribution)+'</td></tr>';
+      +'<td style="text-align:right;padding:6px 0 6px 10px;color:var(--lime);font-variant-numeric:tabular-nums">'+P(c.contribution)+'</td></tr>'
+      +(c.lineage?'<tr><td colspan="4" style="padding:0 0 8px 0;color:var(--muted);font-size:11.5px">'+ciEsc(c.lineage)+(c.basis?' — their base '+ciEsc(c.basis.claimedBase)+' would give '+P(c.basis.overstatement)+' more':'')+'</td></tr>':"");
   }).join("");
   var big=function(label,val,colour){
     return '<div style="flex:1;min-width:150px"><div class="eyebrow" style="margin-bottom:4px">'+label
@@ -1601,8 +1640,32 @@ function defRender(r,cur){
     +'<div style="color:'+(over?"#FF5C5C":"var(--lime)")+'">Annual '+(over?"unsupported":"difference")+': <b>'+cur+' '+M(r.annual.unsupported)+'</b>'+(over?" &mdash; this is what you are negotiating":"")+'</div>'
     +(r.retrospective?'<div>Retrospective ('+r.retrospective.months+' months, about '+r.retrospective.units+' units): <b>'+cur+' '+M(r.retrospective.unsupported)+'</b></div>':"")
     +'</div>'
+    +defEvidenceHTML(r)
     +(r.assumptions.length?'<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px"><div class="eyebrow" style="margin-bottom:6px">Assumptions</div><ul style="margin:0;padding-left:18px;color:var(--muted);font-size:12.5px;line-height:1.6">'+r.assumptions.map(function(x){return "<li>"+ciEsc(x.text)+"</li>";}).join("")+'</ul></div>':"")
     +'<p style="color:var(--muted);font-size:11.5px;margin-top:12px">'+ciEsc(r.formula)+'. Computed in exact integer arithmetic; no language model produced these figures.</p>'
+    +'</div>';
+}
+
+// Evidence sufficiency. Deliberately not a score: it reports what is supported
+// and what is not, and says how it was measured.
+function defEvidenceHTML(r){
+  if(!window.BW.assessEvidence)return"";
+  var ev;
+  try{ ev=window.BW.assessEvidence(r,{}); }catch(e){ return ""; }
+  var sev=function(g){return g.severity==="material"?"#FF5C5C":"#FFB800";};
+  var cov=window.BW.formatWeight(ev.coverageOfClaimedWeight);
+  return '<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">'
+    +'<div class="eyebrow" style="margin-bottom:6px">Evidence</div>'
+    +'<div style="font-size:13.5px;color:#CFCFCF;margin-bottom:8px">'
+    +'Fully evidenced: <b>'+cov+'</b> of the claimed unit-cost weight'
+    +(ev.materialGaps?' &middot; <span style="color:#FF5C5C">'+ev.materialGaps+' material gap(s)</span>':'')
+    +'</div>'
+    +(ev.gaps.length
+      ?'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6">'
+        +ev.gaps.map(function(g){return '<li style="color:'+sev(g)+'">'+ciEsc(g.text)+'</li>';}).join("")
+        +'</ul>'
+      :'<p style="color:var(--lime);font-size:12.5px;margin:0">No evidence gaps identified.</p>')
+    +'<p style="color:var(--muted);font-size:11px;margin-top:8px">'+ciEsc(ev.method)+'</p>'
     +'</div>';
 }
 
@@ -3193,8 +3256,13 @@ async function send(id,text){
   // The same module the unit tests run against - one source of truth.
   import { costBridge, partialAcceptance, delayEffect, formatPercent } from "./src/calc/cost-bridge.mjs";
   import { ratioFromPercent, moneyFromDecimal, moneyToDecimalString } from "./src/calc/exact.mjs";
+  import { createSeries, movementBetween } from "./src/calc/index-series.mjs";
+  import { assessEvidence, formatWeight } from "./src/calc/evidence.mjs";
+  import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { costBridge, partialAcceptance, delayEffect, formatPercent,
-                pc: ratioFromPercent, moneyFromDecimal, moneyToDecimalString };
+                pc: ratioFromPercent, moneyFromDecimal, moneyToDecimalString,
+                createSeries, movementBetween, assessEvidence, formatWeight,
+                SAMPLE_INDEX: STEEL_A };
   if (typeof defRenderDrivers === "function") defRenderDrivers();
 </script>
 </body>

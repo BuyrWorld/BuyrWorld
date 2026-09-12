@@ -15,6 +15,7 @@
 import { costBridge, formatPercent } from "../src/calc/cost-bridge.mjs";
 import { moneyToDecimalString } from "../src/calc/exact.mjs";
 import { CASES, EVALUABLE, PENDING } from "../fixtures/procurebench/cases.mjs";
+import { assessEvidence, formatWeight } from "../src/calc/evidence.mjs";
 
 const verbose = process.argv.includes("--verbose");
 const results = [];
@@ -56,6 +57,29 @@ for (const c of EVALUABLE) {
     for (const [k, want] of Object.entries(e)) {
       const got = actual[k];
       checks.push({ ok: got === want, what: `${k} = ${want}`, got: String(got) });
+    }
+    // Evidence layer: coverage, gaps and contradictions.
+    if (c.expectEvidence) {
+      const ev = assessEvidence(out, c.evidenceInput ?? {});
+      const want = c.expectEvidence;
+      if (want.contradictions !== undefined) {
+        checks.push({
+          ok: ev.contradictions.length === want.contradictions,
+          what: `${want.contradictions} contradiction(s) found`,
+          got: String(ev.contradictions.length),
+        });
+      }
+      if (want.coverageOfClaimedWeight !== undefined) {
+        const got = formatWeight(ev.coverageOfClaimedWeight);
+        checks.push({ ok: got === want.coverageOfClaimedWeight, what: `evidence coverage ${want.coverageOfClaimedWeight}`, got });
+      }
+      if (want.contradictionMatches) {
+        const text = ev.contradictions.map((x) => x.text).join(" | ");
+        checks.push({ ok: want.contradictionMatches.test(text), what: `contradiction matching ${want.contradictionMatches}`, got: text || "none" });
+      }
+      if (want.materialGaps !== undefined) {
+        checks.push({ ok: ev.materialGaps === want.materialGaps, what: `${want.materialGaps} material gap(s)`, got: String(ev.materialGaps) });
+      }
     }
     // Named assumptions the reviewer must be shown.
     for (const id of c.expectAssumptions ?? []) {
