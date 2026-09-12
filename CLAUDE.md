@@ -7,7 +7,7 @@ Read this before changing anything. These constraints are load-bearing; ignoring
 A dark-mode procurement web product at buyrworld.com. Single-page app served from one `index.html`, plus Vercel serverless functions in `/api/`. No build step, no framework, no package manifest.
 
 - `index.html` — the entire UI, state, router, prompts and report generation. Show/hide SPA routed by `go(page)`; Market Intelligence has its own sub-router `miGo()`.
-- `api/chat.js` — the only model endpoint. `maxDuration: 60`.
+- `api/chat.js` — the only model endpoint. `maxDuration: 300`.
 - `/previews/` — 8 lowercase-hyphenated JPEGs for the paid templates.
 - Also in root: `buyrworld-social-card.png`, `founder.jpg`, `robots.txt`, `sitemap.xml`.
 
@@ -21,7 +21,7 @@ Deploys are GitHub → Vercel. Pushing to `main` deploys production.
 - **jsPDF core fonts only.** Custom fonts break the PDF exports.
 - **The Market Intelligence object must always include every slot**, even when empty. Missing slots break the renderer.
 - **`scoreRGB` uses hard colour bands**: red 0–39, amber 40–69, green 70–100. Don't smooth or reinterpolate them.
-- **Vercel Hobby caps functions at 60s.** Supplier Discovery runs close to this. Any change that adds latency needs a timeout path that returns a partial result, not a 504.
+- **The account is Vercel Pro: functions cap at 300s**, and `api/chat.js` aborts itself at 270s to stay inside that. Supplier Discovery runs long. Any change that adds latency needs a timeout path that returns a partial result, not a 504.
 
 ## Post-audit rules (added Sept 2026)
 
