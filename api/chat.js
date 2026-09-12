@@ -78,7 +78,7 @@ export default async function handler(req, res) {
       messages: clean,
     };
     if (wantsWeb) {
-      payload.tools = [{ type: "web_search_20250305", name: "web_search", max_uses: 6 }];
+      payload.tools = [{ type: "web_search_20260209", name: "web_search", max_uses: 6 }];
     }
     const controller = new AbortController();
     abortTimer = setTimeout(() => controller.abort(), 270_000);
@@ -100,9 +100,37 @@ export default async function handler(req, res) {
       log(502, { err: data?.error?.type || "upstream_error" });
       return res.status(502).json({ error: "AI request failed" });
     }
-    const text = (data.content || []).map(c => c.text || "").join("\n").trim();
-    log(200, { out: text.length });
-    return res.status(200).json({ text });
+    const blocks = data.content || [];
+    const text = blocks.map(c => c.text || "").join("\n").trim();
+
+    // Sources, deduped by URL. A block Claude actually cited is marked cited:true;
+    // remaining search hits are returned uncited so the UI can still show its working.
+    const byUrl = new Map();
+    for (const b of blocks) {
+      for (const c of b.citations || []) {
+        if (c.url) byUrl.set(c.url, { url: c.url, title: c.title || c.url, cited: true });
+      }
+    }
+    // Server-tool failures arrive as HTTP 200 with an error OBJECT where a list of
+    // results would normally be — branch on that before iterating.
+    let searchError = null;
+    for (const b of blocks) {
+      if (b.type !== "web_search_tool_result") continue;
+      if (!Array.isArray(b.content)) { searchError = b.content?.error_code || "search_failed"; continue; }
+      for (const hit of b.content) {
+        if (hit.url && !byUrl.has(hit.url)) {
+          byUrl.set(hit.url, { url: hit.url, title: hit.title || hit.url, cited: false });
+        }
+      }
+    }
+    const sources = [...byUrl.values()];
+
+    // An answer cut short by the token cap, or left paused mid-tool-use, is a partial
+    // answer. Say so rather than returning it as though it were complete.
+    const partial = data.stop_reason === "max_tokens" || data.stop_reason === "pause_turn";
+
+    log(200, { out: text.length, src: sources.length, stop: data.stop_reason, searchErr: searchError });
+    return res.status(200).json({ text, sources, partial, searchError });
   } catch (err) {
     clearTimeout(abortTimer);
     if (err.name === "AbortError") {

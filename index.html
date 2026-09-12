@@ -1998,7 +1998,7 @@ async function runSourcing(){
   startLoader("src-out",["Searching live web sources…","Reading what came back…","Mapping the supply market…","Scoring market depth & risk…","Structuring your report…"],30);
   const volStr=qty?`${qty}${unit?" "+unit:""}`:"";
   try{
-    const text=await callAIWeb(`You are the BuyrWorld Supplier Discovery engine, a senior UK procurement market analyst. Search the live web NOW and map the supply market for a buyer sourcing:
+    const {text,sources:_src,partial:_partial,searchError:_serr}=await callAIWeb(`You are the BuyrWorld Supplier Discovery engine, a senior UK procurement market analyst. Search the live web NOW and map the supply market for a buyer sourcing:
 ITEM: ${item}
 ${region?`PREFERRED REGIONS: ${region}\n`:""}${volStr?`REQUIRED QUANTITY: ${volStr}\n`:""}${value?`TARGET / BUDGET VALUE: ${value}\n`:""}${spec?`KEY REQUIREMENTS: ${spec}\n`:""}${detail?`PRODUCT DETAIL (grade/form/brand/colour/finish): ${detail}\n`:""}${incoterm?`TARGET INCOTERM: ${incoterm}\n`:""}${dest?`DELIVERY DESTINATION: ${dest}\n`:""}
 Return ONLY a JSON object, no other text, no markdown fences. Use this exact shape:
@@ -2025,6 +2025,7 @@ RULES (critical):
     window._srcItem=item;
     stopLoader();
     renderSourcing(d,item,true);
+    document.getElementById("src-out").insertAdjacentHTML("beforeend",srcNote(_src,_partial,_serr));
     // Phase 2: find named suppliers while user reads the market data
     try{
       const p2='Search the live web NOW for named companies that supply this item to find real candidate suppliers:\nITEM: '+item+'\n'
@@ -2036,7 +2037,7 @@ RULES (critical):
         +'RULES: Only include companies that appeared in your live web search - never invent names. '
         +'Return {"suppliers":[]} if none found. Maximum 4 suppliers.'
         +(spec?(' Buyer requirements to check: '+spec):'');
-      const text2=await callAIWeb(p2);
+      const {text:text2}=await callAIWeb(p2);
       let d2;try{d2=JSON.parse(text2.replace(/```json|```/g,"").trim());}catch(e2){d2={suppliers:[]};}
       const slot=document.getElementById("src-sup-slot");
       if(slot){
@@ -2355,7 +2356,28 @@ async function sourcingPDF(){
 async function callAIWeb(prompt){
   const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({web:true,messages:[{role:"user",content:prompt}]})});
   if(!r.ok)throw new Error("api");
-  const d=await r.json(); return d.text||"";
+  const d=await r.json();
+  return {text:d.text||"",sources:d.sources||[],partial:!!d.partial,searchError:d.searchError||null};
+}
+
+// Attribute-safe escape. ciEsc omits quotes, which is unsafe inside href="…".
+function attrEsc(t){return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+function safeUrl(u){try{const x=new URL(String(u));return(x.protocol==="http:"||x.protocol==="https:")?x.href:"";}catch(e){return"";}}
+// Every web-grounded claim shows its sources, and says so when it can't.
+function srcNote(sources,partial,searchError){
+  const warn='style="color:#FFB800;font-size:12.5px;margin-top:10px"';
+  let h="";
+  if(searchError)h+='<p '+warn+'>Live search did not complete ('+attrEsc(searchError)+'). Treat every figure below as unverified.</p>';
+  if(partial)h+='<p '+warn+'>This answer was cut short before it finished — what you see is incomplete.</p>';
+  const list=(sources||[]).filter(function(x){return safeUrl(x.url);}).slice(0,10);
+  if(!list.length){
+    if(!searchError)h+='<p style="color:var(--muted);font-size:12.5px;margin-top:10px">No sources were returned. Verify any figure before you rely on it.</p>';
+    return h;
+  }
+  const items=list.map(function(x){
+    return '<li style="margin:4px 0"><a href="'+attrEsc(safeUrl(x.url))+'" target="_blank" rel="noopener noreferrer" style="color:var(--lime);text-decoration:none">'+attrEsc(x.title)+'</a>'+(x.cited?'':' <span style="color:var(--muted)">(searched, not cited)</span>')+'</li>';
+  }).join("");
+  return h+'<div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:12px"><div style="font-family:\'Space Grotesk\';font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Sources</div><ol style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.55;color:#CFCFCF">'+items+'</ol></div>';
 }
 const MI={brief:null,comm:null,exp:null,sim:null,lab:null,ai:null};
 const miStamp=()=>new Date().toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
@@ -2367,7 +2389,7 @@ async function runBriefing(){
   const out=document.getElementById("mi-brief");
   startLoader("mi-brief",["Searching trade, commodity & regulatory news…","Reading what came back…","Mapping STEEPLE risks for procurement…","Scoring indices & writing your briefing…"],55);
   try{
-    const text=await callAIWeb('Search the web for today\'s news on trade policy, commodity markets, environmental regulation, legal compliance, technology and labour — targeted to UK/EU procurement. Run a focused search per section where possible.\n\nFirst line EXACTLY (NN=0-100, higher=calmer/better):\nINDICES: sentiment=NN; supply_stress=NN; commodity_inflation=NN; supplier_risk=NN; geopolitical=NN; logistics=NN; energy=NN; environmental=NN; regulatory=NN\n\nThen produce these six sections. Each: heading in ALL CAPS, then Signal (one sentence — what is happening now, with a figure or source name), Implication (one sentence — procurement consequence), Action (one sentence — what a buyer should do this week or month). Keep each section under 70 words.\n\nPOLITICAL & TRADE\nActive tariffs, sanctions, trade policy changes, regional instability affecting sourcing routes. Cite any new rates or effective dates from your search.\n\nECONOMIC\nCommodity price movements, inflation signals, FX rates, interest rate direction and any supplier credit or financing stress.\n\nENVIRONMENTAL & CLIMATE\nCarbon pricing or ETS changes affecting input costs, CSRD or CSDDD compliance pressure landing on supply chains, weather or climate events disrupting key supply regions.\n\nLEGAL & COMPLIANCE\nModern Slavery Act or UFLPA enforcement news, payment terms legislation, cartel or competition enforcement in relevant sectors, new supplier reporting obligations.\n\nTECHNOLOGY & INNOVATION\nAutomation or AI adoption changing supplier capacity or cost base, reshoring or nearshoring trends, cybersecurity risks in supply chains.\n\nSOCIAL & LABOUR\nWage inflation or skills shortages in key supplier regions, industrial action risk (ports, logistics, manufacturing), migration policy changes affecting labour availability.\n\nThen TOP HEADLINES — 6 items, each on 3 lines:\nLine 1: tag + headline, where tag is one of [P&T] [ECO] [ENV] [L&C] [TEC] [SOC]\nLine 2: one-line procurement implication\nLine 3: "Action:" followed by recommendation and impact (cost / lead-time / supply)\n\nACRONYMS & TERMS: On first use in each section, spell out any acronym or regulatory name in full with the abbreviation immediately after in parentheses — e.g. "Corporate Sustainability Reporting Directive (CSRD)". On subsequent mentions within the same section, the abbreviation alone is fine. For any specialist term a non-procurement reader might not recognise, add a brief plain-English note in parentheses on first use only — five words or fewer.\n\nPlain text only. UK English. No markdown symbols, no bullet points, no asterisks. Never invent a figure — cite your source or state it could not be verified.');
+    const {text,sources:_src,partial:_partial,searchError:_serr}=await callAIWeb('Search the web for today\'s news on trade policy, commodity markets, environmental regulation, legal compliance, technology and labour — targeted to UK/EU procurement. Run a focused search per section where possible.\n\nFirst line EXACTLY (NN=0-100, higher=calmer/better):\nINDICES: sentiment=NN; supply_stress=NN; commodity_inflation=NN; supplier_risk=NN; geopolitical=NN; logistics=NN; energy=NN; environmental=NN; regulatory=NN\n\nThen produce these six sections. Each: heading in ALL CAPS, then Signal (one sentence — what is happening now, with a figure or source name), Implication (one sentence — procurement consequence), Action (one sentence — what a buyer should do this week or month). Keep each section under 70 words.\n\nPOLITICAL & TRADE\nActive tariffs, sanctions, trade policy changes, regional instability affecting sourcing routes. Cite any new rates or effective dates from your search.\n\nECONOMIC\nCommodity price movements, inflation signals, FX rates, interest rate direction and any supplier credit or financing stress.\n\nENVIRONMENTAL & CLIMATE\nCarbon pricing or ETS changes affecting input costs, CSRD or CSDDD compliance pressure landing on supply chains, weather or climate events disrupting key supply regions.\n\nLEGAL & COMPLIANCE\nModern Slavery Act or UFLPA enforcement news, payment terms legislation, cartel or competition enforcement in relevant sectors, new supplier reporting obligations.\n\nTECHNOLOGY & INNOVATION\nAutomation or AI adoption changing supplier capacity or cost base, reshoring or nearshoring trends, cybersecurity risks in supply chains.\n\nSOCIAL & LABOUR\nWage inflation or skills shortages in key supplier regions, industrial action risk (ports, logistics, manufacturing), migration policy changes affecting labour availability.\n\nThen TOP HEADLINES — 6 items, each on 3 lines:\nLine 1: tag + headline, where tag is one of [P&T] [ECO] [ENV] [L&C] [TEC] [SOC]\nLine 2: one-line procurement implication\nLine 3: "Action:" followed by recommendation and impact (cost / lead-time / supply)\n\nACRONYMS & TERMS: On first use in each section, spell out any acronym or regulatory name in full with the abbreviation immediately after in parentheses — e.g. "Corporate Sustainability Reporting Directive (CSRD)". On subsequent mentions within the same section, the abbreviation alone is fine. For any specialist term a non-procurement reader might not recognise, add a brief plain-English note in parentheses on first use only — five words or fewer.\n\nPlain text only. UK English. No markdown symbols, no bullet points, no asterisks. Never invent a figure — cite your source or state it could not be verified.');
     const sm={};(text.match(/INDICES:([^\n]*)/i)||["",""])[1].split(";").forEach(p=>{const m=p.match(/(\w+)\s*=\s*(\d{1,3})/);if(m)sm[m[1].toLowerCase()]=Math.min(100,+m[2]);});
     const rawBody=text.replace(/^.*INDICES:.*$/im,"").trim();
     const body=rawBody;
@@ -2384,6 +2406,7 @@ async function runBriefing(){
       :miWrap(body);
     out.innerHTML=`${tiles?`<div class="mi-indices">${tiles}</div><p style="color:var(--muted);font-size:11px;margin-bottom:12px">AI-assessed indices from live sources at ${MI.brief.at} · 0–100, higher = calmer</p>`:""}${bodyHTML}`;
     miShowExports();
+    out.insertAdjacentHTML("beforeend",srcNote(_src,_partial,_serr));
   }catch(e){miFail("mi-brief");}
 }
 async function runCommodity(){
@@ -2391,10 +2414,11 @@ async function runCommodity(){
   const out=document.getElementById("mi-comm-out");
   startLoader("mi-comm-out",["Searching the live "+c+" market…","Reading current levels…","Assessing the drivers…","Writing the outlook…"],40);
   try{
-    const text=await callAIWeb(`Search the web for the current ${c} market (price level, recent movement, news). Then produce for a UK procurement audience, plain text, UK English, no markdown:\nCURRENT MARKET — price level and recent moves with figures and dates from your sources (state the source names inline)\nKEY DRIVERS — supply, demand, inventories, energy, trade/geopolitics, currency (only the ones that matter now)\nOUTLOOK — short paragraphs for 1 month, 3 months, 12 months, each with bull/base/bear framing and a confidence note\nPROCUREMENT ACTION — concrete: buy forward/hold/index-link/hedge via contract terms, what to put in supplier conversations this week\nWATCH LIST — 3 signals that would change this view\nUnder 450 words. Never invent prices — if live figures aren't found, say so explicitly.`);
+    const {text,sources:_src,partial:_partial,searchError:_serr}=await callAIWeb(`Search the web for the current ${c} market (price level, recent movement, news). Then produce for a UK procurement audience, plain text, UK English, no markdown:\nCURRENT MARKET — price level and recent moves with figures and dates from your sources (state the source names inline)\nKEY DRIVERS — supply, demand, inventories, energy, trade/geopolitics, currency (only the ones that matter now)\nOUTLOOK — short paragraphs for 1 month, 3 months, 12 months, each with bull/base/bear framing and a confidence note\nPROCUREMENT ACTION — concrete: buy forward/hold/index-link/hedge via contract terms, what to put in supplier conversations this week\nWATCH LIST — 3 signals that would change this view\nUnder 450 words. Never invent prices — if live figures aren't found, say so explicitly.`);
     MI.comm={name:c,text,at:miStamp()};
     out.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span class="tag tag-lime">${ciEsc(c)}</span><span style="color:var(--muted);font-size:11px">Generated ${MI.comm.at}</span></div>${miBox(text)}`;
     miShowExports();
+    out.insertAdjacentHTML("beforeend",srcNote(_src,_partial,_serr));
   }catch(e){miFail("mi-comm-out");}
 }
 // ---- Exposure flagship ----
@@ -2698,10 +2722,11 @@ async function runAIWatch(){
   const out=document.getElementById("mi-ai-out");
   startLoader("mi-ai-out",["Searching AI-economy sources…", "Reading the latest moves…", "Tracing input-cost impact…", "Writing the procurement read…"],45);
   try{
-    const text=await callAIWeb(`Search the web for current news on the AI infrastructure buildout (data centres, GPUs, neocloud providers like CoreWeave/IREN/Nebius/Applied Digital/Crusoe, hyperscaler capex, power demand). Then write for UK PROCUREMENT professionals (NOT investors), plain text, UK English, no markdown:\nWHAT'S HAPPENING — 4-5 sentences on the buildout's scale and latest moves, figures from sources\nINPUT-COST IMPACT — how this is hitting markets buyers care about: copper, aluminium, electrical equipment (transformers, switchgear) lead times, electricity prices, semiconductors/electronics lead times, construction capacity\nNEWS → PRICE REACTION — 4 recent AI-economy news items, one line each in the format: [IMPACT: High/Medium/Low] headline — what the relevant stock(s) did on the news with % move from sources — what it signals for buyers\nLEAD-TIME WATCH — components/categories with stretched lead times right now\nPROCUREMENT ACTIONS — 4 concrete actions for buyers exposed to these markets\nUnder 380 words. Cite figures from sources found; say so if something can't be verified. This is cost intelligence, not investment commentary.`);
+    const {text,sources:_src,partial:_partial,searchError:_serr}=await callAIWeb(`Search the web for current news on the AI infrastructure buildout (data centres, GPUs, neocloud providers like CoreWeave/IREN/Nebius/Applied Digital/Crusoe, hyperscaler capex, power demand). Then write for UK PROCUREMENT professionals (NOT investors), plain text, UK English, no markdown:\nWHAT'S HAPPENING — 4-5 sentences on the buildout's scale and latest moves, figures from sources\nINPUT-COST IMPACT — how this is hitting markets buyers care about: copper, aluminium, electrical equipment (transformers, switchgear) lead times, electricity prices, semiconductors/electronics lead times, construction capacity\nNEWS → PRICE REACTION — 4 recent AI-economy news items, one line each in the format: [IMPACT: High/Medium/Low] headline — what the relevant stock(s) did on the news with % move from sources — what it signals for buyers\nLEAD-TIME WATCH — components/categories with stretched lead times right now\nPROCUREMENT ACTIONS — 4 concrete actions for buyers exposed to these markets\nUnder 380 words. Cite figures from sources found; say so if something can't be verified. This is cost intelligence, not investment commentary.`);
     MI.ai={text,at:miStamp()};
     out.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><span style="color:var(--muted);font-size:11px">Generated ${MI.ai.at}</span></div>${miBox(text)}`;
     miShowExports();
+    out.insertAdjacentHTML("beforeend",srcNote(_src,_partial,_serr));
   }catch(e){miFail("mi-ai-out");}
 }
 async function runLabour(){
@@ -2709,10 +2734,11 @@ async function runLabour(){
   const out=document.getElementById("mi-lab-out");
   startLoader("mi-lab-out",["Searching labour-cost sources for "+c+"…","Reading the latest data…","Writing your sourcing read…"],45);
   try{
-    const text=await callAIWeb(`Do ONE quick web search for the MOST RECENT manufacturing labour-cost data for ${c} — prioritise 2026, then 2025 figures. Today is ${new Date().getFullYear()}. Answer concisely for a UK sourcing audience, plain text, UK English, no markdown, under 160 words. Two short paragraphs:\n1) COST & TREND — lead with the most recent figure you can find and ALWAYS state its year explicitly. Prefer current-year/last-year data; only cite older official benchmarks (e.g. 2020) if no recent figure exists, and if so say plainly that the latest hard figure is from that earlier year and more recent data wasn't found. Note the recent wage trend, with one source named.\n2) SOURCING READ — what this means if you're sourcing from ${c} this year (availability/skills if notable). Do not invent figures; if recent data isn't found, say the range is indicative and to verify. Keep it tight to finish quickly.`);
+    const {text,sources:_src,partial:_partial,searchError:_serr}=await callAIWeb(`Do ONE quick web search for the MOST RECENT manufacturing labour-cost data for ${c} — prioritise 2026, then 2025 figures. Today is ${new Date().getFullYear()}. Answer concisely for a UK sourcing audience, plain text, UK English, no markdown, under 160 words. Two short paragraphs:\n1) COST & TREND — lead with the most recent figure you can find and ALWAYS state its year explicitly. Prefer current-year/last-year data; only cite older official benchmarks (e.g. 2020) if no recent figure exists, and if so say plainly that the latest hard figure is from that earlier year and more recent data wasn't found. Note the recent wage trend, with one source named.\n2) SOURCING READ — what this means if you're sourcing from ${c} this year (availability/skills if notable). Do not invent figures; if recent data isn't found, say the range is indicative and to verify. Keep it tight to finish quickly.`);
     MI.lab={country:c,text,at:miStamp()};
     out.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="tag tag-lime">${ciEsc(c)}</span><span style="color:var(--muted);font-size:11px">Generated ${MI.lab.at}</span></div>${miBox(text)}`;
     miShowExports();
+    out.insertAdjacentHTML("beforeend",srcNote(_src,_partial,_serr));
   }catch(e){miFail("mi-lab-out");}
 }
 renderLabour();
