@@ -20,6 +20,8 @@ CRITICAL there means "enterprise trust blocker", not a confirmed breach.
 | HIGH | Filename DOM XSS in the contract upload path | Filenames are now set with `textContent` via `fileChip()`; no filename is interpolated into `innerHTML` anywhere. |
 | HIGH | `ciEsc` output used inside `href` attributes | Both sites now use `attrEsc` (which escapes quotes) and `safeUrl` (http/https only). |
 | MEDIUM | No file size limit before parser operations | `extractFile` refuses anything over 8MB before allocating a buffer. |
+| HIGH | `/api/chat` had no origin check or rate limit | Origin allowlist plus a per-IP token bucket (12/minute), both checked before any model call. See the caveat below. |
+| MEDIUM | No security headers | `vercel.json` sets CSP, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy`. |
 
 ## Partially addressed
 
@@ -34,11 +36,11 @@ that labelling.
 
 | Sev | Issue | Note |
 |---|---|---|
-| HIGH | `/api/chat` has no identity, rate limit, quota or origin check | A public endpoint spending real model credits. |
+| HIGH | The rate limit is per warm instance, not global | It lives in module scope, so a distributed client gets one bucket per instance. Real limiting needs shared state. It raises the cost of casual abuse; it is not a defence against a determined one. |
+| MEDIUM | `script-src` still needs `'unsafe-inline'` | 120+ inline `onclick`-style handlers make a nonce impossible today. The other CSP directives are locked down; this one is honest rather than absent. A test asserts the handler count so the weakness stays visible. |
 | MEDIUM | CDN libraries without Subresource Integrity | jsPDF, ExcelJS and the document parsers load from a public CDN. |
-| MEDIUM | No Content-Security-Policy, `frame-ancestors`, `Referrer-Policy` or `Permissions-Policy` | HSTS is present. |
 | — | Spreadsheet formula injection | **Not applicable.** The audit listed this as a risk class, but this codebase has no CSV or XLSX export path — XLSX is read only, and exports are HTML-as-`.doc` and jsPDF. Re-check if a spreadsheet export is ever added. |
-| MEDIUM | Prompt injection from uploaded documents | Document text is delimited in some prompts but never labelled as untrusted data that cannot change instructions. |
+| MEDIUM | Prompt injection in the tools other than claim review | The claim-review prompt labels the letter as untrusted data; the quote, contract and minutes prompts do not yet. |
 | LOW | No dependency manifest, lockfile, scanning or CI | Nothing pins or audits the CDN versions. |
 
 ## Outstanding owner actions

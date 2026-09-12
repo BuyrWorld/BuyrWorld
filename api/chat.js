@@ -39,8 +39,66 @@ function telemetry(fields) {
   console.log("REQ", JSON.stringify(fields));
 }
 
+// ---- Abuse controls -------------------------------------------------------
+// This endpoint spends real model credits and has no accounts behind it. These
+// are deliberately modest: an origin check stops casual cross-site use, and a
+// per-IP token bucket stops a single client hammering it.
+//
+// HONEST LIMITATION: the bucket lives in module scope, so it is per warm
+// instance, not global. A distributed attacker gets one bucket per instance.
+// A real limit needs shared state (the Upstash instance being retired would
+// have served). This raises the cost of casual abuse; it is not a defence
+// against a determined one.
+
+const ALLOWED_HOST_SUFFIXES = ["buyrworld.com", "vercel.app", "localhost"];
+const WINDOW_MS = 60_000;
+const MAX_PER_WINDOW = 12;
+const buckets = new Map();
+
+function clientKey(req) {
+  const fwd = req.headers["x-forwarded-for"];
+  return (Array.isArray(fwd) ? fwd[0] : (fwd || "")).split(",")[0].trim() || "unknown";
+}
+
+function originAllowed(req) {
+  const raw = req.headers.origin || req.headers.referer;
+  if (!raw) return true; // same-origin form posts and curl send neither
+  try {
+    const host = new URL(raw).hostname;
+    return ALLOWED_HOST_SUFFIXES.some((sfx) => host === sfx || host.endsWith("." + sfx));
+  } catch {
+    return false;
+  }
+}
+
+function rateLimited(key) {
+  const now = Date.now();
+  const b = buckets.get(key);
+  if (!b || now - b.start >= WINDOW_MS) {
+    buckets.set(key, { start: now, count: 1 });
+    if (buckets.size > 5000) {
+      for (const [k, v] of buckets) if (now - v.start >= WINDOW_MS) buckets.delete(k);
+    }
+    return false;
+  }
+  b.count++;
+  return b.count > MAX_PER_WINDOW;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
+
+  if (!originAllowed(req)) {
+    telemetry({ t: new Date().toISOString(), status: 403, err: "origin_rejected" });
+    return res.status(403).json({ error: "Requests from this origin are not accepted." });
+  }
+  if (rateLimited(clientKey(req))) {
+    telemetry({ t: new Date().toISOString(), status: 429, err: "rate_limited" });
+    res.setHeader("Retry-After", "60");
+    return res.status(429).json({
+      error: "That is more requests than this demonstration allows in a minute. Try again shortly.",
+    });
+  }
 
   const { messages } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0 || messages.length > 24) {
