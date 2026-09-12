@@ -9,7 +9,7 @@ A dark-mode procurement web product at buyrworld.com. Single-page app served fro
 - `index.html` — the entire UI, state, router, prompts and report generation. Show/hide SPA routed by `go(page)`; Market Intelligence has its own sub-router `miGo()`.
 - `api/chat.js` — the only model endpoint. `maxDuration: 300`.
 - `/previews/` — 8 lowercase-hyphenated JPEGs for the paid templates.
-- Also in root: `buyrworld-social-card.png`, `founder.jpg`, `robots.txt`, `sitemap.xml`.
+- Also in root: `buyrworld-social-card.png`, `robots.txt`, `sitemap.xml`.
 
 Deploys are GitHub → Vercel. Pushing to `main` deploys production.
 
