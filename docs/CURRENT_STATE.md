@@ -72,12 +72,14 @@ driver, a formula and a source.
 | | Baseline | Now |
 |---|---|---|
 | `index.html` | 522 KB, 20 pages | ~530 KB, 18 pages |
-| Tests | none | 211, plus 21 ProcureBench cases |
+| Tests | none | 231, plus 21 ProcureBench cases |
 | CI | none | every push, Node 22 and 24 |
 | Calculation modules | none | 7 under `src/`, framework-free |
 | Payment links | 8 | 0 |
 | Analytics events | 13 | 0 |
 | Third-party scripts pinned | 0 of 6 | 6 of 6 |
+| Controls without an accessible name | 50 | 0 |
+| Click targets unreachable by keyboard | 5 | 0 |
 
 The weaknesses listed above under "Known weaknesses carried forward" are closed
 except one: the page still carries 130 inline event handlers, which is why the

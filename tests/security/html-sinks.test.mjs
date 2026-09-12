@@ -28,6 +28,7 @@ const ALLOWED = new Map([
   // Navigation and page chrome, from hardcoded arrays in this file.
   ["l", "nav label from the hardcoded LINKS array"],
   ['page===k?"on":""', "a CSS class chosen by an internal comparison"],
+  ['page===k?\' aria-current="page"\':""', "an ARIA attribute chosen by an internal comparison"],
   ["elId", "an element id this code chose itself"],
   ["msgs[0]", "loader text from a hardcoded array"],
   ["etaHtml", "loader markup this code built"],
