@@ -494,6 +494,33 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       </div>
       <div id="def-calc" style="margin-top:18px"></div>
       <div id="def-out" style="margin-top:18px"></div>
+
+      <details style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px">
+        <summary style="cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:15px">5 &middot; Record what was agreed</summary>
+        <p style="color:var(--muted);font-size:13.5px;line-height:1.6;margin:10px 0 14px">Once the negotiation closes, record the outcome. The amount avoided is calculated from the analysis above &mdash; it is not typed in, because a saving somebody typed is not a saving. Outcomes stay in this browser and are never sent anywhere.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+          <label style="font-size:12px;color:var(--muted)">Agreed %<input class="bwin" id="oc-agreed" inputmode="decimal" placeholder="4.5"></label>
+          <label style="font-size:12px;color:var(--muted)">They wanted it from<input class="bwin" id="oc-from-req" placeholder="2026-09"></label>
+          <label style="font-size:12px;color:var(--muted)">Agreed from<input class="bwin" id="oc-from-agr" placeholder="2026-12"></label>
+          <label style="font-size:12px;color:var(--muted)">Review date<input class="bwin" id="oc-review" placeholder="2027-09"></label>
+          <label style="font-size:12px;color:var(--muted)">Approved by<input class="bwin" id="oc-by" placeholder="role, not a name"></label>
+          <label style="font-size:12px;color:var(--muted)">Category<input class="bwin" id="oc-category" placeholder="Fabrications"></label>
+        </div>
+        <div class="eyebrow" style="margin:14px 0 6px">What you argued, and whether it moved them</div>
+        <div id="oc-args"></div>
+        <button class="btn btn-ghost" style="margin-top:6px;padding:6px 12px;font-size:12.5px" onclick="ocAddArg()">+ Add argument</button>
+        <label style="display:block;font-size:12px;color:var(--muted);margin-top:12px">Non-price concessions and commitments (one per line)
+          <textarea class="bwin" id="oc-concessions" rows="2" placeholder="Payment terms 30 to 60 days"></textarea></label>
+        <label style="display:block;font-size:12px;color:var(--muted);margin-top:10px">Lessons for the next case
+          <textarea class="bwin" id="oc-lessons" rows="2" placeholder="What actually did the work"></textarea></label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+          <button class="btn btn-lime" onclick="ocSave()">Record outcome</button>
+          <button class="btn btn-ghost" onclick="ocExport()">Export</button>
+          <button class="btn btn-ghost" onclick="ocClear()">Clear all</button>
+        </div>
+        <div id="oc-msg" style="margin-top:12px"></div>
+        <div id="oc-list" style="margin-top:16px"></div>
+      </details>
     </div>
   </div></section>
 </div>
@@ -1679,6 +1706,105 @@ function defRender(r,cur){
     +(r.assumptions.length?'<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px"><div class="eyebrow" style="margin-bottom:6px">Assumptions</div><ul style="margin:0;padding-left:18px;color:var(--muted);font-size:12.5px;line-height:1.6">'+r.assumptions.map(function(x){return "<li>"+ciEsc(x.text)+"</li>";}).join("")+'</ul></div>':"")
     +'<p style="color:var(--muted);font-size:11.5px;margin-top:12px">'+ciEsc(r.formula)+'. Computed in exact integer arithmetic; no language model produced these figures.</p>'
     +'</div>';
+}
+
+/* ---- Outcome capture -------------------------------------------------------
+   The amount avoided is computed from the analysis, never typed. Records stay
+   in this browser; nothing is sent anywhere. -------------------------------- */
+
+let _ocArgs=[["",""]];   // [description, worked: "yes"|"no"|""]
+function ocRenderArgs(){
+  var host=document.getElementById("oc-args"); if(!host)return;
+  host.innerHTML=_ocArgs.map(function(a,i){
+    return '<div style="display:grid;grid-template-columns:1fr 118px 34px;gap:8px;margin-bottom:6px">'
+      +'<input class="bwin" value="'+attrEsc(a[0])+'" oninput="_ocArgs['+i+'][0]=this.value" placeholder="e.g. 40% of cost unexplained">'
+      +'<select class="bwin" onchange="_ocArgs['+i+'][1]=this.value">'
+      +'<option value=""'+(a[1]===""?" selected":"")+'>Unknown</option>'
+      +'<option value="yes"'+(a[1]==="yes"?" selected":"")+'>Moved them</option>'
+      +'<option value="no"'+(a[1]==="no"?" selected":"")+'>Did not</option></select>'
+      +'<button class="btn btn-ghost" style="padding:6px 9px;font-size:12px" onclick="ocRemoveArg('+i+')" aria-label="Remove">&times;</button>'
+      +'</div>';
+  }).join("");
+}
+function ocAddArg(){_ocArgs.push(["",""]);ocRenderArgs();}
+function ocRemoveArg(i){_ocArgs.splice(i,1);if(!_ocArgs.length)_ocArgs.push(["",""]);ocRenderArgs();}
+function ocMsg(html){var el=document.getElementById("oc-msg");if(el)el.innerHTML=html;}
+
+function ocSave(){
+  if(!window.BW)return;
+  if(!_defResult)defCalc();
+  if(!_defResult){ocMsg('<p style="color:var(--muted);font-size:13.5px">Calculate the exposure first — the outcome is measured against that analysis.</p>');return;}
+  var v=function(id){var el=document.getElementById(id);return el?String(el.value).trim():"";};
+  try{
+    var agreed=v("oc-agreed");
+    if(agreed==="")throw new Error("Enter the percentage that was actually agreed.");
+    var lines=function(id){return v(id).split("\n").map(function(x){return x.trim();}).filter(Boolean);};
+    var rec=window.BW.recordOutcome({
+      bridge:_defResult,
+      agreedChange:window.BW.pc(agreed),
+      requestedEffectiveFrom:v("oc-from-req")||null,
+      agreedEffectiveFrom:v("oc-from-agr")||null,
+      nonPriceConcessions:lines("oc-concessions"),
+      argumentsUsed:_ocArgs.filter(function(a){return a[0].trim();}).map(function(a,i){
+        return {id:"arg-"+i+"-"+a[0].trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,40),
+                description:a[0].trim(),
+                worked:a[1]==="yes"?true:a[1]==="no"?false:null};
+      }),
+      decision:{by:v("oc-by")||null,at:new Date().toISOString().slice(0,10)},
+      reviewDate:v("oc-review")||null,
+      lessons:v("oc-lessons")||"",
+      meta:{caseRef:v("def-case")||null,supplier:v("def-supplier")||null,category:v("oc-category")||null,
+            synthetic:true,recordedAt:new Date().toISOString().slice(0,10)},
+    });
+    var r=window.BW.saveOutcome(rec);
+    if(!r.ok){ocMsg('<p style="color:#FF5C5C;font-size:13.5px">'+ciEsc(r.error)+'</p>');return;}
+    ocMsg('<p style="color:var(--lime);font-size:13.5px">Recorded. '+ciEsc(rec.learning.headline)+'</p>');
+    defRenderOutcomes();
+  }catch(e){
+    ocMsg('<p style="color:#FF5C5C;font-size:13.5px">'+ciEsc(String(e.message||e))+'</p>');
+  }
+}
+
+function ocExport(){
+  if(!window.BW)return;
+  var text=window.BW.exportOutcomes();
+  var w=window.open("","_blank");
+  if(!w){ocMsg('<p style="color:#FFB800;font-size:13.5px">The export opens in a new tab — allow pop-ups and try again.</p>');return;}
+  w.document.write('<pre style="white-space:pre-wrap;word-break:break-all;font:12px/1.5 monospace;padding:20px">'+ciEsc(text)+'</pre>');
+  w.document.close();
+}
+
+function ocClear(){
+  if(!window.BW)return;
+  if(!window.confirm("Delete every recorded outcome from this browser? This cannot be undone."))return;
+  window.BW.clearOutcomes();
+  ocMsg('<p style="color:var(--muted);font-size:13.5px">All outcomes deleted from this browser.</p>');
+  defRenderOutcomes();
+}
+
+function defRenderOutcomes(){
+  var host=document.getElementById("oc-list"); if(!host||!window.BW)return;
+  ocRenderArgs();
+  var all=window.BW.loadOutcomes();
+  if(!all.length){
+    host.innerHTML='<p style="color:var(--muted);font-size:12.5px">No outcomes recorded yet. Until there are, there is no way to tell whether the analysis was any good.</p>';
+    return;
+  }
+  var sum=window.BW.summariseOutcomes(all),M=window.BW.moneyToDecimalString,P=window.BW.formatPercent;
+  var money=sum.byCurrency.map(function(b){return ciEsc(b.currency)+" "+M(b.avoidedAnnual)+" avoided across "+b.cases+" case(s)";}).join(" &middot; ");
+  var args=sum.arguments.length
+    ? '<div class="eyebrow" style="margin:12px 0 6px">What actually moves a supplier</div><ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:#CFCFCF">'
+      +sum.arguments.map(function(a){return '<li><b>'+a.successRate+'%</b> — '+ciEsc(a.description)+' <span style="color:var(--muted)">(used '+a.used+')</span></li>';}).join("")
+      +'</ul><p style="color:var(--muted);font-size:11px;margin-top:6px">'+ciEsc(sum.method)+'</p>'
+    : "";
+  host.innerHTML='<div class="card" style="margin:0">'
+    +'<div class="eyebrow" style="margin-bottom:6px">Recorded outcomes ('+sum.count+')</div>'
+    +'<div style="font-size:13.5px;color:#CFCFCF">'+money+' &middot; mean avoided '+P(sum.meanAvoidedChange)+'</div>'
+    +args
+    +'<div class="eyebrow" style="margin:14px 0 6px">History</div>'
+    +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:var(--muted)">'
+    +all.slice(0,8).map(function(o){return '<li>'+(o.meta.caseRef?'<b>'+ciEsc(o.meta.caseRef)+'</b> — ':'')+ciEsc(o.learning.headline)+'</li>';}).join("")
+    +'</ul></div>';
 }
 
 // Assemble the decision pack and open it print-ready. Everything in it comes
@@ -3350,14 +3476,19 @@ async function send(id,text){
   import { assessEvidence, formatWeight } from "./src/calc/evidence.mjs";
   import { fxRate } from "./src/calc/fx.mjs";
   import { buildDecisionPack } from "./src/calc/decision-pack.mjs";
+  import { recordOutcome, summariseOutcomes } from "./src/calc/outcome.mjs";
+  import { saveOutcome, loadOutcomes, clearOutcomes, exportOutcomes } from "./src/services/outcome-store.mjs";
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { costBridge, partialAcceptance, delayEffect, formatPercent,
                 pc: ratioFromPercent, moneyFromDecimal, moneyToDecimalString,
                 createSeries, movementBetween, assessEvidence, formatWeight, fxRate,
                 buildDecisionPack, renderDecisionPackHTML,
+                recordOutcome, summariseOutcomes,
+                saveOutcome, loadOutcomes, clearOutcomes, exportOutcomes,
                 SAMPLE_INDEX: STEEL_A };
   if (typeof defRenderDrivers === "function") defRenderDrivers();
+  if (typeof defRenderOutcomes === "function") defRenderOutcomes();
 </script>
 </body>
 </html></body>
