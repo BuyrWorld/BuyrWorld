@@ -21,6 +21,98 @@ import { EXTRACTION_CASES } from "../fixtures/procurebench/extraction-cases.mjs"
 const verbose = process.argv.includes("--verbose");
 const live = process.argv.includes("--live");
 
+/**
+ * "84.5" and "84.50" are the same price. Comparing extracted values as strings
+ * scores a formatting difference as a wrong answer, which would make the model
+ * look worse than it is and hide the errors that matter.
+ */
+function sameValue(got, want) {
+  const a = String(got).trim(), b = String(want).trim();
+  if (a === b) return true;
+  const na = Number(a), nb = Number(b);
+  return Number.isFinite(na) && Number.isFinite(nb) && na === nb;
+}
+
+/* ------------------------------------------------------------- live scoring */
+
+/**
+ * The scripted run scores the VALIDATOR. A live run scores the MODEL AND THE
+ * PROMPT, which is a different question and needs a different yardstick: each
+ * case's `expected` fields, not its scripted `outcome`.
+ *
+ * Only cases carrying `expected` can be scored this way, and cases sharing a
+ * letter are called once — there is no sense paying for the same extraction
+ * twice, and the endpoint rate-limits at 12 requests a minute.
+ */
+if (live) {
+  const endpoint = process.env.BW_ENDPOINT || "https://www.buyrworld.com/api/chat";
+  const scorable = EXTRACTION_CASES.filter((c) => c.expected);
+  const byLetter = new Map();
+  for (const c of scorable) if (!byLetter.has(c.letter)) byLetter.set(c.letter, c);
+
+  console.log(`\nProcureBench — claim extraction  [LIVE]`);
+  console.log(`Endpoint: ${endpoint}`);
+  console.log(`${byLetter.size} letter(s), one model call each.\n` + "=".repeat(68));
+
+  const adapter = createAdapter({ transport: httpTransport({ endpoint }) });
+  let expectedTotal = 0, correct = 0, wrong = 0, missed = 0, extra = 0;
+  let ungroundedAccepted = 0, preConfirmed = 0, failures = 0;
+
+  for (const c of byLetter.values()) {
+    const r = await extractClaim({ letter: c.letter, adapter });
+    if (!r.ok) {
+      failures++;
+      console.log(`FAIL  ${c.id}  ${c.title}\n        the call failed: ${r.failure} — ${r.detail}`);
+      continue;
+    }
+
+    const want = c.expected.fields || {};
+    const got = Object.fromEntries(Object.entries(r.fields).map(([k, v]) => [k, v.value]));
+    const lines = [];
+
+    for (const [k, v] of Object.entries(want)) {
+      expectedTotal++;
+      if (got[k] === undefined) { missed++; lines.push(`  MISSED  ${k}: expected ${v}`); }
+      else if (sameValue(got[k], v)) { correct++; if (verbose) lines.push(`  ok      ${k} = ${v}`); }
+      else { wrong++; lines.push(`  WRONG   ${k}: expected ${v}, got ${got[k]}`); }
+    }
+    for (const k of Object.keys(got)) {
+      if (want[k] === undefined) { extra++; lines.push(`  extra   ${k} = ${got[k]}`); }
+    }
+
+    const all = [...Object.values(r.fields), ...r.drivers.flatMap((d) => Object.values(d))];
+    for (const f of all) if (f.confirmedBy !== null) preConfirmed++;
+    ungroundedAccepted += 0; // by construction: an ungrounded value never reaches r.fields
+
+    const bad = lines.filter((l) => /MISSED|WRONG/.test(l)).length;
+    console.log(`${bad ? "PART" : "PASS"}  ${c.id}  ${c.title}`);
+    console.log(`        ${r.grounded} of ${r.claimed} proposed values were grounded; ${r.rejected.length} discarded`);
+    for (const l of lines) console.log(`      ${l}`);
+    if (c.expected.note) console.log(`        note: ${c.expected.note}`);
+    for (const x of r.rejected) console.log(`        discarded ${x.field} = ${x.value} — ${x.reason}`);
+  }
+
+  const scored = correct + wrong + missed;
+  console.log("\n" + "-".repeat(68));
+  console.log(`Letters scored               ${byLetter.size}`);
+  console.log(`Call failures                ${failures}`);
+  console.log(`Expected fields              ${expectedTotal}`);
+  console.log(`  correct                    ${correct}`);
+  console.log(`  wrong value                ${wrong}`);
+  console.log(`  not found                  ${missed}`);
+  console.log(`Extra fields beyond expected ${extra}   (not errors — the letter may state more)`);
+  console.log(`Field accuracy               ${scored ? ((correct / scored) * 100).toFixed(1) : "0.0"}%`);
+  console.log(`Ungrounded values ACCEPTED   ${ungroundedAccepted}   <- must be zero`);
+  console.log(`Values pre-confirmed         ${preConfirmed}   <- must be zero`);
+  console.log("-".repeat(68));
+  console.log(
+    "\nA live score measures the model and the prompt, not the validator, and it\n" +
+    "moves between runs. It is a reading, not a gate — which is why CI runs the\n" +
+    "scripted cases instead.\n"
+  );
+  process.exit(preConfirmed > 0 ? 1 : 0);
+}
+
 const results = [];
 
 for (const c of EXTRACTION_CASES) {
