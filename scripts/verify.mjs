@@ -45,6 +45,11 @@ const steps = [
     args: ["scripts/eval.mjs"],
   },
   {
+    name: "ProcureBench — claim extraction",
+    cmd: process.execPath,
+    args: ["scripts/eval-extraction.mjs"],
+  },
+  {
     name: "Prohibited content (commercial + personal)",
     cmd: process.execPath,
     args: ["scripts/verify-content.mjs"],

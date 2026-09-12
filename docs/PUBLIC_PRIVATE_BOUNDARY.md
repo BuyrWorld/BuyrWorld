@@ -18,7 +18,8 @@ In rough order of durability:
    including adversarial ones, is months of procurement judgement. It is the
    hardest thing here to reproduce and the easiest to give away by accident.
 
-   Twenty-one cases exist today and all pass. One of them earned its place on
+   Thirty-nine cases exist today — 21 for the calculation engine, 18 for
+   extraction — and all pass. One of them earned its place on
    the first run: a case built from an awkward unit price and a large volume
    exposed a rounding defect worth £12,600 a year that every unit test had
    missed, because the unit tests used round numbers where it is invisible.

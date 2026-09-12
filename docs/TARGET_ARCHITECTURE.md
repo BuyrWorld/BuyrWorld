@@ -154,8 +154,10 @@ price found it immediately.
   results rather than a 504 — **built**, except retries
 - No prompt or document content in logs, ever — **built**
 - Every prompt change evaluated against ProcureBench before it ships —
-  *ProcureBench evaluates the calculation layer; extraction has 35 tests of its
-  own against a mock, but no golden-case corpus yet*
+  **built** — 18 extraction golden cases run on every push, scoring the
+  validator against scripted model responses. A live run against the real
+  endpoint is `node scripts/eval-extraction.mjs --live`, kept out of CI because
+  a non-deterministic suite that fails at random teaches nobody anything
 - One adapter interface, one mock implementation, versioned prompts — **built**
 
 The strongest guarantee is structural rather than architectural: in the claim

@@ -27,7 +27,8 @@ Status against the seven phases. Honest about what is done and what is not.
 | `src/services/outcome-store.mjs` | Local-first storage. BigInt-safe, and every browser failure mode handled. |
 | `src/render/decision-pack-html.mjs` | Print-clean output, everything escaped. |
 
-266 tests, 21 ProcureBench cases, five verification checks, all run by CI.
+266 tests, 21 ProcureBench calculation cases, 18 extraction golden cases, and
+six verification checks, all run by CI.
 
 ---
 
