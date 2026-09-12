@@ -465,11 +465,22 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <label style="font-size:12px;color:var(--muted)">Retrospective months<input class="bwin" id="def-retro" value="0" inputmode="numeric"></label>
       </div>
 
-      <div class="eyebrow" style="margin:18px 0 8px">2 &middot; Cost drivers they are claiming</div>
+      <div class="eyebrow" style="margin:18px 0 8px">2 &middot; Currency <span style="text-transform:none;letter-spacing:0">(only if they price in a different currency from your reporting one)</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">
+        <label style="font-size:12px;color:var(--muted)">Report in<input class="bwin" id="def-fx-to" placeholder="none" maxlength="3"></label>
+        <label style="font-size:12px;color:var(--muted)">Rate at baseline<input class="bwin" id="def-fx-base" placeholder="0.8500" inputmode="decimal"></label>
+        <label style="font-size:12px;color:var(--muted)">Baseline date<input class="bwin" id="def-fx-base-at" placeholder="2025-01"></label>
+        <label style="font-size:12px;color:var(--muted)">Rate now<input class="bwin" id="def-fx-now" placeholder="0.8800" inputmode="decimal"></label>
+        <label style="font-size:12px;color:var(--muted)">Rate date<input class="bwin" id="def-fx-now-at" placeholder="2026-06"></label>
+        <label style="font-size:12px;color:var(--muted)">Rate source<input class="bwin" id="def-fx-src" placeholder="where the rates came from"></label>
+      </div>
+      <div style="color:var(--muted);font-size:11.5px;margin-top:6px">Leave blank unless the supplier prices in another currency. A rate with no date and no source is not evidence, so all six are required together.</div>
+
+      <div class="eyebrow" style="margin:18px 0 8px">3 &middot; Cost drivers they are claiming</div>
       <div id="def-drivers"></div>
       <button class="btn btn-ghost" style="margin-top:8px;padding:7px 13px;font-size:13px" onclick="defAddDriver()">+ Add driver</button>
 
-      <div class="eyebrow" style="margin:18px 0 8px">3 &middot; Their letter (optional &mdash; used only to draft the reply)</div>
+      <div class="eyebrow" style="margin:18px 0 8px">4 &middot; Their letter (optional &mdash; used only to draft the reply)</div>
       <textarea class="bwin" id="def-letter" rows="4" placeholder="Paste the supplier letter here. It is not used to produce any figure."></textarea>
       <input class="bwin" id="def-context" style="margin-top:10px" placeholder="Optional context: alternatives available, switching cost, contract notice period">
 
@@ -1555,6 +1566,8 @@ function defLoadExample(){
   ];
   defSet("def-price","100.00");defSet("def-currency","GBP");defSet("def-volume","50000");
   defSet("def-request","9");defSet("def-cap","");defSet("def-retro","4");
+  defSet("def-fx-to","");defSet("def-fx-base","");defSet("def-fx-base-at","");
+  defSet("def-fx-now","");defSet("def-fx-now-at","");defSet("def-fx-src","");
   defSet("def-letter","Due to sustained increases in raw material and energy costs we must apply a 9% increase to all lines with effect from 1 September, applied retrospectively from 1 May.");
   defSet("def-context","Two alternative suppliers exist; requalification is roughly 14 weeks.");
   defRenderDrivers();defCalc();
@@ -1590,6 +1603,22 @@ function defCalc(){
       return base;
     });
     if(!drivers.length)throw new Error("Add at least one cost driver with both a weight and a movement.");
+    // Currency: all six fields or none. A partial rate is not evidence.
+    var fxTo=String(v("def-fx-to")).trim().toUpperCase();
+    var fxParts=[fxTo,String(v("def-fx-base")).trim(),String(v("def-fx-base-at")).trim(),
+                 String(v("def-fx-now")).trim(),String(v("def-fx-now-at")).trim(),String(v("def-fx-src")).trim()];
+    var fxFilled=fxParts.filter(function(x){return x!=="";}).length;
+    var fxInput=null;
+    if(fxFilled>0&&fxFilled<6){
+      throw new Error("Currency needs all six fields, or none. A rate without a date and a source is not evidence.");
+    }
+    if(fxFilled===6){
+      var supplierCcy=String(v("def-currency")).trim().toUpperCase();
+      fxInput={
+        baseRate:window.BW.fxRate({from:supplierCcy,to:fxTo,rate:fxParts[1],asOf:fxParts[2],source:fxParts[5]}),
+        measureRate:window.BW.fxRate({from:supplierCcy,to:fxTo,rate:fxParts[3],asOf:fxParts[4],source:fxParts[5]})
+      };
+    }
     var capRaw=String(v("def-cap")).trim();
     var retro=parseInt(v("def-retro")||"0",10)||0;
     var cur=String(v("def-currency")).trim().toUpperCase();
@@ -1599,7 +1628,8 @@ function defCalc(){
       requestedChange:window.BW.pc(String(v("def-request")).trim()),
       drivers:drivers,
       constraints:capRaw?{cap:window.BW.pc(capRaw)}:{},
-      period:retro>0?{retrospectiveMonths:retro}:{}
+      period:retro>0?{retrospectiveMonths:retro}:{},
+      fx:fxInput
     });
     _defResult=r;
     out.innerHTML=defRender(r,cur);
@@ -1640,9 +1670,32 @@ function defRender(r,cur){
     +'<div style="color:'+(over?"#FF5C5C":"var(--lime)")+'">Annual '+(over?"unsupported":"difference")+': <b>'+cur+' '+M(r.annual.unsupported)+'</b>'+(over?" &mdash; this is what you are negotiating":"")+'</div>'
     +(r.retrospective?'<div>Retrospective ('+r.retrospective.months+' months, about '+r.retrospective.units+' units): <b>'+cur+' '+M(r.retrospective.unsupported)+'</b></div>':"")
     +'</div>'
+    +defCurrencyHTML(r)
     +defEvidenceHTML(r)
     +(r.assumptions.length?'<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px"><div class="eyebrow" style="margin-bottom:6px">Assumptions</div><ul style="margin:0;padding-left:18px;color:var(--muted);font-size:12.5px;line-height:1.6">'+r.assumptions.map(function(x){return "<li>"+ciEsc(x.text)+"</li>";}).join("")+'</ul></div>':"")
     +'<p style="color:var(--muted);font-size:11.5px;margin-top:12px">'+ciEsc(r.formula)+'. Computed in exact integer arithmetic; no language model produced these figures.</p>'
+    +'</div>';
+}
+
+// The currency split. A rate move is not a cost move, and this is where the
+// difference becomes visible instead of hiding inside one percentage.
+function defCurrencyHTML(r){
+  if(!r.currency)return"";
+  var c=r.currency,M=window.BW.moneyToDecimalString,P=window.BW.formatPercent;
+  var row=function(label,m,colour,note){
+    return '<div style="display:flex;justify-content:space-between;gap:12px;padding:4px 0">'
+      +'<span style="color:var(--muted)">'+label+(note?' <span style="font-size:11px">'+note+'</span>':'')+'</span>'
+      +'<span style="color:'+colour+';font-variant-numeric:tabular-nums">'+ciEsc(c.currency)+' '+M(m)+'</span></div>';
+  };
+  return '<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">'
+    +'<div class="eyebrow" style="margin-bottom:8px">Currency</div>'
+    +'<div style="font-size:13.5px">'
+    +row("Total change in "+ciEsc(c.currency),c.totalChange,"var(--text)")
+    +row("Their cost increase",c.costEffect,"var(--text)","at the baseline rate")
+    +row("Exchange rate movement",c.fxEffect,"#FFB800","("+P(c.rateMovement)+") — not their cost")
+    +row("Interaction",c.crossTerm,"var(--muted)","price change x rate change")
+    +'</div>'
+    +'<p style="color:var(--muted);font-size:11px;margin-top:8px">'+ciEsc(c.lineage)+'. '+ciEsc(c.method)+'</p>'
     +'</div>';
 }
 
@@ -3258,10 +3311,11 @@ async function send(id,text){
   import { ratioFromPercent, moneyFromDecimal, moneyToDecimalString } from "./src/calc/exact.mjs";
   import { createSeries, movementBetween } from "./src/calc/index-series.mjs";
   import { assessEvidence, formatWeight } from "./src/calc/evidence.mjs";
+  import { fxRate } from "./src/calc/fx.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { costBridge, partialAcceptance, delayEffect, formatPercent,
                 pc: ratioFromPercent, moneyFromDecimal, moneyToDecimalString,
-                createSeries, movementBetween, assessEvidence, formatWeight,
+                createSeries, movementBetween, assessEvidence, formatWeight, fxRate,
                 SAMPLE_INDEX: STEEL_A };
   if (typeof defRenderDrivers === "function") defRenderDrivers();
 </script>

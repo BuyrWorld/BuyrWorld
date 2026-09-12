@@ -18,6 +18,7 @@ import {
   money, moneyApplyChange, moneySub, moneyTimesQuantity, moneyScale, assertSameCurrency,
 } from "./exact.mjs";
 import { movementBetween, compareClaimedBasis, compareLag } from "./index-series.mjs";
+import { decomposeCurrencyEffect, detectCurrencyDoubleCount } from "./fx.mjs";
 
 /** Where a value came from. Anything ai-inferred must be confirmed first. */
 export const PROVENANCE = Object.freeze({
@@ -61,7 +62,7 @@ export function assertUsable(field, name) {
  * @param {number} [input.lifetimeYears]
  */
 export function costBridge(input) {
-  const { baseline, drivers, requestedChange, constraints = {}, period = {}, lifetimeYears = 3 } = input;
+  const { baseline, drivers, requestedChange, constraints = {}, period = {}, lifetimeYears = 3, fx = null } = input;
 
   validate(input);
 
@@ -271,8 +272,34 @@ export function costBridge(input) {
     });
   }
 
+  // --- 5. Currency -----------------------------------------------------------
+  // A rate move is not a cost move. When the buyer reports in a different
+  // currency from the one the supplier prices in, the change is split so the
+  // cost argument can be had separately from the currency one.
+  let currency = null;
+  if (fx) {
+    if (!fx.baseRate || !fx.measureRate) {
+      throw new TypeError("A currency decomposition needs both a baseRate and a measureRate");
+    }
+    currency = decomposeCurrencyEffect({
+      unitPrice: unit,
+      priceChange: requestedChange,
+      baseRate: fx.baseRate,
+      measureRate: fx.measureRate,
+      annualVolume: baseline.annualVolume,
+    });
+    assumptions.push({
+      id: "currency-effect",
+      text: `Of the ${currency.currency} ${fmtMoney(currency.totalChange)} total change, ` +
+            `${currency.currency} ${fmtMoney(currency.fxEffect)} is exchange-rate movement ` +
+            `(${pct(currency.rateMovement)}) rather than input cost. ${currency.lineage}.`,
+      impact: "separates currency from cost",
+    });
+  }
+
   return Object.freeze({
     annualVolume: baseline.annualVolume,
+    currency,
     warrantedChange: warranted,
     warrantedBeforeConstraints,
     requestedChange,
@@ -365,10 +392,19 @@ function validate(input) {
     );
   }
 
+  const clash = detectCurrencyDoubleCount(drivers, Boolean(input.fx));
+  if (clash) throw new RangeError(clash.text);
+
   const { cap, floor } = input.constraints ?? {};
   if (cap !== undefined && floor !== undefined && floor > cap) {
     throw new RangeError("Contract floor cannot exceed contract cap");
   }
+}
+
+function fmtMoney(m) {
+  const neg = m.minor < 0n;
+  const abs = neg ? -m.minor : m.minor;
+  return (neg ? "-" : "") + (abs / 100n) + "." + (abs % 100n).toString().padStart(2, "0");
 }
 
 function pct(r) {
@@ -382,3 +418,4 @@ export { pct as formatPercent };
 
 export { movementBetween, compareClaimedBasis, compareLag } from "./index-series.mjs";
 export { createSeries } from "./index-series.mjs";
+export { fxRate, convertMoney, decomposeCurrencyEffect, rateMovement } from "./fx.mjs";

@@ -58,6 +58,28 @@ for (const c of EVALUABLE) {
       const got = actual[k];
       checks.push({ ok: got === want, what: `${k} = ${want}`, got: String(got) });
     }
+    // Currency decomposition.
+    if (c.expectCurrency) {
+      const cur = out.currency;
+      if (!cur) {
+        checks.push({ ok: false, what: "a currency decomposition", got: "none produced" });
+      } else {
+        const want = c.expectCurrency;
+        for (const k of ["totalChange", "costEffect", "fxEffect", "crossTerm"]) {
+          if (want[k] === undefined) continue;
+          const got = moneyToDecimalString(cur[k]);
+          checks.push({ ok: got === want[k], what: `${k} = ${want[k]}`, got });
+        }
+        if (want.partsSumToTotal) {
+          const sum = cur.costEffect.minor + cur.fxEffect.minor + cur.crossTerm.minor;
+          checks.push({
+            ok: sum === cur.totalChange.minor,
+            what: "cost + FX + cross sums exactly to the total",
+            got: `${sum} vs ${cur.totalChange.minor}`,
+          });
+        }
+      }
+    }
     // Evidence layer: coverage, gaps and contradictions.
     if (c.expectEvidence) {
       const ev = assessEvidence(out, c.evidenceInput ?? {});

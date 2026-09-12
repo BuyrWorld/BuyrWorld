@@ -31,7 +31,8 @@ Deploys are GitHub → Vercel. Pushing to `main` deploys production.
 
 - **Code calculates, the model explains.** No percentage or money figure shown to a user may come from a language model. Computed figures are passed *into* prompts as fixed facts; the model drafts argument around them.
 - **No floating point in `src/calc/`.** Money is integer minor units on BigInt, ratios are scaled by 1e9. Rounding is half-up away from zero and only where it is named.
-- **Mixed currencies raise.** Never convert implicitly — an FX rate needs a date and a source.
+- **Mixed currencies raise.** Never convert implicitly. `fx.mjs` converts only with a dated, sourced rate, and refuses one missing either.
+- **A rate move is not a cost move.** Where the supplier prices in another currency, the change splits into cost effect, FX effect and cross term, which sum exactly to the total. Claiming currency as a cost driver while also converting is rejected as double counting.
 - **A value marked `ai-inferred` cannot enter arithmetic** until a human confirms it. This is enforced in `cost-bridge.mjs`, not left to convention.
 - **Index movement is derived, never accepted on trust.** A driver may state a movement directly, but the defensible form names an index plus the *contractual* base period and lag. A supplier's claimed base period never influences the warranted figure — it is only reported as an overstatement.
 - **Never interpolate a missing index observation.** A gap in a series is an error. An invented data point is worse than a stopped calculation.

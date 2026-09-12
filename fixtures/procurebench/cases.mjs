@@ -21,6 +21,11 @@
 import { ratioFromPercent as pc, moneyFromDecimal as m } from "../../src/calc/exact.mjs";
 import { STEEL_A } from "./indices.mjs";
 import { evidence, EVIDENCE_KIND as K, contractConstraint, supplierClaim } from "../../src/calc/evidence.mjs";
+import { fxRate } from "../../src/calc/fx.mjs";
+
+const EUR = (x) => m(x, "EUR");
+const FX_BASE = fxRate({ from: "EUR", to: "GBP", rate: "0.8500", asOf: "2025-01", source: "synthetic-fx-series" });
+const FX_NOW  = fxRate({ from: "EUR", to: "GBP", rate: "0.8800", asOf: "2026-06", source: "synthetic-fx-series" });
 
 const GBP = (x) => m(x, "GBP");
 const d = (id, label, weight, move) => ({ id, label, weight: pc(weight), indexMovement: pc(move), provenance: "user-entered" });
@@ -312,10 +317,44 @@ export const CASES = [
 {
   id: "PB-19",
   title: "Currency movement conflated with cost movement",
-  why: "An FX shift is not an input-cost increase, and mixing them double counts.",
-  notYetEvaluable: "Needs dated FX conversion; the engine deliberately refuses mixed currencies rather than converting.",
-  boundaries: { minAccept: "0%", maxAccept: "cost movement excluding FX" },
-  mustNotClaim: ["a combined figure that counts FX twice"],
+  why: "The supplier prices in EUR, the buyer reports in GBP. When the rate moves the buyer pays more without any input cost changing. Letting that sit inside the cost argument counts the same money twice.",
+  input: {
+    baseline: { unitPrice: EUR("50.00"), annualVolume: 20_000 },
+    requestedChange: pc("9"),
+    drivers: [d("material", "Steel bar", "45", "10")],
+    fx: { baseRate: FX_BASE, measureRate: FX_NOW },
+  },
+  expect: { warrantedChange: "4.50%", unsupportedChange: "4.50%" },
+  expectCurrency: {
+    totalChange: "109200.00",
+    costEffect: "76500.00",
+    fxEffect: "30000.00",
+    crossTerm: "2700.00",
+    partsSumToTotal: true,
+  },
+  expectAssumptions: ["currency-effect"],
+  expectGaps: ["part of the increase is exchange rate, not cost"],
+  boundaries: { minAccept: "0%", maxAccept: "4.5%" },
+  mustNotClaim: [
+    "that the whole GBP increase is input cost",
+    "an exchange rate without a date and a source",
+  ],
+},
+
+{
+  id: "PB-19b",
+  title: "Currency claimed as a cost driver while also converting",
+  why: "The same exchange movement counted twice: once as a driver, once in the conversion.",
+  input: {
+    baseline: { unitPrice: EUR("50.00"), annualVolume: 20_000 },
+    requestedChange: pc("9"),
+    drivers: [
+      d("material", "Steel bar", "45", "10"),
+      d("currency", "Currency movement", "10", "3.53"),
+    ],
+    fx: { baseRate: FX_BASE, measureRate: FX_NOW },
+  },
+  expectThrows: /counts the exchange movement twice/,
 },
 
 {
