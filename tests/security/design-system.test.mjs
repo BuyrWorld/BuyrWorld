@@ -318,3 +318,26 @@ describe("article prose was migrated without losing an article", () => {
     assert.match(css, /--bw-body\s*:\s*#CFCFCF/);
   });
 });
+
+describe("tables use the shared one", () => {
+  test("only the export glossary styles its own table", () => {
+    // Each hand-rolled table had its own header size — 10.5px here, 11px there
+    // — and its own cell padding. That drift is what a shared table prevents.
+    const left = [...html.matchAll(/<table style="([^"]+)"/g)].map((m) => m[1]);
+    assert.equal(left.length, 1, `hand-styled tables remaining:\n  ${left.join("\n  ")}`);
+    // miGlossTable renders into the exported document, which is a light page.
+    // The application's dark table would be invisible on paper.
+    assert.match(left[0], /border-collapse:collapse;width:100%;margin:4px 0 10px/);
+  });
+
+  test("the application's tables all use the primitive", () => {
+    assert.ok((html.match(/class="bw-table"/g) || []).length >= 8);
+    assert.ok((html.match(/class="bw-table-wrap"/g) || []).length >= 8,
+      "a wide table must scroll in its own box, not push the page sideways");
+  });
+
+  test("no hand-styled table header survives in the application", () => {
+    const appOnly = html.slice(0, html.indexOf("function miGlossTable("));
+    assert.equal(/<th style="text-align:(left|right);padding-bottom/.test(appOnly), false);
+  });
+});

@@ -2284,21 +2284,20 @@ function defPortfolioHTML(){
     : "";
 
   var rows=P0.suppliers.slice(0,6).map(function(sp){
-    return '<tr><td style="padding:6px 10px 6px 0">'+ciEsc(sp.supplier)+'</td>'
-      +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'+sp.claims+'</td>'
-      +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'
-      +(sp.rate===null?'<span style="color:var(--muted)">&mdash;</span>':P(sp.rate))+'</td>'
-      +'<td style="text-align:right;padding:6px 0 6px 10px;font-variant-numeric:tabular-nums;color:'
-      +(sp.conceded&&sp.conceded.minor>0n?"#FF5C5C":"var(--lime)")+'">'
+    return '<tr><td>'+ciEsc(sp.supplier)+'</td>'
+      +'<td class="n">'+sp.claims+'</td>'
+      +'<td class="n">'
+      +(sp.rate===null?'<span style="color:var(--bw-muted)">&mdash;</span>':P(sp.rate))+'</td>'
+      +'<td class="n" style="color:'
+      +(sp.conceded&&sp.conceded.minor>0n?"var(--bw-danger)":"var(--bw-success)")+'">'
       +(sp.conceded===null?'<span style="color:#FFB800">mixed currency</span>':ciEsc(sp.currency)+" "+M(sp.conceded))+'</td></tr>';
   }).join("");
 
   var suppliers=P0.suppliers.length
     ? '<div class="eyebrow" style="margin:16px 0 6px">Where the money went</div>'
-      +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;color:#CFCFCF">'
-      +'<thead><tr style="color:var(--muted);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase">'
-      +'<th style="text-align:left;padding-bottom:5px">Supplier</th><th style="text-align:right;padding-bottom:5px">Claims</th>'
-      +'<th style="text-align:right;padding-bottom:5px">Resisted</th><th style="text-align:right;padding-bottom:5px">Conceded unevidenced</th>'
+      +'<div class="bw-table-wrap"><table class="bw-table">'
+      +'<thead><tr>'
+      +'<th>Supplier</th><th class="n">Claims</th><th class="n">Resisted</th><th class="n">Conceded unevidenced</th>'
       +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
     : "";
 
@@ -2735,16 +2734,18 @@ function defNegotiationHTML(r,cur){
     : "";
 
   var ladder='<div class="eyebrow" style="margin:14px 0 6px">What each step costs</div>'
-    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;color:#CFCFCF">'
-    +'<thead><tr style="color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase">'
-    +'<th style="text-align:left;padding-bottom:6px">Position</th><th style="text-align:right;padding-bottom:6px">Accepted</th>'
-    +'<th style="text-align:right;padding-bottom:6px">Unit</th><th style="text-align:right;padding-bottom:6px">This step costs</th></tr></thead><tbody>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr>'
+    +'<th>Position</th><th class="n">Accepted</th><th class="n">Unit</th><th class="n">This step costs</th>'
+    +'</tr></thead><tbody>'
     +N.ladder.concessions.map(function(c){
-      return '<tr><td style="padding:6px 10px 6px 0">'+ciEsc(c.note.split(".")[0])
-        +(c.evidenced?' <span style="color:var(--lime);font-size:11px">evidenced</span>':' <span style="color:#FFB800;font-size:11px">a choice</span>')+'</td>'
-        +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'+P(c.acceptedChange)+'</td>'
-        +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'+M(c.acceptedUnitPrice)+'</td>'
-        +'<td style="text-align:right;padding:6px 0 6px 10px;font-variant-numeric:tabular-nums;color:'+(c.costOfThisStep.minor>0n?"#FF5C5C":"var(--lime)")+'">'+money(c.costOfThisStep)+'</td></tr>';
+      /* Evidenced or a choice is the whole point of this table, so it is a
+         chip rather than a coloured word. */
+      return '<tr><td>'+ciEsc(c.note.split(".")[0])
+        +(c.evidenced?' <span class="bw-status bw-status--evidenced">evidenced</span>':' <span class="bw-status bw-status--medium">a choice</span>')+'</td>'
+        +'<td class="n">'+P(c.acceptedChange)+'</td>'
+        +'<td class="n">'+M(c.acceptedUnitPrice)+'</td>'
+        +'<td class="n" style="color:'+(c.costOfThisStep.minor>0n?"var(--bw-danger)":"var(--bw-success)")+'">'+money(c.costOfThisStep)+'</td></tr>';
     }).join("")+'</tbody></table></div>';
 
   var defer=N.deferrals.map(function(d){
@@ -4262,10 +4263,10 @@ function runSim(){
   var up=R.direction==="increase";
   var rowsHtml=R.rows.map(function(r){
     var pos=r.impact.minor>0n;
-    return '<tr><td style="padding:7px 10px;border-bottom:1px solid var(--line)">'+ciEsc(r.name)+'</td>'
-      +'<td style="padding:7px 10px;border-bottom:1px solid var(--line);text-align:right">'+window.BW.formatPercent(r.shock)+'</td>'
-      +'<td style="padding:7px 10px;border-bottom:1px solid var(--line);text-align:right">'+M(r.exposure)+'</td>'
-      +'<td style="padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;color:'+(pos?"#FF5C5C":"var(--lime)")+';font-weight:600">'+(pos?"+":"")+M(r.impact)+'</td></tr>';
+    return '<tr><td>'+ciEsc(r.name)+'</td>'
+      +'<td class="n">'+window.BW.formatPercent(r.shock)+'</td>'
+      +'<td class="n">'+M(r.exposure)+'</td>'
+      +'<td class="n" style="color:'+(pos?"var(--bw-danger)":"var(--bw-success)")+';font-weight:600">'+(pos?"+":"")+M(r.impact)+'</td></tr>';
   }).join("");
 
   MI.sim={rows:rowsHtml,totalImpact:R.totalImpact,baseTotal:baseTotal,shareOfBase:R.shareOfBase,at:miStamp()};
@@ -4276,9 +4277,9 @@ function runSim(){
     +'<br>'+(up?"Mitigations: forward cover on the biggest lines, two-way indexation, spec and demand challenge."
               :"Falling input costs — open renegotiations and capture the decrease before suppliers bank it.")
     +'<br><span style="color:#FFB800">Assumed.</span> '+ciEsc(R.method)+'</div></div>'
-    +'<table style="width:100%;border-collapse:collapse;font-size:13px">'
-    +'<tr style="color:var(--muted)"><th style="text-align:left;padding:7px 10px">Input</th><th style="text-align:right;padding:7px 10px">Shock</th><th style="text-align:right;padding:7px 10px">Exposure</th><th style="text-align:right;padding:7px 10px">Annual impact</th></tr>'
-    +rowsHtml+'</table>';
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Input</th><th class="n">Shock</th><th class="n">Exposure</th><th class="n">Annual impact</th></tr></thead>'
+    +'<tbody>'+rowsHtml+'</tbody></table></div>';
   miShowExports();
 }
 
