@@ -24,10 +24,11 @@ Status against the seven phases. Honest about what is done and what is not.
 | `src/calc/evidence.mjs` | Evidence kinds, coverage by weight of unit cost, contract contradictions. |
 | `src/calc/decision-pack.mjs` | The auditable document. Recommendation derived by rule, with the rule printed. |
 | `src/calc/outcome.mjs` | What was agreed, what it avoided, what it teaches, aggregated across cases. |
+| `src/calc/spend.mjs` | Spend aggregation, concentration, Pareto and banding — exact, with indicative savings returned separately as assumptions. |
 | `src/services/outcome-store.mjs` | Local-first storage. BigInt-safe, and every browser failure mode handled. |
 | `src/render/decision-pack-html.mjs` | Print-clean output, everything escaped. |
 
-319 tests, 21 ProcureBench calculation cases, 18 extraction golden cases, and
+360 tests, 21 ProcureBench calculation cases, 18 extraction golden cases, and
 six verification checks, all run by CI.
 
 ---

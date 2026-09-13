@@ -179,9 +179,8 @@ Strangler, not rewrite. `index.html` keeps working while capability moves out
 from under it.
 
 1. ~~Extract the Spend Analyser's deterministic logic into `calc/` with tests~~
-   — **not done, and deliberately.** The cost bridge was built first because it
-   is what makes the product defensible; the Spend Analyser still works as it
-   is. This remains the best next extraction.
+   — **done.** Deferred while the cost bridge was built, then completed. It was
+   the last tool producing numbers from floating-point arithmetic with no tests.
 2. ~~Build `domain/` and the cost bridge behind it~~ — cost bridge **done**,
    `domain/` outstanding.
 3. ~~Build the flagship workflow as one vertical slice~~ — **done**.

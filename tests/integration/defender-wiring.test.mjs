@@ -169,3 +169,43 @@ describe("continuous integration", () => {
     assert.match(ignored, /\.github\//, ".github/ must not be served as static files");
   });
 });
+
+describe("the Spend Analyser uses the tested engine", () => {
+  const fn = (() => {
+    const i = html.indexOf("function analyseSpend()");
+    const j = html.indexOf("\nfunction ", i + 10);
+    return html.slice(i, j);
+  })();
+
+  test("it calls the engine rather than computing inline", () => {
+    assert.match(fn, /window\.BW\.analyseSpendExact\(window\.BW\.parseSpendCsv\(raw\)\)/);
+  });
+
+  test("no floating-point arithmetic survives in it", () => {
+    // CLAUDE.md forbids floats in the calculation layer. This tool used to do
+    // parseFloat on money and Math.pow on shares.
+    assert.equal(/parseFloat\(/.test(fn), false, "parseFloat on money is how a total goes quietly wrong");
+    assert.equal(/Math\.pow\(/.test(fn), false, "the concentration index is computed exactly in the engine now");
+  });
+
+  test("a failed analysis is surfaced, not rendered as zeroes", () => {
+    assert.match(fn, /if\(!A\.ok\)/);
+    assert.match(fn, /ciEsc\(A\.reason\)/);
+  });
+
+  test("a missing engine says so rather than rendering nothing", () => {
+    assert.match(fn, /The spend engine did not load/);
+  });
+
+  test("savings ranges come from the engine, not from inline percentages", () => {
+    assert.match(fn, /window\.BW\.indicativeSavings\(A\)/);
+    assert.equal(/min:total\*0\.02/.test(fn), false, "the hard-coded ranges are gone");
+    assert.equal(/tailVal\*0\.05/.test(fn), false);
+  });
+
+  test("money is converted to major units only for display", () => {
+    // The conversion exists, but it must sit after the arithmetic, not inside it.
+    assert.match(fn, /const maj=function\(m\)\{return Number\(m\.minor\)\/100;\}/);
+    assert.match(fn, /for formatting only — never for arithmetic/);
+  });
+});

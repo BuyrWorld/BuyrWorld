@@ -38,7 +38,7 @@ Genuinely working, worth preserving:
 
 | Capability | Assessment |
 |---|---|
-| Spend Analyser | Real deterministic logic — Pareto, concentration, tail, category aggregation, XLSX export. Runs entirely in the browser. The strongest existing code. |
+| Spend Analyser | Real deterministic logic — Pareto, concentration, tail, category aggregation, XLSX export. Now extracted into `src/calc/spend.mjs` with exact arithmetic and 35 tests. |
 | Quote Comparator | Multi-file ingestion, normalisation, structured report output. |
 | Contract Intelligence | Clause-level review and redline generation; three sub-tools through one render path. |
 | Price-Increase Defender | The closest existing thing to the target workflow. Decomposes a supplier claim and drafts a rebuttal. |
@@ -72,7 +72,7 @@ driver, a formula and a source.
 | | Baseline | Now |
 |---|---|---|
 | `index.html` | 522 KB, 20 pages | ~530 KB, 18 pages |
-| Tests | none | 319, plus 39 ProcureBench cases |
+| Tests | none | 360, plus 39 ProcureBench cases |
 | CI | none | every push, Node 22 and 24 |
 | Calculation modules | none | 7 under `src/`, framework-free |
 | Payment links | 8 | 0 |

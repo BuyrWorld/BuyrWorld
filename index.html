@@ -3444,46 +3444,40 @@ function analyseSpend(){
   const raw=document.getElementById("spend-paste").value.trim();
   const out=document.getElementById("spend-out");
   if(!raw){out.innerHTML='<p style="color:var(--muted);font-size:14px">Paste some data, upload a file, or tap "Load sample data" first.</p>';return;}
-  const lines=raw.split(/\r?\n/).filter(l=>l.trim());
-  let si=0,ci=1,ai=2,start=0;
-  const head=lines[0].toLowerCase();
-  if(/supplier|vendor|name|category|amount|value|spend|total|cost/.test(head)){
-    const cols=head.split(",").map(s=>s.trim());
-    const find=(words,def)=>{const i=cols.findIndex(c=>words.some(w=>c.includes(w)));return i>=0?i:def;};
-    si=find(["supplier","vendor","payee","name"],0);
-    ci=find(["category","commodity","group","type"],1);
-    ai=find(["amount","value","spend","total","cost","net"],2);
-    start=1;
+  // Every figure below is computed by src/calc/spend.mjs in exact integer
+  // arithmetic and covered by 35 tests. This function now reads the input,
+  // adapts the result for display and renders. Amounts become major units at
+  // the edge, for formatting only — never for arithmetic.
+  if(!window.BW||!window.BW.analyseSpendExact){
+    out.innerHTML='<p style="color:#FF5C5C;font-size:14px">The spend engine did not load. This page must be served over http rather than opened from the file system.</p>';
+    return;
   }
-  const sup={},cat={};let total=0,rows=0,skipped=0,maxLine=0,maxLineDesc="";
-  for(let i=start;i<lines.length;i++){
-    const p=lines[i].split(",");
-    const amt=parseFloat((p[ai]||"").replace(/[£$€,\s]/g,""));
-    const s=(p[si]||"").trim()||"(blank)";
-    const c=(p[ci]||"").trim()||"Uncategorised";
-    if(!isFinite(amt)){skipped++;continue;}
-    sup[s]=(sup[s]||0)+amt; cat[c]=(cat[c]||0)+amt; total+=amt; rows++;
-    if(amt>maxLine){maxLine=amt;maxLineDesc=s;}
-  }
-  if(!rows){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t find any amounts — check the data is comma-separated with a numeric amount column.</p>';return;}
-  const topS=Object.entries(sup).sort((a,b)=>b[1]-a[1]);
-  const topC=Object.entries(cat).sort((a,b)=>b[1]-a[1]);
-  const top1=topS[0][1]/total;
-  const tail=topS.filter(([,v])=>v/total<0.01);
-  const tailVal=tail.reduce((a,[,v])=>a+v,0);
-  // Pareto: how many suppliers make 80% of spend
-  let cum=0,n80=0;
-  for(const [,v] of topS){cum+=v;n80++;if(cum/total>=0.8)break;}
-  const uncat=(cat["Uncategorised"]||0)/total;
-  // Advanced metrics
-  const hhi=Math.round(topS.reduce((a,[,v])=>a+Math.pow(v/total*100,2),0));
-  const hhiVerdict=hhi>=1800?["High concentration","#FF5C5C"]:hhi>=1000?["Moderate concentration","#FFB800"]:["Healthy competition","#D6FF00"];
-  const n20=Math.max(1,Math.ceil(topS.length*0.2));
-  const pareto20=topS.slice(0,n20).reduce((a,[,v])=>a+v,0)/total;
+  const A=window.BW.analyseSpendExact(window.BW.parseSpendCsv(raw));
+  if(!A.ok){ out.innerHTML='<p style="color:var(--muted);font-size:14px">'+ciEsc(A.reason)+'</p>'; return; }
+  const maj=function(m){return Number(m.minor)/100;};
+  const shr=function(r){return Number(r)/1e9;};
+  const total=maj(A.total), rows=A.rows, skipped=A.skipped;
+  const maxLine=maj(A.largestLine.value), maxLineDesc=A.largestLine.supplier;
+  const topS=A.suppliers.map(function(x){return [x.name,maj(x.value)];});
+  const topC=A.categories.map(function(x){return [x.name,maj(x.value)];});
+  const top1=shr(A.largestSupplierShare);
+  const _tailBand=A.bands[2];
+  const tail=_tailBand.suppliers.map(function(x){return [x.name,maj(x.value)];});
+  const tailVal=maj(_tailBand.value);
+  const n80=A.pareto.suppliersTo80;
+  const uncat=shr(A.uncategorisedShare);
+  const hhi=A.concentration.hhi;
+  const hhiVerdict=A.concentration.level==="high"?[A.concentration.label,"#FF5C5C"]
+    :A.concentration.level==="moderate"?[A.concentration.label,"#FFB800"]
+    :[A.concentration.label,"#D6FF00"];
+  const n20=A.pareto.topFifthCount;
+  const pareto20=shr(A.pareto.topFifthShare);
   const bands=[["Critical (≥10% of spend)",topS.filter(([,v])=>v/total>=0.10)],["Core (1–10%)",topS.filter(([,v])=>v/total>=0.01&&v/total<0.10)],["Tail (<1%)",tail]].map(([lab,arr])=>({lab,n:arr.length,val:arr.reduce((a,[,v])=>a+v,0)}));
-  const savings=[{name:`Competitive tension on ${topC[0][0]}`,min:topC[0][1]*0.05,max:topC[0][1]*0.12,basis:`5–12% of ${gbp(topC[0][1])} category spend via RFQ`}];
-  if(tail.length>3)savings.push({name:"Tail consolidation",min:tailVal*0.05,max:tailVal*0.10,basis:`5–10% of ${gbp(tailVal)} tail plus process cost`});
-  savings.push({name:"Specification & demand challenge",min:total*0.02,max:total*0.04,basis:"2–4% of total spend (indicative)"});
+  // Indicative ranges, returned separately by the engine and labelled assumed.
+  // Rules of thumb, not figures this data can evidence.
+  const _sv=window.BW.indicativeSavings(A);
+  const savings=_sv.ranges.map(function(r){return {name:r.name,min:maj(r.min),max:maj(r.max),basis:r.basis};});
+  const _svNote=_sv.note;
   const savMin=savings.reduce((a,s)=>a+s.min,0),savMax=savings.reduce((a,s)=>a+s.max,0);
   const esc=t=>String(t).replace(/</g,"&lt;");
 
@@ -3770,6 +3764,7 @@ async function send(id,text){
   import { createSeries, movementBetween } from "./src/calc/index-series.mjs";
   import { assessEvidence, formatWeight } from "./src/calc/evidence.mjs";
   import { labelFor, assumptionsToVerify, LEGEND } from "./src/calc/provenance.mjs";
+  import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
   import { fxRate } from "./src/calc/fx.mjs";
   import { buildDecisionPack } from "./src/calc/decision-pack.mjs";
   import { recordOutcome, summariseOutcomes } from "./src/calc/outcome.mjs";
@@ -3782,6 +3777,7 @@ async function send(id,text){
                 pc: ratioFromPercent, moneyFromDecimal, moneyToDecimalString,
                 createSeries, movementBetween, assessEvidence, formatWeight, fxRate,
                 labelFor, assumptionsToVerify, LEGEND,
+                parseSpendCsv, analyseSpendExact, indicativeSavings,
                 buildDecisionPack, renderDecisionPackHTML,
                 recordOutcome, summariseOutcomes,
                 extractClaim, confirmField, FIELD_RULES, DRIVER_RULES,
