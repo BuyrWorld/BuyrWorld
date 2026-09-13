@@ -178,3 +178,64 @@ describe("navigation state is announced, not only coloured", () => {
     assert.ok(navRenders >= 2, "both the desktop and mobile navs should mark the current page");
   });
 });
+
+describe("responsive: documents that open in their own window", () => {
+  const pack = readFileSync("src/render/decision-pack-html.mjs", "utf8");
+
+  test("the decision pack declares a viewport", () => {
+    // Without this it renders at desktop width on a phone: zoomed out,
+    // unreadable, and the reader has no idea why.
+    assert.match(pack, /<meta name="viewport" content="width=device-width, initial-scale=1">/);
+  });
+
+  test("every table in the pack can scroll instead of pushing the page", () => {
+    const tables = (pack.match(/<table>/g) || []).length;
+    const wrapped = (pack.match(/<div class="tw"><table>/g) || []).length;
+    assert.equal(wrapped, tables, "a table wider than the screen must scroll inside its own box");
+    assert.match(pack, /\.tw \{ overflow-x: auto/);
+  });
+
+  test("print undoes the scroll container, because paper cannot scroll", () => {
+    assert.match(pack, /@media print \{[\s\S]*?\.tw \{ overflow-x: visible/);
+  });
+
+  test("the pack has a phone stylesheet", () => {
+    assert.match(pack, /@media screen and \(max-width: 640px\)/);
+  });
+
+  test("every export shell declares a viewport too", () => {
+    // ciShell and the quote and spend reports all open in a new window.
+    const shells = (html.match(/<html><head><meta charset="utf-8">/g) || []).length;
+    const withViewport = (html.match(/<html><head><meta charset="utf-8"><meta name="viewport"/g) || []).length;
+    assert.equal(withViewport, shells, "an export shell without a viewport renders desktop-width on a phone");
+    assert.ok(shells >= 3, "expected the quote, generic and spend report shells");
+  });
+
+  test("export shells let a wide table scroll on a phone and reflow on paper", () => {
+    assert.match(html, /@media screen and \(max-width:640px\)\{[^}]*body\{padding:14px/);
+    assert.match(html, /table\{display:block;overflow-x:auto/);
+    assert.match(html, /@media print\{table\{display:table;overflow:visible/);
+  });
+
+  test("the page itself allows pinch zoom", () => {
+    const vp = html.match(/<meta name="viewport"[^>]*>/)[0];
+    assert.equal(/user-scalable\s*=\s*(no|0)/.test(vp), false, "blocking zoom is a WCAG failure");
+    assert.equal(/maximum-scale\s*=\s*1/.test(vp), false);
+  });
+
+  test("multi-column grids collapse before a phone width", () => {
+    // Every fixed-column grid needs a breakpoint, or it overflows.
+    const fixedGrids = [...html.matchAll(/\.([a-z-]+)\{[^}]*grid-template-columns:repeat\((\d+),1fr\)/g)];
+    const seen = new Set();
+    for (const [, cls, cols] of fixedGrids) {
+      if (Number(cols) < 3 || seen.has(cls)) continue;
+      seen.add(cls);
+      // A plain substring, not a constructed regex: a class name is not a
+      // pattern, and escaping one into a RegExp is a needless way to get this
+      // wrong — which is exactly what happened on the first attempt.
+      const hasBreakpoint = html.includes(`){.${cls}{grid-template-columns`);
+      assert.ok(hasBreakpoint, `.${cls} is ${cols} fixed columns with no breakpoint — it will overflow a phone`);
+    }
+    assert.ok(seen.size > 0, "expected at least one multi-column grid to check");
+  });
+});

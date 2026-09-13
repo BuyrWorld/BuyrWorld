@@ -2379,7 +2379,7 @@ async function runComparator(){
 function quoteReportHTML(){
   const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const d=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"});
-  return `<html><head><meta charset="utf-8"><title>BuyrWorld Quote Comparison Review</title>
+  return `<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>@media screen and (max-width:640px){body{padding:14px !important;font-size:14px}table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}h1{font-size:22px}h2{font-size:16px}}@media print{table{display:table;overflow:visible;white-space:normal}}</style><title>BuyrWorld Quote Comparison Review</title>
   <style>body{font-family:Arial,sans-serif;color:#1A1A1A;margin:40px;line-height:1.6;font-size:11pt}
   .tag{color:#8C8C8C;font-size:9pt}
   h1{font-size:17pt;margin:6px 0 2px}.rule{border-bottom:3px solid #5A6B00;margin:10px 0 18px}
@@ -2504,7 +2504,7 @@ function ciCopy(btn){if(!_cLast)return;navigator.clipboard.writeText(_cLast.text
 function ciShell(title,inner,footerOverride,headExtra){
   const d=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"});
   const foot=footerOverride!==undefined?footerOverride:'Generated with the BuyrWorld Contract Intelligence Agent. Procurement contract intelligence, not legal advice &#8212; verify with qualified legal counsel before reliance or signature. &copy; '+new Date().getFullYear()+' BuyrWorld.';
-  return `<html><head><meta charset="utf-8"><title>${ciEsc(title)}</title>
+  return `<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>@media screen and (max-width:640px){body{padding:14px !important;font-size:14px}table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}h1{font-size:22px}h2{font-size:16px}}@media print{table{display:table;overflow:visible;white-space:normal}}</style><title>${ciEsc(title)}</title>
   <style>body{font-family:Arial,sans-serif;color:#1A1A1A;margin:40px;line-height:1.6;font-size:11pt}
   .tag{color:#8C8C8C;font-size:9pt}
   h1{font-size:17pt;margin:6px 0 2px}h2{font-size:12.5pt;margin:18px 0 6px;color:#5A6B00}
@@ -3588,7 +3588,7 @@ function spendReportHTML(){
   const sevBg={red:"#FFC7CE",amber:"#FFEB9C",lime:"#C6EFCE"};
   const insRows=d.ins.map(i=>`<p style="background:${sevBg[i.sev]};padding:8px 10px;margin:6px 0">${esc(i.txt)}</p>`).join("");
   const recRows=d.recs.map((r,i)=>`<p style="margin:6px 0"><b>${i+1}.</b> ${esc(r)}</p>`).join("");
-  return `<html><head><meta charset="utf-8"><title>BuyrWorld Spend Analysis Report</title>
+  return `<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>@media screen and (max-width:640px){body{padding:14px !important;font-size:14px}table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}h1{font-size:22px}h2{font-size:16px}}@media print{table{display:table;overflow:visible;white-space:normal}}</style><title>BuyrWorld Spend Analysis Report</title>
   <style>body{font-family:Arial,sans-serif;color:#1A1A1A;margin:40px;line-height:1.55;font-size:10.5pt}
   .tag{color:#8C8C8C;font-size:9pt}
   h1{font-size:17pt;margin:6px 0 2px}h2{font-size:12.5pt;margin:18px 0 6px;color:#5A6B00}

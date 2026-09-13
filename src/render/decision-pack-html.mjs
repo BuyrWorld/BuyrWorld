@@ -26,6 +26,7 @@ export function renderDecisionPackHTML(pack) {
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(m.caseId || "Supplier claim review")} — decision pack</title>
 <style>
   @page { margin: 18mm 16mm; }
@@ -40,6 +41,10 @@ export function renderDecisionPackHTML(pack) {
   .synthetic { background: #fff3cd; border: 1px solid #b8860b; padding: 8px 11px; margin: 0 0 18px; font-size: 9.5pt; }
   .headline { font-size: 13pt; line-height: 1.45; margin: 0 0 6px; }
   table { border-collapse: collapse; width: 100%; margin: 6px 0 10px; font-size: 10pt; page-break-inside: avoid; }
+  /* A table narrower than the screen is fine; one wider than it must scroll
+     inside its own box rather than pushing the whole document sideways. */
+  .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 6px 0 10px; }
+  .tw table { margin: 0; min-width: 420px; }
   th { text-align: left; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .06em;
        border-bottom: 1px solid #16160f; padding: 5px 8px 5px 0; }
   td { padding: 5px 8px 5px 0; border-bottom: 1px solid #ddd; vertical-align: top; }
@@ -69,7 +74,26 @@ export function renderDecisionPackHTML(pack) {
   .foot { margin-top: 28px; padding-top: 10px; border-top: 1px solid #16160f; font-size: 9pt; color: #5a5a53; }
   .approval { border: 1px dashed #16160f; padding: 12px 14px; margin-top: 10px; }
   .approval .line { margin-top: 18px; border-bottom: 1px solid #16160f; height: 1px; }
-  @media print { body { padding: 0; } .noprint { display: none; } }
+  @media print {
+    body { padding: 0; }
+    .noprint { display: none; }
+    /* On paper there is nowhere to scroll to, so let a wide table wrap. */
+    .tw { overflow-x: visible; }
+    .tw table { min-width: 0; }
+  }
+
+  /* Phones. The pack is read on one as often as it is printed. */
+  @media screen and (max-width: 640px) {
+    body { padding: 16px 14px; font-size: 10.5pt; }
+    h1 { font-size: 17pt; }
+    h2 { font-size: 11pt; margin-top: 20px; }
+    table { font-size: 9pt; }
+    .rec { padding: 10px 11px; }
+    .rec .action { font-size: 11pt; }
+    .opt { padding-left: 9px; }
+    .prov { margin-left: 4px; font-size: 7pt; }
+    .verify { padding: 10px 11px; }
+  }
 </style></head><body>
 
 <h1>Supplier claim review</h1>
@@ -85,12 +109,12 @@ document is fictional. It is not a real supplier claim and must not be used as o
 
 <h2>Executive summary</h2>
 <p class="headline">${esc(pack.summary.headline)}</p>
-<table>
+<div class="tw"><table>
   <tr><th>Position</th><th class="n">Change</th><th class="n">Annual, ${cur}</th></tr>
   <tr><td>Requested by the supplier</td><td class="n">${P(pack.summary.requested)}</td><td class="n">${M(pack.summary.annualRequested)}</td></tr>
   <tr><td>Supported by the evidence ${tag(LABEL.DERIVED)}</td><td class="n">${P(pack.summary.warranted)}</td><td class="n">${M(pack.summary.annualWarranted)}</td></tr>
   <tr><td><b>Unsupported</b></td><td class="n"><b>${P(pack.summary.unsupported)}</b></td><td class="n"><b>${M(pack.summary.annualUnsupported)}</b></td></tr>
-</table>
+</table></div>
 
 <p class="legend">Every figure below is labelled:
   ${(pack.provenance?.legend ?? []).map((l) => `${tag(l.label)}${esc(l.means)}`).join(" &middot; ")}</p>
@@ -104,14 +128,14 @@ document is fictional. It is not a real supplier claim and must not be used as o
 </div>
 
 <h2>Baseline</h2>
-<table>
+<div class="tw"><table>
   <tr><td>Current unit price</td><td class="n">${cur} ${M(pack.baseline.unitPrice)}</td></tr>
   <tr><td>Annual volume</td><td class="n">${esc(String(pack.baseline.annualVolume))} units</td></tr>
   <tr><td>Annual line value</td><td class="n">${cur} ${M(lineValue(pack))}</td></tr>
-</table>
+</table></div>
 
 <h2>Claim decomposition</h2>
-<table>
+<div class="tw"><table>
   <tr><th>Driver</th><th class="n">Share of cost</th><th class="n">Movement</th><th class="n">Contribution</th></tr>
   ${pack.decomposition.map((c) => `
   <tr><td>${esc(c.label)}${provTag(pack, c.id, "weight")}${c.lineage ? `<div class="sub">${esc(c.lineage)}</div>` : ""}${
@@ -119,7 +143,7 @@ document is fictional. It is not a real supplier claim and must not be used as o
   }</td><td class="n">${P(c.weight)}</td><td class="n">${P(c.indexMovement)}${provTag(pack, c.id, "movement")}</td><td class="n">${P(c.contribution)}</td></tr>`).join("")}
   <tr><td class="muted">Unexplained share of unit cost</td><td class="n muted">${P(unexplained(pack))}</td>
       <td class="n muted">unknown</td><td class="n muted">treated as nil</td></tr>
-</table>
+</table></div>
 ${pack.contract.constraintApplied ? `<p>A contract ${esc(pack.contract.constraintApplied)} applies. The driver evidence
 alone would support ${P(pack.contract.warrantedBeforeConstraints)}.</p>` : ""}
 ${pack.retrospective ? `<p>Retrospective application over ${esc(String(pack.retrospective.months))} months covers
@@ -129,12 +153,12 @@ ${cur} ${M(pack.retrospective.unsupported)}.</p>` : ""}
 ${pack.currency ? `<h2>Currency</h2>
 <p>The supplier prices in ${esc(pack.currency.supplierCurrency)}; this analysis reports in ${esc(pack.currency.currency)}.
 A rate move is not a cost move, so the two are separated.</p>
-<table>
+<div class="tw"><table>
   <tr><td>Total change</td><td class="n">${esc(pack.currency.currency)} ${M(pack.currency.totalChange)}</td></tr>
   <tr><td>Their cost increase, at the baseline rate</td><td class="n">${M(pack.currency.costEffect)}</td></tr>
   <tr><td><b>Exchange rate movement (${P(pack.currency.rateMovement)}) — not their cost</b></td><td class="n"><b>${M(pack.currency.fxEffect)}</b></td></tr>
   <tr><td>Interaction</td><td class="n">${M(pack.currency.crossTerm)}</td></tr>
-</table>
+</table></div>
 <p class="sub">${esc(pack.currency.lineage)}. ${esc(pack.currency.method)}</p>` : ""}
 
 <h2>Evidence</h2>
@@ -148,12 +172,12 @@ ${pack.contract.contradictions.length ? `<h2>Contract</h2>
 <ul>${pack.contract.contradictions.map((x) => `<li class="gap-material">${esc(x.text)}</li>`).join("")}</ul>` : ""}
 
 <h2>Scenario comparison</h2>
-<table>
+<div class="tw"><table>
   <tr><th>Scenario</th><th class="n">Change</th><th class="n">Annual cost, ${cur}</th><th>Basis</th></tr>
   ${pack.scenarios.map((sc) => `
   <tr><td>${esc(sc.label)}</td><td class="n">${P(sc.change)}</td><td class="n">${M(sc.annualCost)}</td>
       <td class="sub">${esc(sc.basis)}</td></tr>`).join("")}
-</table>
+</table></div>
 
 <h2>Options</h2>
 ${pack.options.map((o) => `
@@ -189,10 +213,10 @@ ${pack.assumptions.length ? `<ul>${pack.assumptions.map((a) => `<li>${esc(a.text
 <ul>${pack.uncertainties.map((u) => `<li>${esc(u)}</li>`).join("")}</ul>
 
 <h2>Source appendix</h2>
-${pack.sources.length ? `<table>
+${pack.sources.length ? `<div class="tw"><table>
   <tr><th>For</th><th>Source</th><th>Kind</th></tr>
   ${pack.sources.map((sc) => `<tr><td>${esc(sc.for)}</td><td>${esc(sc.detail)}</td><td class="sub">${esc(sc.kind)}</td></tr>`).join("")}
-</table>` : "<p>No sources were attached to this analysis, which is itself a finding.</p>"}
+</table></div>` : "<p>No sources were attached to this analysis, which is itself a finding.</p>"}
 
 <h2>Approval record</h2>
 <div class="approval">
