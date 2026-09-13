@@ -22,6 +22,7 @@ import { ONE, moneyToDecimalString, moneyScale, moneyTimesQuantity } from "./exa
 import { partialAcceptance, delayEffect, formatPercent } from "./cost-bridge.mjs";
 import { assessEvidence } from "./evidence.mjs";
 import { labelFor, assumptionsToVerify, LABEL, LEGEND } from "./provenance.mjs";
+import { prepareNegotiation } from "./negotiation.mjs";
 
 /** Options the analysis can support with numbers. Ordered by escalation. */
 export const ACTION = Object.freeze({
@@ -40,10 +41,13 @@ export const ACTION = Object.freeze({
  * @param {object} input.meta      { caseId, supplier, part, received, preparedBy?, synthetic }
  * @param {object} input.bridge    a costBridge() result
  * @param {object} [input.evidenceInput]  { claims, constraints } for assessEvidence
- * @param {object} [input.position]       { criticality, alternatives, switchingCost, qualificationWeeks, noticePeriod }
+ * @param {object} [input.position]       { criticality, alternatives, switchingCost, qualificationWeeks, noticePeriodWeeks }
+ * @param {object} [input.history]        a supplierHistory() result, if there is one.
+ *                                        Passed in rather than looked up: this module
+ *                                        has no business knowing where cases are stored.
  * @param {string} [input.generatedAt]    ISO timestamp; supplied so packs are reproducible in tests
  */
-export function buildDecisionPack({ meta = {}, bridge, evidenceInput = {}, position = {}, generatedAt }) {
+export function buildDecisionPack({ meta = {}, bridge, evidenceInput = {}, position = {}, history = null, generatedAt }) {
   if (!bridge || !bridge.contributions) throw new TypeError("A decision pack needs a costBridge result");
 
   const ev = assessEvidence(bridge, evidenceInput);
@@ -224,6 +228,14 @@ export function buildDecisionPack({ meta = {}, bridge, evidenceInput = {}, posit
     }),
 
     decomposition: bridge.contributions,
+
+    /* The position to take into the room, and what this supplier did last time.
+       Both were screen-only until now: the pack said what was warranted and
+       stopped short of what to do about it, which is the half that gets read
+       in a meeting. */
+    negotiation: prepareNegotiation({ bridge, ev, position, generatedAt }),
+    history,
+
     evidence: ev,
     currency: bridge.currency,
     contract: Object.freeze({

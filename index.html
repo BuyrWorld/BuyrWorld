@@ -2042,15 +2042,30 @@ function defPortfolioHTML(){
     +'</div>';
 }
 
+// The supplier record, as data rather than markup, so the exported pack and
+// the screen cannot disagree about what it says.
+function defSupplierRecord(){
+  if(!window.BW||!window.BW.supplierHistory||!window.BW.loadOutcomes)return null;
+  var el=document.getElementById("def-supplier");
+  var name=el?String(el.value).trim():"";
+  if(!name)return null;
+  try{
+    var h=window.BW.supplierHistory(window.BW.loadOutcomes()||[],name);
+    return h&&h.count?h:null;
+  }catch(e){ return null; }
+}
+
 function defHistoryHTML(){
   if(!window.BW.supplierHistory||!window.BW.loadOutcomes)return"";
   var el=document.getElementById("def-supplier");
   var name=el?String(el.value).trim():"";
-  var all=[]; try{ all=window.BW.loadOutcomes()||[]; }catch(e){ return ""; }
   if(!name)return"";
-  var H; try{ H=window.BW.supplierHistory(all,name); }catch(e){ return ""; }
+  var all=[]; try{ all=window.BW.loadOutcomes()||[]; }catch(e){ return ""; }
+  // One lookup, shared with the exported pack, so the two cannot disagree
+  // about what this supplier has done.
+  var H=defSupplierRecord();
 
-  if(!H.count){
+  if(!H){
     // Silent on a fresh corpus; a note only once outcomes are actually being kept,
     // so a first-time case is not cluttered by a feature it cannot use yet.
     if(!all.length)return"";
@@ -2461,6 +2476,11 @@ function defDecisionPack(){
         synthetic:true
       },
       bridge:_defResult,
+      // The same sourcing position and supplier record the screen shows. The
+      // pack used to stop at what was warranted, which is the half a reader
+      // cannot act on.
+      position:defPosition(),
+      history:defSupplierRecord(),
       generatedAt:new Date().toISOString().slice(0,16).replace("T"," ")
     });
     html=window.BW.renderDecisionPackHTML(pack);

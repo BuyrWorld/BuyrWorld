@@ -20,6 +20,117 @@ const esc = (t) =>
 const M = moneyToDecimalString;
 const P = formatPercent;
 
+/**
+ * What this supplier has done before.
+ *
+ * Placed ahead of the executive summary deliberately: three claims with a
+ * consistent over-ask changes how every figure below it should be read, and a
+ * reader who meets that fact on page two has already formed a view.
+ */
+function historySection(pack) {
+  const h = pack.history;
+  if (!h || !h.count) return "";
+  const rows = h.claims.map((c) => `
+  <tr>
+    <td>${esc(c.at || `Round ${c.round}`)}</td>
+    <td class="n">${P(c.requested)}</td>
+    <td class="n">${P(c.warranted)}</td>
+    <td class="n">${P(c.agreed)}</td>
+    <td class="n">${c.concededAboveWarranted > 0n
+      ? `${esc(c.currency)} ${M(c.concededAboveWarrantedAnnual)}` : "&mdash;"}</td>
+  </tr>`).join("");
+
+  const repeats = h.drivers.filter((d) => d.claimedEveryRound && !d.everEvidenced);
+  const worked = h.argumentsThatWorked.filter((a) => a.worked > 0);
+
+  return `<h2>Their record</h2>
+<p>${esc(h.headline)}</p>
+<div class="tw"><table>
+  <tr><th>When</th><th class="n">Asked</th><th class="n">Evidenced</th><th class="n">Agreed</th><th class="n">Above the evidence</th></tr>${rows}
+</table></div>
+${repeats.length ? `<p class="gap-material"><b>Claimed every round and never evidenced:</b> ${
+  repeats.map((d) => esc(d.label)).join(", ")}. Ask for the breakdown before anything else.</p>` : ""}
+${worked.length ? `<p class="sub"><b>Has worked against this supplier:</b> ${
+  worked.map((a) => `${esc(a.description)} (${a.worked} of ${a.used})`).join(" &middot; ")}.</p>` : ""}
+${h.mixedCurrency ? `<p class="sub">Claims span more than one currency, so totals are kept separate rather than added.</p>` : ""}
+<p class="sub">${esc(h.method)}</p>
+`;
+}
+
+/**
+ * The position to take into the room.
+ *
+ * The pack used to stop at "this much is warranted", which is the half a
+ * reader cannot act on. Every figure here is derived by the engine; the only
+ * judgement is which row you choose, and the ladder says plainly which of them
+ * are evidenced and which are a decision.
+ */
+function negotiationSection(pack) {
+  const n = pack.negotiation;
+  if (!n) return "";
+  const cur = esc(n.currency);
+
+  const challenges = n.ladder.challenges.length ? `
+<h3>Ask for these first</h3>
+<ul>${n.ladder.challenges.map((c) => `
+  <li><b>${esc(c.label)}</b> &mdash; ${P(c.contribution)} of the increase, worth ${cur} ${M(c.worthAnnually)} a year.
+  <span class="muted">${esc(c.why)}</span></li>`).join("")}
+</ul>` : "";
+
+  const ladder = `
+<h3>What each step costs</h3>
+<div class="tw"><table>
+  <tr><th>Position</th><th class="n">Accepted</th><th class="n">Unit</th><th class="n">This step costs</th></tr>
+  ${n.ladder.concessions.map((c) => `
+  <tr>
+    <td>${esc(c.note.split(".")[0])}${c.evidenced
+      ? " <b>(evidenced)</b>" : ' <span class="muted">(a choice)</span>'}</td>
+    <td class="n">${P(c.acceptedChange)}</td>
+    <td class="n">${M(c.acceptedUnitPrice)}</td>
+    <td class="n">${cur} ${M(c.costOfThisStep)}</td>
+  </tr>`).join("")}
+</table></div>`;
+
+  const rebuttals = n.rebuttals.length ? `
+<h3>What they will say</h3>
+<ul>${n.rebuttals.slice(0, 8).map((r) => `
+  <li>${esc(r.theirPoint)}<br><span class="muted">Ask for ${esc(r.ask)}.</span>${
+    r.worthAnnually ? ` <b>${cur} ${M(r.worthAnnually)} a year.</b>`
+      : ' <span class="muted">(nothing to recover &mdash; already treated as zero)</span>'}</li>`).join("")}
+</ul>` : "";
+
+  const walk = `
+<h3>Walking away is ${esc(n.walkAway.credibility)}</h3>
+<p>${esc(n.walkAway.rule)}</p>
+${n.walkAway.breakeven ? `<p>Switching pays back in about <b>${
+  n.walkAway.breakeven.yearsApprox.toFixed(1)} year${n.walkAway.breakeven.yearsApprox === 1 ? "" : "s"}</b>
+&mdash; ${esc(n.walkAway.breakeven.basis)} ${tag(LABEL.ASSUMED)}, because nobody has quoted an alternative.</p>` : ""}`;
+
+  return `<h2>Negotiating position</h2>
+<div class="tw"><table>
+  <tr><th>Anchor</th><th class="n">Change</th><th class="n">Unit</th><th class="n">Annual, ${cur}</th></tr>
+  <tr><td>Open at &mdash; the hard line ${tag(LABEL.DERIVED)}</td><td class="n">${P(n.openingPosition.openAt)}</td>
+      <td class="n">${M(n.hardLine.unitPrice)}</td><td class="n">${M(n.hardLine.annualCost)}</td></tr>
+  <tr><td>Target &mdash; what the evidence supports</td><td class="n">${P(n.openingPosition.target)}</td>
+      <td class="n">${M(n.anchors.warranted.unitPrice)}</td><td class="n">${M(n.anchors.warranted.annualCost)}</td></tr>
+  <tr><td>Their ask</td><td class="n">${P(pack.summary.requested)}</td>
+      <td class="n">${M(n.anchors.requested.unitPrice)}</td><td class="n">${M(n.anchors.requested.annualCost)}</td></tr>
+</table></div>
+<p><b>In dispute: ${cur} ${M(n.anchors.inDispute)} a year (${P(n.anchors.inDisputeChange)}).</b>
+Everything below the target is arithmetic both sides can check.</p>
+${n.hardLine.assessed
+  ? `<p>The hard line is ${cur} ${M(n.hardLine.belowWarrantedBy)} a year below the warranted figure &mdash;
+     what survives if none of the unevidenced drivers is supported.</p>`
+  : `<p class="gap-minor">No evidence assessment, so the hard line cannot be told apart from the warranted figure.</p>`}
+${challenges}${ladder}
+<p class="sub">Deferral instead of money &mdash; ${n.deferrals.map((d) =>
+  `${d.months} month${d.months > 1 ? "s" : ""}: ${cur} ${M(d.firstYearAvoided)} avoided in year one`).join(" &middot; ")}.</p>
+${rebuttals}${walk}
+<p class="sub">${esc(n.openingPosition.rule)}</p>
+<p class="sub">${esc(n.method)}</p>
+`;
+}
+
 export function renderDecisionPackHTML(pack) {
   const cur = esc(pack.summary.currency);
   const m = pack.meta;
@@ -107,6 +218,7 @@ export function renderDecisionPackHTML(pack) {
 ${m.synthetic ? `<p class="synthetic"><b>Synthetic demonstration data.</b> Every figure, supplier and source in this
 document is fictional. It is not a real supplier claim and must not be used as one.</p>` : ""}
 
+${historySection(pack)}
 <h2>Executive summary</h2>
 <p class="headline">${esc(pack.summary.headline)}</p>
 <div class="tw"><table>
@@ -193,6 +305,7 @@ ${pack.options.map((o) => `
   }</p>
 </div>`).join("")}
 
+${negotiationSection(pack)}
 ${pack.assumptionsToVerify?.length ? `<h2>Assumptions to verify</h2>
 <div class="verify">
   <h3>${pack.assumptionsToVerify.filter((a) => a.material).length} material, ${pack.assumptionsToVerify.filter((a) => !a.material).length} minor</h3>

@@ -42,6 +42,18 @@ describe("the panel is wired into the page", () => {
     }
   });
 
+  test("the exported pack is given the same position and record as the screen", () => {
+    // The pack is the artefact that leaves the building. It stopped at what was
+    // warranted until now, which is the half a reader cannot act on.
+    assert.match(html, /position:defPosition\(\),/);
+    assert.match(html, /history:defSupplierRecord\(\),/);
+  });
+
+  test("the screen and the pack read the supplier record through one lookup", () => {
+    assert.match(html, /var H=defSupplierRecord\(\);/,
+      "two lookups could drift and disagree about what this supplier has done");
+  });
+
   test("no arithmetic is done in the page — the engine owns every figure", () => {
     const fn = html.slice(html.indexOf("function defNegotiationHTML"), html.indexOf("\nfunction defRender(r,cur){"));
     assert.ok(fn.length > 500, "the function was not found");
@@ -178,7 +190,7 @@ describe("the supplier's record opens the plan", () => {
         ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
       console,
     };
-    const src = html.slice(html.indexOf("function defHistoryHTML()"), html.indexOf("\nfunction defNegotiationHTML(r,cur){"));
+    const src = html.slice(html.indexOf("function defSupplierRecord()"), html.indexOf("\nfunction defNegotiationHTML(r,cur){"));
     vm.createContext(sandbox);
     new vm.Script(src + "\n;globalThis.__H__ = defHistoryHTML();").runInContext(sandbox);
     return sandbox.__H__;
@@ -238,7 +250,7 @@ describe("the supplier's record opens the plan", () => {
       document: { getElementById: () => ({ value: "Meridian Fabrication Ltd" }) },
       ciEsc: (x) => String(x), console,
     };
-    const src = html.slice(html.indexOf("function defHistoryHTML()"), html.indexOf("\nfunction defNegotiationHTML(r,cur){"));
+    const src = html.slice(html.indexOf("function defSupplierRecord()"), html.indexOf("\nfunction defNegotiationHTML(r,cur){"));
     vm.createContext(sandbox);
     new vm.Script(src + "\n;globalThis.__H__ = defHistoryHTML();").runInContext(sandbox);
     assert.equal(sandbox.__H__, "");
