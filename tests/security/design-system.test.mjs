@@ -278,3 +278,43 @@ describe("form fields use the primitive", () => {
     assert.match(css, /input\.bwin:focus-visible[^{]*\{[^}]*outline:3px solid/);
   });
 });
+
+describe("article prose was migrated without losing an article", () => {
+  test("all fifteen articles are still there", () => {
+    // CLAUDE.md: greedy matches have eaten neighbouring articles in this file
+    // before. This is the count that would reveal it.
+    assert.equal((html.match(/\{t:"/g) || []).length, 15);
+  });
+
+  test("each article still has a title, a category and a body", () => {
+    const block = html.slice(html.indexOf("const ARTICLES=["), html.indexOf("\nconst BLOG_CATS=["));
+    for (const field of ["t:", "cat:", "mins:", "body:"]) {
+      const n = (block.match(new RegExp(field.replace(":", "\s*:"), "g")) || []).length;
+      assert.ok(n >= 15, `only ${n} articles carry ${field}`);
+    }
+  });
+
+  test("the body container styles its own prose", () => {
+    assert.match(html, /<div id="blog-body" class="bw-prose">/);
+    assert.match(css, /\.bw-prose\{font-size:15px;line-height:1\.75;color:var\(--bw-body\)\}/);
+    assert.match(css, /\.bw-prose > p\{margin-bottom:var\(--bw-4\)\}/);
+  });
+
+  test("the per-paragraph styling is gone", () => {
+    assert.equal(/style="color:#CFCFCF;font-size:15px;line-height:1\.75;margin-bottom:16px"/.test(html), false,
+      "49 paragraphs carrying the same four declarations");
+    assert.equal(/style="font-size:18px;margin:22px 0 10px"/.test(html), false);
+  });
+
+  test("the repeated in-article row is a component", () => {
+    assert.match(css, /\.bw-figrow\{display:flex/);
+    for (const c of ["bw-figrow-t", "bw-figrow-d", "bw-figrow-n"]) {
+      assert.match(css, new RegExp(`\.${c}\{`), `.${c} is missing`);
+      assert.ok(html.includes(`class="${c}"`), `.${c} is defined but unused`);
+    }
+  });
+
+  test("body copy is a token now, not a literal repeated everywhere", () => {
+    assert.match(css, /--bw-body\s*:\s*#CFCFCF/);
+  });
+});

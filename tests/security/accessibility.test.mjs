@@ -39,8 +39,8 @@ describe("colour contrast (WCAG 1.4.3)", () => {
   const inks = {
     ...Object.fromEntries(["bw-text", "bw-muted", "bw-subtle", "bw-accent"].map((n) => [n, token(n)])),
     ...Object.fromEntries(["bw-danger", "bw-warning", "bw-success"].map((n) => [n, token(n)])),
-    // Still hardcoded across the inline styles, so still load-bearing.
-    "body copy #CFCFCF": "#CFCFCF",
+    // Still hardcoded across the inline styles that remain, so still load-bearing.
+    "bw-body": token("bw-body"),
     "legacy warning #FFB800": "#FFB800",
     "legacy danger #FF5C5C": "#FF5C5C",
   };
