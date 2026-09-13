@@ -17,7 +17,8 @@ loop. This single rule drives the whole structure below.
 
 ```
 src/
-  domain/          typed entities + Zod schemas — no I/O, no framework
+  domain/          entity identity + the commercial memory spine — no I/O, no framework
+                   BUILT (plain frozen objects, not Zod: see docs/DOMAIN_MODEL.md)
   calc/            [built] pure deterministic functions — no I/O, no AI, fully tested
   data/            [built] the synthetic index series the demonstration ships
   render/          [built] decision pack output
