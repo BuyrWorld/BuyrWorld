@@ -261,10 +261,30 @@ function buildRebuttals(bridge, ev) {
  * Whether leaving is a real option. Decided by stated rules on stated facts,
  * with the rule returned so it can be argued with.
  */
-function assessWalkAway(position, anchors) {
+function assessWalkAway(position, anchors, batna = null) {
   const { alternatives, qualificationWeeks, noticePeriodWeeks, switchingCost, criticality } = position;
   const unknown = (why) =>
     Object.freeze({ credibility: CREDIBILITY.UNKNOWN, rule: why, breakeven: null });
+
+  /* An assessed BATNA answers this question better than the fields below can:
+     it knows which alternatives could actually be used in time, and whether
+     enough is known about them to rely on. Its verdict is used directly rather
+     than re-derived from a count, so the two cannot disagree. */
+  if (batna) {
+    const credibility =
+      batna.strength === "strong" || batna.strength === "moderate"
+        ? CREDIBILITY.CREDIBLE
+        : CREDIBILITY.NOT_CREDIBLE;
+    return Object.freeze({
+      credibility,
+      rule: batna.rule,
+      strength: batna.strength,
+      cappedByEvidence: Boolean(batna.cappedByEvidence),
+      openQuestions: batna.openQuestions,
+      breakeven: batna.breakeven ?? breakevenFor(switchingCost, anchors),
+      fromAssessedAlternatives: true,
+    });
+  }
 
   if (alternatives == null && qualificationWeeks == null && noticePeriodWeeks == null) {
     return unknown("No sourcing position was supplied, so the credibility of leaving cannot be assessed.");
@@ -289,22 +309,22 @@ function assessWalkAway(position, anchors) {
     rule = "An alternative exists, but qualification time or notice period is not recorded, so the timing cannot be checked.";
   }
 
-  /* Breakeven: how long conceding the disputed amount takes to fund a switch.
-     It assumes an alternative matches today's price — which nobody has verified,
-     so it is returned as an assumption rather than a saving. */
-  let breakeven = null;
-  if (switchingCost && anchors.inDispute.minor > 0n) {
-    const years = scaleDiv(switchingCost.minor * SCALE, anchors.inDispute.minor);
-    breakeven = Object.freeze({
-      switchingCost,
-      annualDisputedAmount: anchors.inDispute,
-      years,
-      yearsApprox: Number(years) / 1e9,
-      basis: `${gbp(switchingCost)} of switching cost against ${gbp(anchors.inDispute)} a year in dispute.`,
-    });
-  }
+  return Object.freeze({ credibility, rule, breakeven: breakevenFor(switchingCost, anchors) });
+}
 
-  return Object.freeze({ credibility, rule, breakeven });
+/* Breakeven: how long conceding the disputed amount takes to fund a switch.
+   It assumes an alternative matches today's price — which nobody has verified,
+   so it is returned as an assumption rather than a saving. */
+function breakevenFor(switchingCost, anchors) {
+  if (!switchingCost || anchors.inDispute.minor <= 0n) return null;
+  const years = scaleDiv(switchingCost.minor * SCALE, anchors.inDispute.minor);
+  return Object.freeze({
+    switchingCost,
+    annualDisputedAmount: anchors.inDispute,
+    years,
+    yearsApprox: Number(years) / 1e9,
+    basis: `${gbp(switchingCost)} of switching cost against ${gbp(anchors.inDispute)} a year in dispute.`,
+  });
 }
 
 /* ------------------------------------------------------------------- public */
@@ -317,11 +337,14 @@ function assessWalkAway(position, anchors) {
  * @param {object} [input.ev]        an assessEvidence result; without it the
  *                                   hard line cannot be distinguished from the
  *                                   warranted figure, and this says so
+ * @param {object} [input.batna]     an assessBatna() result. When given it decides the
+ *                                   walk-away verdict, because it knows which alternatives
+ *                                   could actually be used and what is still unknown.
  * @param {object} [input.position]  { criticality, alternatives, switchingCost (Money),
  *                                     qualificationWeeks, noticePeriodWeeks }
  * @param {string} [input.generatedAt]
  */
-export function prepareNegotiation({ bridge, ev = null, position = {}, generatedAt = null }) {
+export function prepareNegotiation({ bridge, ev = null, position = {}, batna = null, generatedAt = null }) {
   if (!bridge || !bridge.unitPrice) {
     throw new TypeError("prepareNegotiation needs a costBridge result");
   }
@@ -334,7 +357,9 @@ export function prepareNegotiation({ bridge, ev = null, position = {}, generated
   const { challenges, concessions, hardLineChange, unevidencedContribution } =
     buildLadder(bridge, evidenced);
   const rebuttals = buildRebuttals(bridge, ev);
-  const walkAway = assessWalkAway(position, anchors);
+  /* An assessed BATNA supersedes the loose position fields: it knows which
+     alternatives could actually be used, and how much is still unknown. */
+  const walkAway = assessWalkAway(batna ? batna.position : position, anchors, batna);
 
   const unit = bridge.unitPrice.baseline;
   const vol = BigInt(bridge.annualVolume);
