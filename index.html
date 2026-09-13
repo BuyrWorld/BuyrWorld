@@ -35,7 +35,126 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0C0C0C;--panel:#141414;--panel2:#1A1A1A;--line:#262626;--text:#EDEDED;--muted:#8F8F8F;--lime:#D6FF00;}
+:root{
+  /* ---- surfaces, darkest to lightest ---- */
+  --bw-bg:#0B1014;            /* the page ground */
+  --bw-sidebar:#090E12;       /* navigation, deliberately darker than the page */
+  --bw-surface:#11181E;       /* a panel sitting on the ground */
+  --bw-surface-2:#151E25;     /* a panel sitting on a panel */
+  --bw-border:rgba(255,255,255,.07);
+  --bw-border-strong:rgba(255,255,255,.14);
+
+  /* ---- ink ---- */
+  --bw-text:#F3F6F8;
+  --bw-muted:#95A1AA;
+  /* The pack proposed #6F7C85 for this. It fails 4.5:1 on three of the four
+     surfaces above (3.94 on --bw-surface-2), which the accessibility suite
+     catches. Lightened to the nearest passing value; worst case is now 4.52. */
+  --bw-subtle:#79868F;
+
+  /* ---- accent, used scarcely ---- */
+  --bw-accent:#D6FF00;
+  --bw-accent-ink:#0B1014;    /* text ON the accent, never the accent as text on dark */
+  --bw-accent-hover:#E4FF3D;   /* the primary action, lifted on hover */
+  --bw-accent-soft:rgba(214,255,0,.10);
+
+  /* ---- semantic. Never the only signal: chips carry a label too. ---- */
+  --bw-danger:#FF6B6B;
+  --bw-warning:#FFB020;
+  --bw-success:#3DDC84;
+  --bw-danger-soft:rgba(255,107,107,.12);
+  --bw-warning-soft:rgba(255,176,32,.12);
+  --bw-success-soft:rgba(61,220,132,.12);
+
+  /* ---- spacing rhythm. One scale, not one per feature. ---- */
+  --bw-1:4px; --bw-2:8px; --bw-3:12px; --bw-4:16px; --bw-5:20px; --bw-6:24px; --bw-8:32px;
+
+  /* ---- radius ---- */
+  --bw-r-sm:8px; --bw-r:12px; --bw-r-lg:14px;
+
+  /* ---- type scale, for the workspace rather than the marketing page ---- */
+  --bw-t-page:30px; --bw-t-panel:16px; --bw-t-metric:28px;
+  --bw-t-body:13.5px; --bw-t-meta:11.5px;
+
+  /* ---- the original seven, now aliases. Every existing inline style that
+       says var(--lime) or var(--panel) keeps working and moves with the new
+       palette. Nothing had to be rewritten to adopt this. ---- */
+  --bg:var(--bw-bg);
+  --panel:var(--bw-surface);
+  --panel2:var(--bw-surface-2);
+  --line:var(--bw-border);
+  --text:var(--bw-text);
+  --muted:var(--bw-muted);
+  --lime:var(--bw-accent);
+}
+
+/* ==================== shared primitives ====================
+   New classes. Nothing existing is removed or restyled: .card and .btn keep
+   their own rules, and screens migrate onto these one at a time. */
+
+.bw-panel{background:var(--bw-surface);border:1px solid var(--bw-border);border-radius:var(--bw-r);padding:var(--bw-4)}
+.bw-panel--flush{padding:0;overflow:hidden}
+.bw-panel--accent{border-color:var(--bw-accent)}
+.bw-panel-head{display:flex;align-items:center;justify-content:space-between;gap:var(--bw-3);margin-bottom:var(--bw-3)}
+.bw-panel-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:var(--bw-t-panel);letter-spacing:-.01em;display:flex;align-items:center;gap:var(--bw-2)}
+.bw-panel-action{font-size:var(--bw-t-meta);color:var(--bw-muted);text-transform:uppercase;letter-spacing:.08em}
+
+/* A metric: small label, the figure, then what qualifies it. The figure is the
+   thing a procurement lead reads first, so it carries the weight. */
+.bw-metric{min-width:0}
+.bw-metric-label{font-size:var(--bw-t-meta);color:var(--bw-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--bw-1)}
+.bw-metric-value{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:var(--bw-t-metric);line-height:1.1;font-variant-numeric:tabular-nums}
+.bw-metric-sub{font-size:var(--bw-t-meta);color:var(--bw-muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.bw-metric--danger .bw-metric-value{color:var(--bw-danger)}
+.bw-metric--accent .bw-metric-value{color:var(--bw-accent)}
+.bw-metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--bw-4)}
+
+/* A chip never signals by colour alone: it always carries its word. */
+.bw-status{display:inline-flex;align-items:center;gap:6px;font-size:var(--bw-t-meta);font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--bw-border-strong);color:var(--bw-muted)}
+.bw-status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.bw-status--live,.bw-status--approved,.bw-status--evidenced,.bw-status--low{color:var(--bw-success);border-color:rgba(61,220,132,.35);background:var(--bw-success-soft)}
+.bw-status--review,.bw-status--medium,.bw-status--derived{color:var(--bw-warning);border-color:rgba(255,176,32,.35);background:var(--bw-warning-soft)}
+.bw-status--high,.bw-status--assumed{color:var(--bw-danger);border-color:rgba(255,107,107,.35);background:var(--bw-danger-soft)}
+.bw-status--supplied{color:var(--bw-accent);border-color:rgba(214,255,0,.35);background:var(--bw-accent-soft)}
+
+/* Three actions, not one per tool. */
+.bw-act{display:inline-flex;align-items:center;gap:var(--bw-2);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:var(--bw-t-body);border-radius:var(--bw-r-sm);padding:9px 15px;border:1px solid transparent;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease}
+.bw-act-primary{background:var(--bw-accent);color:var(--bw-accent-ink)}
+.bw-act-primary:hover{background:var(--bw-accent-hover)}
+.bw-act-secondary{background:var(--bw-surface-2);color:var(--bw-text);border-color:var(--bw-border-strong)}
+.bw-act-secondary:hover{border-color:var(--bw-accent)}
+.bw-act-text{background:none;color:var(--bw-muted);padding:6px 4px}
+.bw-act-text:hover{color:var(--bw-text)}
+.bw-act-danger{background:var(--bw-danger-soft);color:var(--bw-danger);border-color:rgba(255,107,107,.35)}
+.bw-act[disabled]{opacity:.45;cursor:not-allowed}
+
+/* Dense tables. A wide one scrolls inside its own box rather than pushing the
+   page sideways — the rule the exported documents already follow. */
+.bw-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.bw-table{width:100%;border-collapse:collapse;font-size:var(--bw-t-body)}
+.bw-table th{text-align:left;font-size:var(--bw-t-meta);font-weight:600;color:var(--bw-muted);text-transform:uppercase;letter-spacing:.08em;padding:0 var(--bw-3) var(--bw-2) 0;border-bottom:1px solid var(--bw-border)}
+.bw-table td{padding:10px var(--bw-3) 10px 0;border-bottom:1px solid var(--bw-border);vertical-align:top}
+.bw-table tr:last-child td{border-bottom:0}
+.bw-table .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.bw-list-row{display:flex;align-items:center;gap:var(--bw-3);padding:10px 0;border-bottom:1px solid var(--bw-border)}
+.bw-list-row:last-child{border-bottom:0}
+.bw-list-row:hover{background:rgba(255,255,255,.02)}
+.bw-list-main{flex:1;min-width:0}
+.bw-list-title{font-size:var(--bw-t-body);color:var(--bw-text)}
+.bw-list-sub{font-size:var(--bw-t-meta);color:var(--bw-muted)}
+
+/* The workspace grid. Collapses rather than shrinking until unreadable. */
+.bw-grid{display:grid;gap:var(--bw-4)}
+.bw-grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.bw-grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.bw-grid-wide{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+@media(max-width:1100px){.bw-grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}.bw-grid-wide{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){.bw-grid-2,.bw-grid-3{grid-template-columns:minmax(0,1fr)}}
+
+/* Focus stays visible on every new control, as it does on the old ones. */
+.bw-act:focus-visible,.bw-list-row:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
+
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}

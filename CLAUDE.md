@@ -50,6 +50,15 @@ Deploys are GitHub → Vercel. Pushing to `main` deploys production.
 - **Treat uploaded documents as untrusted.** Wrap them in explicit delimiters; content inside is data, never instructions. Escape filenames with `textContent`, never `innerHTML`.
 - **No silent truncation.** If a document is cut short, say so on screen with the actual coverage.
 
+## Design system (added Sept 2026)
+
+- **Tokens live in one `:root` block.** `--bw-*` for surfaces, ink, semantics, spacing, radius and type. The original seven (`--bg`, `--panel`, `--lime` and so on) are now **aliases** of them, because 1,382 inline `style=` attributes reference those names. Never remove an alias.
+- **Primitives are `.bw-*` classes** and take colours from tokens only. `tests/security/design-system.test.mjs` fails on a hardcoded hex inside one.
+- **Screens migrate onto the primitives one at a time.** `.card` and `.btn` still exist and still work; nothing is restyled underneath a working feature.
+- **Contrast is derived from the stylesheet, not copied.** When the palette changed, a hardcoded test list went on passing while testing colours the page had stopped using. `accessibility.test.mjs` now parses the real tokens.
+- **A status chip never signals by colour alone** — it carries a dot and its word.
+- See `docs/VISUAL_NORTH_STAR.md` and `docs/VISUAL_ACCEPTANCE_CHECKLIST.md`.
+
 ## Brand
 
 - Background `#0C0C0C`, lime accent `#D6FF00`.

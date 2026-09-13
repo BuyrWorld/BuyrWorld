@@ -19,24 +19,70 @@ const contrast = (a, b) => {
 };
 
 describe("colour contrast (WCAG 1.4.3)", () => {
-  const GROUND = "#0C0C0C";
-  const CARD = "#1A1A1A";
-  const inks = {
-    "--text": "#E8E8E2", "--muted": "#8F8F8F", "--lime": "#D6FF00",
-    "body copy": "#CFCFCF", warning: "#FFB800", danger: "#FF5C5C",
+  /**
+   * Read the palette out of the stylesheet rather than keeping a copy here.
+   *
+   * The copy is the failure mode: when the tokens changed, a hardcoded list
+   * went on passing while testing colours the page had stopped using. Parsing
+   * the real values means a palette change is either checked or breaks this.
+   */
+  const token = (name) => {
+    const m = new RegExp(`--${name}\\s*:\\s*(#[0-9a-fA-F]{3,8})`).exec(html);
+    assert.ok(m, `--${name} is not defined in index.html`);
+    return m[1];
   };
 
-  test("every ink meets 4.5:1 on the page background", () => {
-    for (const [name, hex] of Object.entries(inks)) {
-      const r = contrast(hex, GROUND);
-      assert.ok(r >= 4.5, `${name} ${hex} is ${r.toFixed(2)}:1 on ${GROUND}, below the 4.5:1 minimum`);
-    }
+  const surfaces = Object.fromEntries(
+    ["bw-bg", "bw-sidebar", "bw-surface", "bw-surface-2"].map((n) => [n, token(n)])
+  );
+
+  const inks = {
+    ...Object.fromEntries(["bw-text", "bw-muted", "bw-subtle", "bw-accent"].map((n) => [n, token(n)])),
+    ...Object.fromEntries(["bw-danger", "bw-warning", "bw-success"].map((n) => [n, token(n)])),
+    // Still hardcoded across the inline styles, so still load-bearing.
+    "body copy #CFCFCF": "#CFCFCF",
+    "legacy warning #FFB800": "#FFB800",
+    "legacy danger #FF5C5C": "#FF5C5C",
+  };
+
+  test("the palette was actually found, so this is testing something", () => {
+    assert.equal(Object.keys(surfaces).length, 4);
+    assert.ok(Object.keys(inks).length >= 9);
   });
 
-  test("every ink meets 4.5:1 on a card as well", () => {
-    for (const [name, hex] of Object.entries(inks)) {
-      const r = contrast(hex, CARD);
-      assert.ok(r >= 4.5, `${name} ${hex} is ${r.toFixed(2)}:1 on a card, below the 4.5:1 minimum`);
+  test("every ink meets 4.5:1 on every surface", () => {
+    const failures = [];
+    for (const [sName, ground] of Object.entries(surfaces)) {
+      for (const [iName, hex] of Object.entries(inks)) {
+        const r = contrast(hex, ground);
+        if (r < 4.5) failures.push(`${iName} ${hex} on ${sName} ${ground} is ${r.toFixed(2)}:1`);
+      }
+    }
+    assert.deepEqual(failures, [], `below the 4.5:1 minimum:\n  ${failures.join("\n  ")}`);
+  });
+
+  test("text on the accent is dark, not light", () => {
+    // Lime is a background for a primary action. Light text on it is the
+    // classic way an accent colour becomes unreadable.
+    assert.ok(contrast(token("bw-accent-ink"), token("bw-accent")) >= 4.5);
+  });
+
+  test("the subtle ink is the one that needed correcting, and it holds", () => {
+    // The proposed #6F7C85 failed on three of four surfaces (3.94 at worst).
+    for (const ground of Object.values(surfaces)) {
+      assert.ok(contrast(token("bw-subtle"), ground) >= 4.5);
+    }
+    assert.ok(contrast("#6F7C85", surfaces["bw-surface-2"]) < 4.5,
+      "if this passes, the surface changed and the correction can be revisited");
+  });
+
+  test("the legacy aliases point at the new tokens, so old styles move with them", () => {
+    // 1,382 inline styles reference the original seven names. They keep working
+    // only because those names are now aliases.
+    for (const [alias, target] of [["bg", "bw-bg"], ["panel", "bw-surface"], ["line", "bw-border"],
+                                   ["text", "bw-text"], ["muted", "bw-muted"], ["lime", "bw-accent"]]) {
+      assert.match(html, new RegExp(`--${alias}\\s*:\\s*var\\(--${target}\\)`),
+        `--${alias} must alias --${target}, or existing inline styles fall out of the palette`);
     }
   });
 
