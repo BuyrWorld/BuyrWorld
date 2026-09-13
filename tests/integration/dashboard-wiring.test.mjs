@@ -21,6 +21,7 @@ import { costBridge, formatPercent } from "../../src/calc/cost-bridge.mjs";
 import { recordOutcome } from "../../src/calc/outcome.mjs";
 import { portfolio } from "../../src/calc/portfolio.mjs";
 import { learningCorpus, whatWorks, captureGaps } from "../../src/calc/learning.mjs";
+import { scanOpportunities } from "../../src/calc/radar.mjs";
 import { ratioFromPercent as pc, moneyFromDecimal, moneyToDecimalString } from "../../src/calc/exact.mjs";
 
 const html = readFileSync("index.html", "utf8");
@@ -225,5 +226,97 @@ describe("it stays honest and safe", () => {
   test("the page says where the data came from", () => {
     assert.match(html, /computed from the cases and outcomes stored in this browser/);
     assert.match(html, /nothing is carried over from anyone else/);
+  });
+});
+
+describe("the radar leads the workspace", () => {
+  const DRIVER = [{ id: "freight", label: "Freight", weight: pc("12"), indexMovement: pc("10") }];
+  const claim = (requested) => costBridge({
+    baseline: { unitPrice: moneyFromDecimal("100.00", "GBP"), annualVolume: 50_000 },
+    requestedChange: pc(requested), drivers: DRIVER,
+  });
+  const past = (at) => recordOutcome({
+    bridge: claim("9"), agreedChange: pc("8"),
+    meta: { supplier: "Alpha Castings Ltd", recordedAt: at, caseId: "c-" + at },
+  });
+
+  function renderRadar({ outcomes = [], cases = [], parts = [] } = {}) {
+    const out = { innerHTML: "" };
+    const sandbox = {
+      document: { getElementById: (id) => (id === "dash-out" ? out : null) },
+      window: {
+        BW: {
+          portfolio, learningCorpus, whatWorks, captureGaps, scanOpportunities,
+          formatPercent, moneyToDecimalString,
+          loadOutcomes: () => outcomes,
+          loadCases: () => cases,
+          listCases: () => cases,
+          loadParts: () => parts,
+          forComparison: (p) => p,
+        },
+        MI: {},
+      },
+      MI: {},
+      ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
+      attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+      console,
+    };
+    const src = html.slice(html.indexOf("function defPortfolio(){"), html.indexOf("\nfunction defHistoryHTML(){"));
+    vm.createContext(sandbox);
+    new vm.Script(src + "\n;renderDash();").runInContext(sandbox);
+    return out.innerHTML;
+  }
+
+  test("it is rendered above the other panels", () => {
+    assert.match(html, /'<div style="margin-bottom:var\(--bw-4\)">'\+dashRadarHTML\(\)/);
+    const out = renderRadar();
+    assert.ok(out.indexOf("What needs asking about") < out.indexOf("Needs attention"));
+  });
+
+  test("an empty corpus lists what is not being looked at", () => {
+    const out = renderRadar();
+    assert.match(out, /nothing recorded to look at/);
+    assert.match(out, /Not being looked at/);
+    assert.match(out, /Contract dates are not held anywhere/);
+  });
+
+  test("a real pattern appears with its rule and its action", () => {
+    const out = renderRadar({ outcomes: [past("2024-01"), past("2025-01"), past("2026-01")] });
+    assert.match(out, /claims Freight every time and has never evidenced it/);
+    assert.match(out, /Ask for the Freight breakdown/);
+    assert.match(out, /bw-status--high/);
+  });
+
+  test("a finding with no figure says so rather than showing a zero", () => {
+    const out = renderRadar({ outcomes: [past("2024-01"), past("2025-01"), past("2026-01")] });
+    assert.match(out, /not quantified/);
+    assert.equal(/GBP 0\.00/.test(out), false);
+  });
+
+  test("the page computes none of it", () => {
+    const fn = html.slice(html.indexOf("function dashRadar()"), html.indexOf("\nfunction renderDash()"));
+    assert.ok(fn.length > 500);
+    assert.equal(/parseFloat|toFixed|\*\s*100/.test(fn.replace(/\/\*[\s\S]*?\*\//g, "")), false);
+    assert.match(fn, /window\.BW\.scanOpportunities/);
+  });
+
+  test("a store that throws leaves the workspace standing", () => {
+    const sandbox = {
+      document: { getElementById: () => ({ innerHTML: "" }) },
+      window: { BW: { portfolio, learningCorpus, whatWorks, captureGaps, scanOpportunities,
+        loadOutcomes() { throw new Error("blocked"); }, loadCases() { throw new Error("blocked"); },
+        listCases() { throw new Error("blocked"); }, loadParts() { throw new Error("blocked"); } } },
+      ciEsc: String, attrEsc: String, console,
+    };
+    const src = html.slice(html.indexOf("function defPortfolio(){"), html.indexOf("\nfunction defHistoryHTML(){"));
+    vm.createContext(sandbox);
+    assert.doesNotThrow(() => new vm.Script(src + "\n;renderDash();").runInContext(sandbox));
+  });
+
+  test("the spend analyser keeps its result so the radar can see it", () => {
+    // Nothing is persisted; if nobody ran an analysis, spend is invisible and
+    // the blind-spot list says so rather than the radar guessing.
+    assert.match(html, /MI\.spendAnalysis=A\.ok\?A:null/);
   });
 });

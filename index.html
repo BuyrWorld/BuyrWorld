@@ -2666,11 +2666,74 @@ function dashLearningHTML(){
     {action:W.solidPatterns+" solid"});
 }
 
+/* ---------------------------------------------------------------- radar ---
+   What is worth asking about, across everything recorded. The page renders it;
+   every finding, figure and severity comes from the engine. */
+
+function dashRadar(){
+  if(!window.BW||!window.BW.scanOpportunities)return null;
+  var outcomes=[],cases=[],parts=[],spend=null;
+  try{ outcomes=window.BW.loadOutcomes()||[]; }catch(e){}
+  try{ cases=window.BW.loadCases?window.BW.loadCases():[]; }catch(e){}
+  try{ parts=(window.BW.loadParts()||[]).map(window.BW.forComparison); }catch(e){}
+  /* The spend analysis is whatever is on screen in the analyser. Nothing is
+     stored, so if nobody has run one the radar simply cannot see spend. */
+  try{ spend=(window.MI&&MI.spendAnalysis)||null; }catch(e){ spend=null; }
+  try{ return window.BW.scanOpportunities({spend:spend,outcomes:outcomes,cases:cases,parts:parts,suppliers:[]}); }
+  catch(e){ return null; }
+}
+
+function dashRadarHTML(){
+  var R=dashRadar();
+  if(!R)return "";
+
+  var chip=function(sev){
+    var v=sev==="high"?"high":sev==="medium"?"medium":"low";
+    return '<span class="bw-status bw-status--'+v+'">'+ciEsc(sev)+'</span>';
+  };
+
+  if(!R.counts.total){
+    return dashPanel("What needs asking about",
+      '<p style="font-size:var(--bw-t-body);color:var(--bw-muted);margin:0 0 var(--bw-3);line-height:1.6">'+ciEsc(R.headline)+'</p>'
+      +'<div class="eyebrow" style="margin-bottom:6px">Not being looked at</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:var(--bw-muted)">'
+      +R.blindSpots.map(function(b){return '<li>'+ciEsc(b)+'</li>';}).join("")+'</ul>');
+  }
+
+  var rows=R.opportunities.slice(0,8).map(function(o){
+    return '<div class="bw-list-row" style="align-items:flex-start">'
+      +'<div class="bw-list-main">'
+      +'<div class="bw-list-title">'+ciEsc(o.title)+' '+chip(o.severity)+'</div>'
+      +'<div class="bw-list-sub" style="margin-top:2px">'+ciEsc(o.why)+'</div>'
+      +'<div class="bw-list-sub" style="margin-top:4px;color:var(--bw-body)">'+ciEsc(o.action)+'</div>'
+      +(o.missing.length?'<div class="bw-list-sub" style="margin-top:4px;color:var(--bw-warning)">'+ciEsc(o.missing[0])+'</div>':'')
+      +'</div>'
+      +(o.valueAtStake
+        ? '<div style="text-align:right;white-space:nowrap"><div class="bw-metric-label">At stake</div>'
+          +'<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-variant-numeric:tabular-nums">'
+          +ciEsc(o.valueAtStake.currency)+' '+window.BW.moneyToDecimalString(o.valueAtStake)+'</div></div>'
+        : '<div style="text-align:right;white-space:nowrap"><div class="bw-metric-label">At stake</div>'
+          +'<div style="color:var(--bw-muted)">not quantified</div></div>')
+      +'</div>';
+  }).join("");
+
+  return dashPanel("What needs asking about",
+    '<p style="font-size:var(--bw-t-body);color:var(--bw-body);margin:0 0 var(--bw-3)">'+ciEsc(R.headline)+'</p>'
+    +rows
+    +(R.blindSpots.length
+      ? '<p style="font-size:var(--bw-t-meta);color:var(--bw-warning);margin:var(--bw-4) 0 0;line-height:1.5">Not looked at: '
+        +ciEsc(R.blindSpots.join(" "))+'</p>'
+      : '')
+    +'<p style="font-size:var(--bw-t-meta);color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.5">'+ciEsc(R.method)+'</p>',
+    {action:R.counts.high+" pressing"});
+}
+
 function renderDash(){
   var out=document.getElementById("dash-out");
   if(!out||!window.BW)return;
   out.innerHTML=
-    '<div class="bw-grid bw-grid-wide" style="margin-bottom:var(--bw-4)">'
+    '<div style="margin-bottom:var(--bw-4)">'+dashRadarHTML()+'</div>'
+    +'<div class="bw-grid bw-grid-wide" style="margin-bottom:var(--bw-4)">'
       +dashAttentionHTML()+dashPositionHTML()
     +'</div>'
     +'<div class="bw-grid bw-grid-2">'
@@ -4939,6 +5002,8 @@ function analyseSpend(){
     return;
   }
   const A=window.BW.analyseSpendExact(window.BW.parseSpendCsv(raw));
+  // Kept in memory only, so the radar can look at what was last analysed.
+  try{ window.MI=window.MI||{}; MI.spendAnalysis=A.ok?A:null; }catch(e){}
   if(!A.ok){ out.innerHTML='<p style="color:var(--muted);font-size:14px">'+ciEsc(A.reason)+'</p>'; return; }
   const maj=function(m){return Number(m.minor)/100;};
   const shr=function(r){return Number(r)/1e9;};
@@ -5258,6 +5323,7 @@ async function send(id,text){
   import { classify, nextActions } from "./src/intake/classify.mjs";
   import { alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL } from "./src/calc/batna.mjs";
   import { comparablePart, compare, findComparable, priceGap, ATTRIBUTES } from "./src/calc/comparable.mjs";
+  import { scanOpportunities, SEVERITY } from "./src/calc/radar.mjs";
   import { part as makePart, savePart, loadParts, deletePart, storeStatus as partStoreStatus,
            forComparison } from "./src/services/part-store.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
@@ -5283,6 +5349,7 @@ async function send(id,text){
                 classify, nextActions,
                 alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL,
                 comparablePart, compare, findComparable, priceGap, ATTRIBUTES,
+                scanOpportunities, SEVERITY,
                 makePart, savePart, loadParts, deletePart, partStoreStatus, forComparison,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,

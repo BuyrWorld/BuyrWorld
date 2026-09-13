@@ -32,6 +32,8 @@ Priorities below are design intent, not progress. What has actually shipped:
 
 | Comparable parts | P2 | **Built.** `comparable.mjs` compares on twelve weighted attributes rather than on part number, names what matched and what differed, and reports comparability against checkable weight with coverage beside it. The price gap is split into what stated differences account for and what nothing does. It never calls a part overpriced. Wired: a Parts library records what a part is, and comparison reads from it. |
 
+| Commercial opportunity radar | P2 | **Built and wired.** `radar.mjs` reads across spend, outcomes, cases, parts and suppliers and reports what is worth asking about, each finding carrying its rule, evidence, action and what is missing. A signal needing data nobody recorded does not fire, and the blind spots are listed so an empty result is legible. Findings are never totalled. |
+
 ## 1. Document ingestion and bid normalisation
 
 | | |
