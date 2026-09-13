@@ -88,6 +88,14 @@
   --lime:var(--bw-accent);
 }
 
+/* A labelled input. Repeated 25 times in the claim form alone, previously with
+   its type size and colour written out each time. */
+.bw-field{display:block;font-size:var(--bw-t-meta);color:var(--bw-muted)}
+.bw-field > .bwin{margin-top:var(--bw-1)}
+/* A row of them. Wraps rather than shrinking: a field narrower than its own
+   label is worse than a second row. */
+.bw-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:var(--bw-3)}
+
 /* ==================== application shell ====================
    Desktop gets a sidebar; the marketing header becomes a slim top bar. Nothing
    in the DOM moved to achieve this — only padding and a fixed panel. */
@@ -645,25 +653,25 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <div id="def-cases" style="margin-bottom:20px"></div>
 
       <div class="eyebrow" style="margin-bottom:8px">1 &middot; Baseline and request</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">
-        <label style="font-size:12px;color:var(--muted)">Case reference<input class="bwin" id="def-case" placeholder="SC-001"></label>
-        <label style="font-size:12px;color:var(--muted)">Supplier<input class="bwin" id="def-supplier" placeholder="fictional name only"></label>
-        <label style="font-size:12px;color:var(--muted)">Unit price<input class="bwin" id="def-price" value="100.00" inputmode="decimal"></label>
-        <label style="font-size:12px;color:var(--muted)">Currency<input class="bwin" id="def-currency" value="GBP" maxlength="3"></label>
-        <label style="font-size:12px;color:var(--muted)">Annual volume<input class="bwin" id="def-volume" value="50000" inputmode="numeric"></label>
-        <label style="font-size:12px;color:var(--muted)">Requested %<input class="bwin" id="def-request" value="9" inputmode="decimal"></label>
-        <label style="font-size:12px;color:var(--muted)">Contract cap % (optional)<input class="bwin" id="def-cap" placeholder="none" inputmode="decimal"></label>
-        <label style="font-size:12px;color:var(--muted)">Retrospective months<input class="bwin" id="def-retro" value="0" inputmode="numeric"></label>
+      <div class="bw-fields">
+        <label class="bw-field">Case reference<input class="bwin" id="def-case" placeholder="SC-001"></label>
+        <label class="bw-field">Supplier<input class="bwin" id="def-supplier" placeholder="fictional name only"></label>
+        <label class="bw-field">Unit price<input class="bwin" id="def-price" value="100.00" inputmode="decimal"></label>
+        <label class="bw-field">Currency<input class="bwin" id="def-currency" value="GBP" maxlength="3"></label>
+        <label class="bw-field">Annual volume<input class="bwin" id="def-volume" value="50000" inputmode="numeric"></label>
+        <label class="bw-field">Requested %<input class="bwin" id="def-request" value="9" inputmode="decimal"></label>
+        <label class="bw-field">Contract cap % (optional)<input class="bwin" id="def-cap" placeholder="none" inputmode="decimal"></label>
+        <label class="bw-field">Retrospective months<input class="bwin" id="def-retro" value="0" inputmode="numeric"></label>
       </div>
 
       <div class="eyebrow" style="margin:18px 0 8px">2 &middot; Currency <span style="text-transform:none;letter-spacing:0">(only if they price in a different currency from your reporting one)</span></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">
-        <label style="font-size:12px;color:var(--muted)">Report in<input class="bwin" id="def-fx-to" placeholder="none" maxlength="3"></label>
-        <label style="font-size:12px;color:var(--muted)">Rate at baseline<input class="bwin" id="def-fx-base" placeholder="0.8500" inputmode="decimal"></label>
-        <label style="font-size:12px;color:var(--muted)">Baseline date<input class="bwin" id="def-fx-base-at" placeholder="2025-01"></label>
-        <label style="font-size:12px;color:var(--muted)">Rate now<input class="bwin" id="def-fx-now" placeholder="0.8800" inputmode="decimal"></label>
-        <label style="font-size:12px;color:var(--muted)">Rate date<input class="bwin" id="def-fx-now-at" placeholder="2026-06"></label>
-        <label style="font-size:12px;color:var(--muted)">Rate source<input class="bwin" id="def-fx-src" placeholder="where the rates came from"></label>
+      <div class="bw-fields">
+        <label class="bw-field">Report in<input class="bwin" id="def-fx-to" placeholder="none" maxlength="3"></label>
+        <label class="bw-field">Rate at baseline<input class="bwin" id="def-fx-base" placeholder="0.8500" inputmode="decimal"></label>
+        <label class="bw-field">Baseline date<input class="bwin" id="def-fx-base-at" placeholder="2025-01"></label>
+        <label class="bw-field">Rate now<input class="bwin" id="def-fx-now" placeholder="0.8800" inputmode="decimal"></label>
+        <label class="bw-field">Rate date<input class="bwin" id="def-fx-now-at" placeholder="2026-06"></label>
+        <label class="bw-field">Rate source<input class="bwin" id="def-fx-src" placeholder="where the rates came from"></label>
       </div>
       <div style="color:var(--muted);font-size:11.5px;margin-top:6px">Leave blank unless the supplier prices in another currency. A rate with no date and no source is not evidence, so all six are required together.</div>
 
@@ -679,12 +687,12 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       </div>
       <div id="def-extract" style="margin-top:12px"></div>
       <div class="eyebrow" style="margin:18px 0 8px">5 &middot; Your position <span style="text-transform:none;letter-spacing:0">(optional &mdash; decides whether walking away is credible)</span></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">
-        <label style="font-size:12px;color:var(--muted)">Qualified alternatives<input class="bwin" id="def-alts" placeholder="how many" inputmode="numeric"></label>
-        <label style="font-size:12px;color:var(--muted)">Qualification weeks<input class="bwin" id="def-qual" placeholder="e.g. 12" inputmode="numeric"></label>
-        <label style="font-size:12px;color:var(--muted)">Notice period weeks<input class="bwin" id="def-notice" placeholder="e.g. 26" inputmode="numeric"></label>
-        <label style="font-size:12px;color:var(--muted)">Switching cost<input class="bwin" id="def-switch" placeholder="one-off total" inputmode="decimal"></label>
-        <label style="font-size:12px;color:var(--muted)">Criticality<select class="bwin" id="def-crit"><option value="">not stated</option><option value="standard">standard</option><option value="critical">critical</option><option value="single-source">single-source</option></select></label>
+      <div class="bw-fields">
+        <label class="bw-field">Qualified alternatives<input class="bwin" id="def-alts" placeholder="how many" inputmode="numeric"></label>
+        <label class="bw-field">Qualification weeks<input class="bwin" id="def-qual" placeholder="e.g. 12" inputmode="numeric"></label>
+        <label class="bw-field">Notice period weeks<input class="bwin" id="def-notice" placeholder="e.g. 26" inputmode="numeric"></label>
+        <label class="bw-field">Switching cost<input class="bwin" id="def-switch" placeholder="one-off total" inputmode="decimal"></label>
+        <label class="bw-field">Criticality<select class="bwin" id="def-crit"><option value="">not stated</option><option value="standard">standard</option><option value="critical">critical</option><option value="single-source">single-source</option></select></label>
       </div>
       <div style="color:var(--muted);font-size:11.5px;margin-top:6px">Leave blank and the walk-away question is reported as unknown rather than guessed.</div>
 
@@ -703,13 +711,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <details style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px">
         <summary style="cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:15px">6 &middot; Record what was agreed</summary>
         <p style="color:var(--muted);font-size:13.5px;line-height:1.6;margin:10px 0 14px">Once the negotiation closes, record the outcome. The amount avoided is calculated from the analysis above &mdash; it is not typed in, because a saving somebody typed is not a saving. Outcomes stay in this browser and are never sent anywhere.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
-          <label style="font-size:12px;color:var(--muted)">Agreed %<input class="bwin" id="oc-agreed" inputmode="decimal" placeholder="4.5"></label>
-          <label style="font-size:12px;color:var(--muted)">They wanted it from<input class="bwin" id="oc-from-req" placeholder="2026-09"></label>
-          <label style="font-size:12px;color:var(--muted)">Agreed from<input class="bwin" id="oc-from-agr" placeholder="2026-12"></label>
-          <label style="font-size:12px;color:var(--muted)">Review date<input class="bwin" id="oc-review" placeholder="2027-09"></label>
-          <label style="font-size:12px;color:var(--muted)">Approved by<input class="bwin" id="oc-by" placeholder="role, not a name"></label>
-          <label style="font-size:12px;color:var(--muted)">Category<input class="bwin" id="oc-category" placeholder="Fabrications"></label>
+        <div class="bw-fields">
+          <label class="bw-field">Agreed %<input class="bwin" id="oc-agreed" inputmode="decimal" placeholder="4.5"></label>
+          <label class="bw-field">They wanted it from<input class="bwin" id="oc-from-req" placeholder="2026-09"></label>
+          <label class="bw-field">Agreed from<input class="bwin" id="oc-from-agr" placeholder="2026-12"></label>
+          <label class="bw-field">Review date<input class="bwin" id="oc-review" placeholder="2027-09"></label>
+          <label class="bw-field">Approved by<input class="bwin" id="oc-by" placeholder="role, not a name"></label>
+          <label class="bw-field">Category<input class="bwin" id="oc-category" placeholder="Fabrications"></label>
         </div>
         <div class="eyebrow" style="margin:14px 0 6px">What you argued, and whether it moved them</div>
         <div id="oc-args"></div>

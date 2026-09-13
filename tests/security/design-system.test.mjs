@@ -243,3 +243,38 @@ describe("the application shell", () => {
     assert.equal(/input|search/i.test(side), false, "a search box that searches nothing is decoration");
   });
 });
+
+describe("form fields use the primitive", () => {
+  test("the repeated label is a class, not typed out 25 times", () => {
+    assert.match(css, /\.bw-field\{display:block;font-size:var\(--bw-t-meta\);color:var\(--bw-muted\)\}/);
+    assert.equal(/<label style="font-size:12px;color:var\(--muted\)">/.test(html), false,
+      "the hand-typed field label should be gone");
+  });
+
+  test("one field grid serves every form", () => {
+    // Three of these differed only by a minmax value picked by eye — 120, 130,
+    // 140 — which is the "different spacing per feature" the north star warns of.
+    assert.match(css, /\.bw-fields\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(128px,1fr\)\)/);
+    assert.equal(/grid-template-columns:repeat\(auto-fit,minmax\(1[234]0px,1fr\)\);gap:10px/.test(html), false,
+      "the hand-typed field grids should be gone");
+  });
+
+  test("every migrated field kept its input and its accessible name", () => {
+    // 25 labels changed at once; a silent break here would be a form that looks
+    // right and cannot be filled in.
+    const page = html.slice(html.indexOf('id="page-tool-defender"'), html.indexOf('id="page-tool-sim"'));
+    const wired = [...page.matchAll(/<label class="bw-field">([^<]*)<(input|select|textarea)[^>]*id="([a-z0-9-]+)"/g)];
+    assert.equal(wired.length, (page.match(/<label class="bw-field">/g) || []).length,
+      "a label lost its control");
+    assert.ok(wired.length >= 20, `expected the claim form's fields, found ${wired.length}`);
+    for (const [whole, text] of wired) {
+      assert.ok(/aria-label=/.test(whole) || text.trim().length > 2,
+        `a field has neither a visible label nor an aria-label: ${whole.slice(0, 70)}`);
+    }
+  });
+
+  test("the input reset still restores a focus ring", () => {
+    // .bwin removes the outline; the field primitive must not have hidden that.
+    assert.match(css, /input\.bwin:focus-visible[^{]*\{[^}]*outline:3px solid/);
+  });
+});
