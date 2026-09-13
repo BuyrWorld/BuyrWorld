@@ -846,9 +846,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ TEMPLATES ============ -->
 <div class="page" id="page-templates">
   <section class="sec"><div class="wrap">
-    <div class="eyebrow" style="margin-bottom:10px">Marketplace</div>
+    <div class="eyebrow" style="margin-bottom:10px">Reference library</div>
     <h2 style="font-size:34px;margin-bottom:10px">Procurement templates</h2>
-    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Preview, buy once, use forever — or go Pro for unlimited access.</p>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">The document structures these tools assume, published so the method can be inspected rather than taken on trust. Every preview is <b style="color:var(--text)">illustrative and synthetic</b> — nothing here is for sale.</p>
     <div class="grid3" id="tpl-all"></div>
   </div></section>
 </div>
@@ -1033,15 +1033,34 @@ const FEATURES=[
 ["Buyr AI","Your AI procurement assistant — drafts RFQs, compares quotes, builds strategies and scores risk in seconds.","ai",'<path d="M3 5h13a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 4v-4H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M19 8l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>'],
 ["AI Tools","Nine working tools: Price-Increase Defender, Negotiation Simulator, Quote Comparator, Contract Intelligence and more.","tools",'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2.2"/><circle cx="8" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/>'],
 ["Spend Analyser","Upload spend data for an instant dashboard — Pareto, concentration risk, savings opportunity and exportable reports.","spend",'<circle cx="12" cy="12" r="8.5"/><path d="M12 12V3.5"/><path d="M12 12l6 6"/>'],
-["Templates","Battle-tested RFQs, scorecards, planners and policies from real sourcing events. Download, edit, send.","templates",'<path d="M8 3h8l4 4v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M16 3v4h4"/><path d="M4 7v13a1 1 0 0 0 1 1h11"/><path d="M10 11h7M10 14h7"/>'],
+["Templates","The document structures these tools assume — RFQs, scorecards, planners and policies, published as illustrative samples.","templates",'<path d="M8 3h8l4 4v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M16 3v4h4"/><path d="M4 7v13a1 1 0 0 0 1 1h11"/><path d="M10 11h7M10 14h7"/>'],
 ["Academy","Seven structured pathways and 38 modules — from first PO to CIPS-ready strategic sourcing.","academy",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/>'],
 ["Market Intelligence","Live markets, AI-searched commodity briefings, your exposure and a cost-shock simulator — the procurement market terminal.","market",'<path d="M3 20h18"/><path d="M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>']];
 const PILLARS=[
 ["Intelligence","Live markets, daily AI briefings, commodity & labour intel, your exposure mapped.","market",'<path d="M3 20h18"/><path d="M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>',"market"],
 ["Workflows","RFQs, quote comparisons, contract reviews, spend analysis, negotiation prep — done in minutes.","tools",'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2.2"/><circle cx="8" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/>',"tools"],
 ["Learn","Structured Academy pathways and a weekly blog — from first PO to category leadership and CIPS.","academy",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/>',"academy"],
-["Supplier Scorecard","",4.8,"Weighted QCDS scoring with traffic-light dashboards and review cadence.","SRM","supplier-scorecard"],["Negotiation Planner","",4.9,"Targets, walk-aways, concessions ladder and counterpart analysis on one page.","Negotiation","negotiation-planner"],["Category Strategy Pack","",4.7,"Kraljic positioning, market analysis, levers and a board-ready strategy deck.","Strategy","category-strategy-pack"],["Supplier Risk Matrix","",4.8,"Financial, geographic, single-source and ESG risk in one weighted model.","Risk","supplier-risk-matrix"],["Contract Review Checklist","",4.6,"40 clauses buyers miss — liability caps, indexation, exit and IP.","Contracts","contract-review-checklist"],["Cost Saving Tracker","",4.8,"Pipeline-to-banked savings tracker your finance team will actually sign off.","Value","cost-saving-tracker"],["Procurement Policy Template","",4.7,"Thresholds, approvals and ethics policy ready for SME adoption in a day.","Governance","procurement-policy-template"]];
-const tplCard=([t,p,r,d,c,slug])=>`<div class="flip-tpl${["supplier-scorecard","supplier-risk-matrix","cost-saving-tracker"].includes(slug)?" is-xlsx":""}" id="tpl-${slug}"><div class="tpl-front"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span class="tag">${c}</span></div><h3 style="font-size:16px;margin-bottom:6px">${t}</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.5">${d}</p><div style="font-size:13px;color:var(--muted);margin:12px 0 14px">Reference structure · sample preview only</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost" style="padding:9px 16px;font-size:13px" onclick="tplFlip('${slug}')">Preview</button></div></div><div class="tpl-back"><div class="tpl-back-wrap"><img class="tpl-preview-img" loading="lazy" src="previews/${slug}.jpg" alt="${t} sample preview"><div class="tpl-back-bar"><button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="tplFlip('${slug}')">Back</button></div></div></div></div>`;
+["Method","Every figure is calculated in the open, labelled supplied, derived or assumed, and checked by tests.","about",'<path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9z"/><path d="M8.5 12.2l2.4 2.4 4.6-4.9"/>',"about"]];
+document.getElementById("pillars").innerHTML=PILLARS.map(([t,d,_ic,icon,dest])=>`
+<div class="card glow-hover" role="button" tabindex="0" onkeydown="cardKey(event)" style="cursor:pointer" onclick="go('${dest}')">
+  <svg viewBox="0 0 24 24" aria-hidden="true" style="width:26px;height:26px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;margin-bottom:12px">${icon}</svg>
+  <h3 style="font-size:18px;margin-bottom:8px">${t}</h3>
+  <p style="color:var(--muted);font-size:13.5px;line-height:1.55">${d}</p>
+  <span style="color:var(--lime);font-family:'Space Grotesk';font-weight:600;font-size:13px;display:inline-block;margin-top:12px">Go →</span>
+</div>`).join("");
+document.getElementById("features").innerHTML=FEATURES.map(([t,d,dest,icon])=>`
+<div class="flip" role="button" tabindex="0" onkeydown="cardKey(event)" onclick="go('${dest}')">
+  <div class="flip-inner">
+    <div class="flip-face flip-front"><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><h3 style="font-size:17px">${t}</h3></div>
+    <div class="flip-face flip-back"><p style="color:#CFCFCF;font-size:14px;line-height:1.6">${d}</p>
+    <span style="color:var(--lime);font-family:'Space Grotesk';font-weight:600;font-size:13.5px">Open ${t} →</span></div>
+  </div>
+</div>`).join("");
+
+// Reference structures shown as sample previews. Illustrative and synthetic:
+// no real sourcing event, supplier or price is represented here.
+const TPL=[["RFQ Template","Specification, commercial terms and weighted evaluation sections, laid out so quotes come back comparable.","Sourcing","rfq-template"],["Supplier Scorecard","Weighted quality, cost, delivery and service scoring with traffic-light dashboards and a review cadence.","SRM","supplier-scorecard"],["Negotiation Planner","Targets, walk-aways, a concessions ladder and counterpart analysis on one page.","Negotiation","negotiation-planner"],["Category Strategy Pack","Kraljic positioning, market analysis, levers and a board-ready strategy outline.","Strategy","category-strategy-pack"],["Supplier Risk Matrix","Financial, geographic, single-source and ESG risk in one weighted model.","Risk","supplier-risk-matrix"],["Contract Review Checklist","Forty clauses buyers commonly miss — liability caps, indexation, exit and IP.","Contracts","contract-review-checklist"],["Cost Saving Tracker","Pipeline-to-banked tracking with the evidence stages a finance team needs to sign a saving off.","Value","cost-saving-tracker"],["Procurement Policy Template","Thresholds, approvals and an ethics policy sized for a small organisation.","Governance","procurement-policy-template"]];
+const tplCard=([t,d,c,slug])=>`<div class="flip-tpl${["supplier-scorecard","supplier-risk-matrix","cost-saving-tracker"].includes(slug)?" is-xlsx":""}" id="tpl-${slug}"><div class="tpl-front"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span class="tag">${c}</span></div><h3 style="font-size:16px;margin-bottom:6px">${t}</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.5">${d}</p><div style="font-size:13px;color:var(--muted);margin:12px 0 14px">Reference structure · sample preview only</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost" style="padding:9px 16px;font-size:13px" onclick="tplFlip('${slug}')">Preview</button></div></div><div class="tpl-back"><div class="tpl-back-wrap"><img class="tpl-preview-img" loading="lazy" src="previews/${slug}.jpg" alt="${t} sample preview"><div class="tpl-back-bar"><button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="tplFlip('${slug}')">Back</button></div></div></div></div>`;
 function tplFlip(slug){var el=document.getElementById("tpl-"+slug);if(el)el.classList.toggle("flipped");}
 document.getElementById("tpl-all").innerHTML=TPL.map(tplCard).join("");
 
