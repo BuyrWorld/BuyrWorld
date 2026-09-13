@@ -88,6 +88,40 @@
   --lime:var(--bw-accent);
 }
 
+/* ==================== application shell ====================
+   Desktop gets a sidebar; the marketing header becomes a slim top bar. Nothing
+   in the DOM moved to achieve this — only padding and a fixed panel. */
+.bw-side{display:none}
+@media(min-width:1080px){
+  .bw-side{
+    display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:236px;z-index:60;
+    background:var(--bw-sidebar);border-right:1px solid var(--bw-border);padding:var(--bw-5) var(--bw-3);overflow-y:auto;
+  }
+  header{padding-left:236px}
+  main{padding-left:236px}
+  /* One navigation, not two. The top nav is the mobile and narrow-desktop
+     affordance; where the sidebar exists it would only be a duplicate. */
+  #desknav{display:none}
+}
+.bw-side-brand{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;letter-spacing:-.02em;padding:0 var(--bw-3);margin-bottom:var(--bw-1)}
+.bw-side-brand span{color:var(--bw-accent)}
+.bw-side-tag{font-size:var(--bw-t-meta);color:var(--bw-subtle);padding:0 var(--bw-3);margin-bottom:var(--bw-6);line-height:1.45}
+.bw-side-nav{display:flex;flex-direction:column;gap:2px}
+.bw-side-link{
+  display:flex;align-items:center;gap:var(--bw-3);width:100%;text-align:left;
+  font-family:'Inter',sans-serif;font-size:var(--bw-t-body);color:var(--bw-muted);
+  background:none;border:0;border-radius:var(--bw-r-sm);padding:9px var(--bw-3);cursor:pointer;
+  transition:background .15s ease,color .15s ease;
+}
+.bw-side-link:hover{background:rgba(255,255,255,.04);color:var(--bw-text)}
+.bw-side-link[aria-current="page"]{background:var(--bw-surface);color:var(--bw-text)}
+/* The active marker is a lime rule, not a glow. */
+.bw-side-link[aria-current="page"]::before{content:"";position:absolute;left:0;width:3px;height:20px;background:var(--bw-accent);border-radius:0 2px 2px 0}
+.bw-side-link{position:relative}
+.bw-side-link:focus-visible{outline:3px solid var(--bw-accent);outline-offset:-2px}
+.bw-side-ico{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.bw-side-foot{margin-top:auto;padding:var(--bw-4) var(--bw-3) 0;border-top:1px solid var(--bw-border);font-size:var(--bw-t-meta);color:var(--bw-subtle);line-height:1.5}
+
 /* ==================== shared primitives ====================
    New classes. Nothing existing is removed or restyled: .card and .btn keep
    their own rules, and screens migrate onto these one at a time. */
@@ -407,6 +441,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   </div>
   <div id="mobmenu"></div>
 </header>
+
+<aside class="bw-side" id="bw-side" aria-label="Sections"></aside>
 
 <main id="main" tabindex="-1">
 
@@ -1177,10 +1213,57 @@ function cardKey(e){
 }
 
 function toggleMenu(){const m=document.getElementById("mobmenu");m.style.display=m.style.display==="flex"?"none":"flex";}
-function renderNav(){
-  document.getElementById("desknav").innerHTML=LINKS.map(([k,l])=>`<button class="navlink ${page===k?"on":""}"${page===k?' aria-current="page"':""} onclick="go('${k}')">${l}</button>`).join("")+`<button class="btn btn-lime" style="padding:8px 16px;font-size:13px;margin-left:8px" onclick="go('ai')">Start free</button>`;
-  document.getElementById("mobmenu").innerHTML=LINKS.map(([k,l])=>`<button class="navlink ${page===k?"on":""}"${page===k?' aria-current="page"':""} onclick="go('${k}')">${l}</button>`).join("");
+/* One line icon per destination. Only routes that exist appear here: a
+   sidebar advertising a Reports screen nobody built is worse than a short one. */
+const NAV_ICONS={
+  home:'<path d="M3 10.5 12 4l9 6.5"/><path d="M5 10v9h14v-9"/>',
+  inbox:'<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5 6h14l2 7v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5z"/>',
+  ai:'<path d="M3 5h13a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 4v-4H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>',
+  tools:'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+  market:'<path d="M3 20h18"/><path d="M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>',
+  spend:'<circle cx="12" cy="12" r="8.5"/><path d="M12 12V3.5"/><path d="M12 12l7 4.5"/>',
+  templates:'<path d="M8 3h8l4 4v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M16 3v5h4"/>',
+  academy:'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>',
+  blog:'<path d="M5 4h11l3 3v13H5z"/><path d="M8 9h8M8 13h8M8 17h5"/>',
+  contact:'<circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/>'
+};
+
+function navIcon(k){
+  var d=NAV_ICONS[k]||NAV_ICONS.tools;
+  return '<svg class="bw-side-ico" viewBox="0 0 24 24" aria-hidden="true">'+d+'</svg>';
 }
+
+function renderNav(){
+  var links=LINKS.map(function(x){
+    var k=x[0],l=x[1],on=page===k;
+    return '<button class="navlink'+(on?" on":"")+'"'+(on?' aria-current="page"':"")+' data-go="'+attrEsc(k)+'">'+ciEsc(l)+'</button>';
+  }).join("");
+  document.getElementById("desknav").innerHTML=links
+    +'<button class="btn btn-lime" style="padding:8px 16px;font-size:13px;margin-left:8px" data-go="ai">Start free</button>';
+  document.getElementById("mobmenu").innerHTML=links;
+
+  var side=document.getElementById("bw-side");
+  if(side){
+    side.innerHTML='<div class="bw-side-brand">Buyr<span>World</span></div>'
+      +'<div class="bw-side-tag">Evidence in. Commercial position out.</div>'
+      +'<nav class="bw-side-nav" aria-label="Sections">'
+      +LINKS.map(function(x){
+        var k=x[0],l=x[1],on=page===k;
+        return '<button class="bw-side-link" data-go="'+attrEsc(k)+'"'+(on?' aria-current="page"':"")+'>'
+          +navIcon(k)+'<span>'+ciEsc(l)+'</span></button>';
+      }).join("")
+      +'</nav>'
+      +'<div class="bw-side-foot">Synthetic demonstration data throughout. Nothing here is a real supplier, price or contract.</div>';
+  }
+}
+
+/* One listener for all three navigations. Attached once, at the document, so
+   the markup rebuilt on every route change needs no reattachment — and a
+   nine-item sidebar costs nothing against the inline-handler ceiling. */
+document.addEventListener("click",function(e){
+  var t=e.target&&e.target.closest?e.target.closest("[data-go]"):null;
+  if(t&&t.dataset.go)go(t.dataset.go);
+});
 renderNav();
 
 // ---------- Content data ----------

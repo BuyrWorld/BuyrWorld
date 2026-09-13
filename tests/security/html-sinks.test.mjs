@@ -25,10 +25,9 @@ const ESCAPERS = /^(ciEsc|attrEsc|esc|safeUrl|md|miBox|formatPercent|moneyToDeci
  * Each entry names why. Adding to this list is a deliberate act.
  */
 const ALLOWED = new Map([
-  // Navigation and page chrome, from hardcoded arrays in this file.
-  ["l", "nav label from the hardcoded LINKS array"],
-  ['page===k?"on":""', "a CSS class chosen by an internal comparison"],
-  ['page===k?\' aria-current="page"\':""', "an ARIA attribute chosen by an internal comparison"],
+  // Three navigation entries used to sit here. The sidebar rewrite escapes nav
+  // labels with ciEsc and builds the active state by concatenation rather than
+  // interpolation, so there is nothing left to excuse.
   ["elId", "an element id this code chose itself"],
   ["msgs[0]", "loader text from a hardcoded array"],
   ["etaHtml", "loader markup this code built"],
@@ -147,7 +146,7 @@ describe("the known CSP weakness is measured, not assumed away", () => {
     // Ratcheted down as delegation replaces them. Adding two capture fields
     // pushed this over 140 and the guard caught it; delegating the whole
     // argument row took it to 138 instead of raising the ceiling.
-    assert.ok(handlers <= 138, `inline handlers have grown to ${handlers}; they should be shrinking, not rising`);
+    assert.ok(handlers <= 135, `inline handlers have grown to ${handlers}; they should be shrinking, not rising`);
   });
 
   test("no new inline <script> blocks have appeared", () => {

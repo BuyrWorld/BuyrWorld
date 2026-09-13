@@ -150,7 +150,7 @@ describe("layout degrades rather than shrinking until unreadable", () => {
 describe("Phase 1 changed nothing but the paint", () => {
   test("no inline handlers were added", () => {
     const handlers = (html.match(/\son(click|input|change|load|error|submit)=/g) || []).length;
-    assert.ok(handlers <= 138, `inline handlers rose to ${handlers}`);
+    assert.ok(handlers <= 135, `inline handlers rose to ${handlers}`);
   });
 
   test("the existing card and button classes are untouched", () => {
@@ -164,5 +164,82 @@ describe("Phase 1 changed nothing but the paint", () => {
     for (const id of ["page-home", "page-inbox", "page-tool-defender", "page-spend", "page-market"]) {
       assert.match(html, new RegExp(`id="${id}"`), `${id} disappeared`);
     }
+  });
+});
+
+describe("the application shell", () => {
+  test("the sidebar exists, is labelled, and sits between the header and main", () => {
+    assert.match(html, /<aside class="bw-side" id="bw-side" aria-label="Sections">/);
+    assert.ok(html.indexOf('id="bw-side"') > html.indexOf("</header>"));
+    assert.ok(html.indexOf('id="bw-side"') < html.indexOf('<main id="main"'));
+  });
+
+  test("the skip link still precedes main, and every page is still inside it", () => {
+    // The shell is CSS, not a DOM restructure, precisely so these hold.
+    assert.ok(html.indexOf('class="skip-link"') < html.indexOf('<main id="main"'));
+    const mainStart = html.indexOf('<main id="main"');
+    const mainEnd = html.indexOf("</main>");
+    for (const m of html.matchAll(/<div class="page[^"]*" id="page-/g)) {
+      assert.ok(m.index > mainStart && m.index < mainEnd, "a page escaped the main landmark");
+    }
+  });
+
+  test("it appears only where there is room, and the top nav yields to it", () => {
+    assert.match(css, /\.bw-side\{display:none\}/, "narrow screens keep the existing mobile menu untouched");
+    const desktop = css.slice(css.indexOf("@media(min-width:1080px){"));
+    assert.match(desktop, /#desknav\{display:none\}/, "two navigations at once would be a duplicate");
+    assert.match(desktop, /header\{padding-left:236px\}/);
+    assert.match(desktop, /main\{padding-left:236px\}/);
+  });
+
+  test("the active destination is marked for a screen reader, not only in colour", () => {
+    assert.match(html, /aria-current="page"/);
+    assert.match(css, /\.bw-side-link\[aria-current="page"\]/);
+    assert.match(css, /\.bw-side-link\[aria-current="page"\]::before\{content:""/,
+      "the active marker is a rule, so it survives a colour-blind reading");
+  });
+
+  test("keyboard focus is visible on a sidebar link", () => {
+    assert.match(css, /\.bw-side-link:focus-visible\{outline:3px solid/);
+  });
+
+  test("the nav is built from LINKS, so it cannot advertise a route that does not exist", () => {
+    const render = html.slice(html.indexOf("function renderNav()"), html.indexOf("document.addEventListener(\"click\""));
+    assert.match(render, /side\.innerHTML=/);
+    assert.equal((render.match(/LINKS\.map/g) || []).length, 2, "one source of truth for destinations");
+  });
+
+  test("every destination in LINKS has an icon", () => {
+    const links = html.match(/const LINKS=\[(.*?)\];/s)[1];
+    const keys = [...links.matchAll(/\["([a-z-]+)",/g)].map((m) => m[1]);
+    assert.ok(keys.length >= 8);
+    const icons = html.slice(html.indexOf("const NAV_ICONS={"), html.indexOf("function navIcon"));
+    for (const k of keys) {
+      // A plain substring, not a constructed regex: escaping a key into one is
+      // a needless way to get this wrong, and it went wrong here first time.
+      assert.ok(icons.includes(`\n  ${k}:`), `${k} has no icon, so the sidebar would fall back`);
+    }
+  });
+
+  test("all three navigations are delegated, taking handlers down rather than up", () => {
+    const render = html.slice(html.indexOf("function renderNav()"), html.indexOf('document.addEventListener("click"'));
+    assert.equal(/onclick=/.test(render), false, "a nine-item sidebar must not add nine handlers");
+    assert.match(html, /document\.addEventListener\("click",function\(e\)\{[\s\S]{0,200}closest\("\[data-go\]"\)/);
+  });
+
+  test("nav labels are escaped, which they were not before", () => {
+    const render = html.slice(html.indexOf("function renderNav()"), html.indexOf('document.addEventListener("click"'));
+    assert.match(render, /ciEsc\(l\)/);
+  });
+
+  test("the sidebar says the data is synthetic", () => {
+    assert.match(html, /Synthetic demonstration data throughout/);
+  });
+
+  test("no decorative control was invented", () => {
+    // The reference has a search field and a status light. Neither has anything
+    // behind it here yet, and the north star forbids non-functional controls.
+    const side = html.slice(html.indexOf('id="bw-side"'), html.indexOf('<main id="main"'));
+    assert.equal(/input|search/i.test(side), false, "a search box that searches nothing is decoration");
   });
 });
