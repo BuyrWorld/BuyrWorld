@@ -53,6 +53,13 @@ still does not know a case exists.
 Cases are saved locally and can be resumed days later (`src/services/case-store.mjs`),
 so a claim no longer has to be finished in one sitting.
 
+A workspace dashboard lives at the `dash` route, separate from the public home
+page. It is built only from what the engines can answer: open cases, exposure
+still in dispute, the resisted rate with its coverage, supplier records and the
+learning patterns with their sample sizes. Cards the reference shows but the
+data cannot support — a savings tracker, an opportunity radar, market signals
+tied to live positions — are absent rather than filled with plausible figures.
+
 ## Known weaknesses carried forward
 
 - The Price-Increase Defender asks the model to invent its own headline score

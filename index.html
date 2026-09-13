@@ -1011,6 +1011,15 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   </div></section>
 </div>
 
+<!-- ============ WORKSPACE ============ -->
+<div class="page" id="page-dash">
+  <section class="sec"><div class="wrap" style="max-width:1320px">
+    <h2 style="font-size:var(--bw-t-page);margin-bottom:4px">Workspace</h2>
+    <p style="color:var(--bw-muted);font-size:var(--bw-t-body);margin-bottom:var(--bw-6)">Everything below is computed from the cases and outcomes stored in this browser. Nothing is estimated, and nothing is carried over from anyone else.</p>
+    <div id="dash-out"></div>
+  </div></section>
+</div>
+
 <!-- ============ INBOX ============ -->
 <div class="page" id="page-inbox">
   <section class="sec"><div class="wrap">
@@ -1198,9 +1207,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <script>
 
 // ---------- Navigation ----------
-const LINKS=[["home","Home"],["inbox","Inbox"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Resources"],["academy","Academy"],["blog","Blog"],["contact","Project"]];
+const LINKS=[["home","Home"],["dash","Workspace"],["inbox","Inbox"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Resources"],["academy","Academy"],["blog","Blog"],["contact","Project"]];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
+function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
   // Without this, activating a nav item changes the page but leaves focus where
   // it was, so a screen reader stays on the old content.
   var m=document.getElementById("main"); if(m)m.focus({preventScroll:true});}
@@ -1217,6 +1226,7 @@ function toggleMenu(){const m=document.getElementById("mobmenu");m.style.display
    sidebar advertising a Reports screen nobody built is worse than a short one. */
 const NAV_ICONS={
   home:'<path d="M3 10.5 12 4l9 6.5"/><path d="M5 10v9h14v-9"/>',
+  dash:'<path d="M4 4h7v7H4z"/><path d="M13 4h7v4h-7z"/><path d="M13 11h7v9h-7z"/><path d="M4 14h7v6H4z"/>',
   inbox:'<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5 6h14l2 7v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5z"/>',
   ai:'<path d="M3 5h13a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 4v-4H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>',
   tools:'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
@@ -2434,6 +2444,162 @@ function inboxGo(route,extract){
     var notes=document.getElementById("min-notes");
     if(notes)notes.value=text;
   }
+}
+
+/* ---------------------------------------------------------- workspace ---
+   A command centre built only from what the engines can actually answer.
+   The reference shows cards this product has no data for — a savings tracker,
+   market signals tied to live positions, an opportunity radar. Rendering those
+   would mean inventing figures, so they are absent rather than faked.
+
+   The empty states are the design here, not an afterthought: on a fresh
+   browser every panel says what is missing and offers the one action that
+   would fix it. Each engine already returns that sentence, so the page quotes
+   it rather than writing its own. */
+
+function dashPanel(title, body, opts){
+  opts=opts||{};
+  return '<div class="bw-panel'+(opts.accent?" bw-panel--accent":"")+'">'
+    +'<div class="bw-panel-head"><div class="bw-panel-title">'+ciEsc(title)+'</div>'
+    +(opts.action?'<span class="bw-panel-action">'+ciEsc(opts.action)+'</span>':'')
+    +'</div>'+body+'</div>';
+}
+
+function dashEmpty(note,label,route){
+  return '<p style="font-size:var(--bw-t-body);color:var(--bw-muted);line-height:1.6;margin:0 0 var(--bw-4)">'+ciEsc(note)+'</p>'
+    +(route?'<button class="bw-act bw-act-secondary" data-go="'+attrEsc(route)+'">'+ciEsc(label)+'</button>':'');
+}
+
+/* What is open, and what is at stake in it. */
+function dashAttentionHTML(){
+  var cases=[];
+  try{ cases=window.BW.listCases()||[]; }catch(e){ cases=[]; }
+  var open=cases.filter(function(c){return c.status!=="closed";});
+
+  if(!open.length){
+    return dashPanel("Needs attention",
+      dashEmpty("No case is open. A supplier letter dropped into the Inbox becomes one in a couple of clicks.",
+                "Open the Inbox","inbox"));
+  }
+
+  var rows=open.slice(0,6).map(function(c){
+    var cls=c.status==="analysed"?"bw-status--review":c.status==="decided"?"bw-status--approved":"";
+    return '<tr><td>'+ciEsc(c.ref||"(no reference)")+'</td>'
+      +'<td>'+ciEsc(c.supplier||"&mdash;")+'</td>'
+      +'<td><span class="bw-status '+cls+'">'+ciEsc(c.status)+'</span></td>'
+      +'<td class="n" style="color:var(--bw-muted)">'+ciEsc(String(c.updatedAt||"").slice(0,10))+'</td></tr>';
+  }).join("");
+
+  return dashPanel("Needs attention",
+    '<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Case</th><th>Supplier</th><th>Stage</th><th class="n">Updated</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +'<div style="margin-top:var(--bw-4)"><button class="bw-act bw-act-primary" data-go="tool-defender">Open the claim reviewer</button></div>',
+    {action:open.length+" open"});
+}
+
+/* The one figure worth watching, with what qualifies it. */
+function dashPositionHTML(){
+  var P0=null;
+  try{ P0=defPortfolio(); }catch(e){ P0=null; }
+  if(!P0)return dashPanel("Your position", dashEmpty("The stores did not load.","",""));
+
+  var M0=window.BW.moneyToDecimalString;
+  if(!P0.outcomes){
+    /* No outcome yet does not mean nothing is at stake. Exposure across open
+       cases is the most actionable figure on this page, and hiding it behind
+       having closed something would be exactly backwards. */
+    var f0=P0.inFlight[0];
+    return dashPanel("Your position",
+      (f0?'<div class="bw-metric bw-metric--danger" style="margin-bottom:var(--bw-4)">'
+        +'<div class="bw-metric-label">In dispute now</div>'
+        +'<div class="bw-metric-value">'+ciEsc(f0.currency)+' '+M0(f0.unsupported)+'</div>'
+        +'<div class="bw-metric-sub">'+f0.cases+' open case(s), none yet settled</div></div>':'')
+      +dashEmpty(P0.headline,"Record an outcome","tool-defender"));
+  }
+
+  var P=window.BW.formatPercent,M=window.BW.moneyToDecimalString;
+  var r=P0.resisted[0];
+  var flight=P0.inFlight[0];
+
+  return dashPanel("Your position",
+    '<div class="bw-metric-grid">'
+    +'<div class="bw-metric bw-metric--accent"><div class="bw-metric-label">Unevidenced ask resisted</div>'
+    +'<div class="bw-metric-value">'+(r&&r.rate!==null?P(r.rate):"&mdash;")+'</div>'
+    +'<div class="bw-metric-sub">'+(r?ciEsc(r.currency)+" "+M(r.kept)+" of "+M(r.unsupported):"nothing in dispute")+'</div></div>'
+    +(flight?'<div class="bw-metric bw-metric--danger"><div class="bw-metric-label">In dispute now</div>'
+      +'<div class="bw-metric-value">'+ciEsc(flight.currency)+' '+M(flight.unsupported)+'</div>'
+      +'<div class="bw-metric-sub">'+flight.cases+' open case(s)</div></div>':'')
+    +'<div class="bw-metric"><div class="bw-metric-label">Outcomes recorded</div>'
+    +'<div class="bw-metric-value">'+P0.outcomes+'</div>'
+    +'<div class="bw-metric-sub">'+(P0.coverage.rate!==null?P0.coverage.closed+" of "+P0.coverage.analysed+" analysed cases":"no cases to compare against")+'</div></div>'
+    +'</div>'
+    +(P0.coverage.rate!==null&&!P0.coverage.complete
+      ? '<p style="font-size:var(--bw-t-meta);color:var(--bw-warning);margin:var(--bw-4) 0 0;line-height:1.5">Based on '+P0.coverage.closed+' of '+P0.coverage.analysed+' analysed case(s). The rest have no outcome recorded, so this is not yet a track record.</p>'
+      : ''));
+}
+
+/* Who the money goes to. */
+function dashSuppliersHTML(){
+  var P0=null;
+  try{ P0=defPortfolio(); }catch(e){ P0=null; }
+  if(!P0||!P0.suppliers.length){
+    return dashPanel("Suppliers",
+      dashEmpty("No supplier has a recorded outcome yet. A record builds as cases are closed, and the second claim from the same supplier reads very differently from the first.",
+                "Open the claim reviewer","tool-defender"));
+  }
+  var M=window.BW.moneyToDecimalString,P=window.BW.formatPercent;
+  var rows=P0.suppliers.slice(0,6).map(function(sp){
+    return '<tr><td>'+ciEsc(sp.supplier)+'</td>'
+      +'<td class="n">'+sp.claims+'</td>'
+      +'<td class="n">'+(sp.rate===null?'<span style="color:var(--bw-muted)">&mdash;</span>':P(sp.rate))+'</td>'
+      +'<td class="n" style="color:'+(sp.conceded&&sp.conceded.minor>0n?"var(--bw-danger)":"var(--bw-success)")+'">'
+      +(sp.conceded===null?'<span style="color:var(--bw-warning)">mixed</span>':ciEsc(sp.currency)+" "+M(sp.conceded))+'</td></tr>';
+  }).join("");
+  return dashPanel("Suppliers",
+    '<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Supplier</th><th class="n">Claims</th><th class="n">Resisted</th><th class="n">Conceded unevidenced</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>',
+    {action:"by conceded"});
+}
+
+/* What has actually moved anyone, with its denominator. */
+function dashLearningHTML(){
+  var corpus=[],W=null,gaps=null;
+  try{
+    corpus=window.BW.learningCorpus(window.BW.loadOutcomes()||[]);
+    W=window.BW.whatWorks(corpus);
+    gaps=window.BW.captureGaps(corpus);
+  }catch(e){ return dashPanel("What works", dashEmpty("The stores did not load.","","")); }
+
+  if(!W.records){
+    return dashPanel("What works",
+      dashEmpty(W.headline,"Record an outcome","tool-defender"));
+  }
+  var items=W.patterns.slice(0,5).map(function(x){
+    return '<div class="bw-list-row"><div class="bw-list-main">'
+      +'<div class="bw-list-title">'+ciEsc(x.statement)+'</div>'
+      +(x.evidenceRequested.length?'<div class="bw-list-sub">Asked for: '+x.evidenceRequested.map(ciEsc).join("; ")+'</div>':'')
+      +'</div>'+(x.thinEvidence?'<span class="bw-status bw-status--medium">thin</span>':'<span class="bw-status bw-status--evidenced">pattern</span>')+'</div>';
+  }).join("");
+  return dashPanel("What works",
+    items
+    +(gaps&&(gaps.missingEvidence||gaps.missingResponse||gaps.missingResult)
+      ? '<p style="font-size:var(--bw-t-meta);color:var(--bw-warning);margin:var(--bw-4) 0 0;line-height:1.5">'+ciEsc(gaps.note)+'</p>'
+      : ''),
+    {action:W.solidPatterns+" solid"});
+}
+
+function renderDash(){
+  var out=document.getElementById("dash-out");
+  if(!out||!window.BW)return;
+  out.innerHTML=
+    '<div class="bw-grid bw-grid-wide" style="margin-bottom:var(--bw-4)">'
+      +dashAttentionHTML()+dashPositionHTML()
+    +'</div>'
+    +'<div class="bw-grid bw-grid-2">'
+      +dashSuppliersHTML()+dashLearningHTML()
+    +'</div>';
 }
 
 function defHistoryHTML(){
