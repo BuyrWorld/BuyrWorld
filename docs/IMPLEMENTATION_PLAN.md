@@ -10,7 +10,7 @@ Status against the seven phases. Honest about what is done and what is not.
 | 3 — Flagship workflow | **Done as a vertical slice.** Baseline → claim → decomposition → evidence → calculation → currency → scenarios → options → decision pack → outcome. |
 | 4 — ProcureBench | **Done.** 21 cases, all evaluable, 100% calculation accuracy. |
 | 5 — Security hardening | **Largely done.** One known weakness remains; see below and `SECURITY_REVIEW.md`. |
-| 6 — UX and accessibility | **Accessibility done; visual UX not.** WCAG 2.2 AA pass complete and guarded by 20 tests. Evidence-state design, responsive testing and export layout remain. |
+| 6 — UX and accessibility | **Done, bar device testing.** WCAG 2.2 AA pass guarded by 20 tests; every figure now labelled supplied / derived / assumed, with an Assumptions to verify block. Responsive behaviour untested on real devices. |
 | 7 — Verification and handover | **Done.** `scripts/verify.mjs` runs five checks; CI runs it on every push, on Node 22 and 24. |
 
 ## What exists
@@ -27,7 +27,7 @@ Status against the seven phases. Honest about what is done and what is not.
 | `src/services/outcome-store.mjs` | Local-first storage. BigInt-safe, and every browser failure mode handled. |
 | `src/render/decision-pack-html.mjs` | Print-clean output, everything escaped. |
 
-289 tests, 21 ProcureBench calculation cases, 18 extraction golden cases, and
+311 tests, 21 ProcureBench calculation cases, 18 extraction golden cases, and
 six verification checks, all run by CI.
 
 ---
@@ -75,7 +75,7 @@ The per-IP bucket in `api/chat.js` lives in module scope, so it is per warm
 instance rather than global. It raises the cost of casual abuse; it is not a
 defence against a determined one. A real limit needs shared state.
 
-### 4. Phase 6 — the visual half
+### 4. Phase 6 — device testing
 
 The accessibility pass is done: contrast verified against both the page ground
 and card surfaces, every click target keyboard-operable, focus restored where
@@ -83,10 +83,14 @@ the input reset had removed it, a skip link and main landmark, focus moved on
 route change, every control named, reduced motion covering all 17 animations,
 and aria-current on the navigation. 20 tests hold it in place.
 
-What remains is design rather than compliance. Evidence and confidence states
-are the hard part: a figure must *look* different depending on whether it is
-supplied, derived or assumed, without the interface becoming noisy. Responsive
-behaviour and export layout have not been tested on real devices.
+Provenance labelling is done too: every figure in the calculator and the
+decision pack is tagged supplied, derived or assumed, each tag carries its own
+word rather than relying on colour, and an Assumptions to verify block collects
+what rests on nothing — with what would settle each one, because "verify this"
+without "how" is not actionable.
+
+What remains is responsive behaviour and export layout on real devices, which
+needs hardware rather than code.
 
 ### 5. The domain model as originally specified
 

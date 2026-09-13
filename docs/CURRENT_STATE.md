@@ -72,7 +72,7 @@ driver, a formula and a source.
 | | Baseline | Now |
 |---|---|---|
 | `index.html` | 522 KB, 20 pages | ~530 KB, 18 pages |
-| Tests | none | 289, plus 39 ProcureBench cases |
+| Tests | none | 311, plus 39 ProcureBench cases |
 | CI | none | every push, Node 22 and 24 |
 | Calculation modules | none | 7 under `src/`, framework-free |
 | Payment links | 8 | 0 |

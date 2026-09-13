@@ -21,6 +21,7 @@
 import { ONE, moneyToDecimalString, moneyScale, moneyTimesQuantity } from "./exact.mjs";
 import { partialAcceptance, delayEffect, formatPercent } from "./cost-bridge.mjs";
 import { assessEvidence } from "./evidence.mjs";
+import { labelFor, assumptionsToVerify, LABEL, LEGEND } from "./provenance.mjs";
 
 /** Options the analysis can support with numbers. Ordered by escalation. */
 export const ACTION = Object.freeze({
@@ -235,6 +236,20 @@ export function buildDecisionPack({ meta = {}, bridge, evidenceInput = {}, posit
     options,
     recommendation,
     position,
+    // Every figure labelled supplied, derived or assumed, so a reviewer can see
+    // which numbers warrant which amount of trust without reading the appendix.
+    provenance: Object.freeze({
+      legend: LEGEND,
+      byDriver: bridge.contributions.map((c) => Object.freeze({
+        id: c.id,
+        label: c.label,
+        weight: labelFor({ provenance: c.provenance, evidence: c.evidence?.weight }),
+        movement: labelFor({ provenance: c.provenance, evidence: c.evidence?.movement, lineage: c.lineage }),
+      })),
+      warranted: labelFor({ provenance: "system-calculated" }),
+      exposure: labelFor({ provenance: "system-calculated" }),
+    }),
+    assumptionsToVerify: assumptionsToVerify(bridge, ev),
     assumptions: bridge.assumptions,
     uncertainties: uncertaintiesFor(bridge, ev),
     sources,

@@ -10,6 +10,7 @@
 
 import { moneyToDecimalString } from "../calc/exact.mjs";
 import { formatPercent } from "../calc/cost-bridge.mjs";
+import { LABEL } from "../calc/provenance.mjs";
 
 const esc = (t) =>
   String(t == null ? "" : t)
@@ -50,6 +51,19 @@ export function renderDecisionPackHTML(pack) {
   .gap-material { color: #a01919; }
   .gap-minor { color: #8a6d1f; }
   .muted { color: #5a5a53; }
+  /* A provenance tag must survive a black-and-white print, so it carries its
+     own text and a border rather than relying on colour. */
+  .prov { display: inline-block; font-size: 7.5pt; letter-spacing: .04em; text-transform: uppercase;
+          padding: 1px 5px; border: 1px solid currentColor; border-radius: 3px; vertical-align: 1px;
+          margin-left: 6px; white-space: nowrap; }
+  .prov-supplied { color: #1d5a1d; }
+  .prov-derived  { color: #16160f; }
+  .prov-assumed  { color: #a01919; font-weight: bold; }
+  .legend { font-size: 9pt; color: #5a5a53; margin: 4px 0 12px; }
+  .legend .prov { margin-left: 0; margin-right: 4px; }
+  .verify { border: 2px solid #a01919; padding: 12px 14px; margin: 8px 0; page-break-inside: avoid; }
+  .verify h3 { margin-top: 0; }
+  .verify li { margin: 7px 0; }
   .opt { border-left: 3px solid #ccc; padding: 2px 0 2px 12px; margin: 12px 0; page-break-inside: avoid; }
   .opt.chosen { border-left-color: #16160f; }
   .foot { margin-top: 28px; padding-top: 10px; border-top: 1px solid #16160f; font-size: 9pt; color: #5a5a53; }
@@ -74,9 +88,12 @@ document is fictional. It is not a real supplier claim and must not be used as o
 <table>
   <tr><th>Position</th><th class="n">Change</th><th class="n">Annual, ${cur}</th></tr>
   <tr><td>Requested by the supplier</td><td class="n">${P(pack.summary.requested)}</td><td class="n">${M(pack.summary.annualRequested)}</td></tr>
-  <tr><td>Supported by the evidence</td><td class="n">${P(pack.summary.warranted)}</td><td class="n">${M(pack.summary.annualWarranted)}</td></tr>
+  <tr><td>Supported by the evidence ${tag(LABEL.DERIVED)}</td><td class="n">${P(pack.summary.warranted)}</td><td class="n">${M(pack.summary.annualWarranted)}</td></tr>
   <tr><td><b>Unsupported</b></td><td class="n"><b>${P(pack.summary.unsupported)}</b></td><td class="n"><b>${M(pack.summary.annualUnsupported)}</b></td></tr>
 </table>
+
+<p class="legend">Every figure below is labelled:
+  ${(pack.provenance?.legend ?? []).map((l) => `${tag(l.label)}${esc(l.means)}`).join(" &middot; ")}</p>
 
 <h2>Recommended action</h2>
 <div class="rec">
@@ -97,9 +114,9 @@ document is fictional. It is not a real supplier claim and must not be used as o
 <table>
   <tr><th>Driver</th><th class="n">Share of cost</th><th class="n">Movement</th><th class="n">Contribution</th></tr>
   ${pack.decomposition.map((c) => `
-  <tr><td>${esc(c.label)}${c.lineage ? `<div class="sub">${esc(c.lineage)}</div>` : ""}${
+  <tr><td>${esc(c.label)}${provTag(pack, c.id, "weight")}${c.lineage ? `<div class="sub">${esc(c.lineage)}</div>` : ""}${
     c.basis ? `<div class="sub gap-material">Their base ${esc(c.basis.claimedBase)} would add ${P(c.basis.overstatement)}.</div>` : ""
-  }</td><td class="n">${P(c.weight)}</td><td class="n">${P(c.indexMovement)}</td><td class="n">${P(c.contribution)}</td></tr>`).join("")}
+  }</td><td class="n">${P(c.weight)}</td><td class="n">${P(c.indexMovement)}${provTag(pack, c.id, "movement")}</td><td class="n">${P(c.contribution)}</td></tr>`).join("")}
   <tr><td class="muted">Unexplained share of unit cost</td><td class="n muted">${P(unexplained(pack))}</td>
       <td class="n muted">unknown</td><td class="n muted">treated as nil</td></tr>
 </table>
@@ -152,6 +169,18 @@ ${pack.options.map((o) => `
   }</p>
 </div>`).join("")}
 
+${pack.assumptionsToVerify?.length ? `<h2>Assumptions to verify</h2>
+<div class="verify">
+  <h3>${pack.assumptionsToVerify.filter((a) => a.material).length} material, ${pack.assumptionsToVerify.filter((a) => !a.material).length} minor</h3>
+  <p class="sub">These figures rest on an assumption rather than on evidence. Each says what would settle it,
+  because "verify this" without "how" is not actionable.</p>
+  <ul>
+  ${pack.assumptionsToVerify.map((a) => `<li><b>${esc(a.figure)}</b>${a.material ? " " + tag(LABEL.ASSUMED) : ""}<br>
+    <span class="sub">Assumes ${esc(a.assumption)}</span><br>
+    <span class="sub">Settled by: ${esc(a.settledBy)}</span></li>`).join("")}
+  </ul>
+</div>` : ""}
+
 <h2>Assumptions</h2>
 ${pack.assumptions.length ? `<ul>${pack.assumptions.map((a) => `<li>${esc(a.text)}</li>`).join("")}</ul>`
   : "<p>No assumptions recorded.</p>"}
@@ -181,6 +210,15 @@ ${pack.sources.length ? `<table>
 </div>
 
 </body></html>`;
+}
+
+function tag(label) {
+  return `<span class="prov prov-${esc(label)}">${esc(label)}</span>`;
+}
+function provTag(pack, driverId, field) {
+  const p = pack.provenance?.byDriver?.find((x) => x.id === driverId);
+  const l = p?.[field];
+  return l ? `<span class="prov prov-${esc(l.label)}" title="${esc(l.why)}">${esc(l.label)}</span>` : "";
 }
 
 function labelFor(action) {
