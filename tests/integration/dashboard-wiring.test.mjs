@@ -92,7 +92,9 @@ describe("it is wired in", () => {
   });
 
   test("no arithmetic happens in the page", () => {
-    const fn = html.slice(html.indexOf("function dashPanel("), html.indexOf("\nfunction defHistoryHTML(){"));
+    // Bounded by the dashboard's own functions. An open-ended slice to the next
+    // unrelated declaration picks up whatever later gets inserted between them.
+    const fn = html.slice(html.indexOf("function dashPanel("), html.indexOf("\nfunction ptAttrFields("));
     assert.ok(fn.length > 1000);
     assert.equal(/parseFloat|toFixed|\*\s*100|\/\s*100/.test(fn), false,
       "a dashboard is where an invented figure would never be questioned");

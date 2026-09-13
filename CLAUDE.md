@@ -14,6 +14,7 @@ A dark-mode procurement web product at buyrworld.com. Single-page app served fro
 - `tests/` — Node's built-in runner. `node --test "tests/**/*.test.mjs"`.
 - `scripts/verify.mjs` — runs everything. Run it before any deploy.
 - `src/intake/classify.mjs` — deterministic document classification and routing for the Inbox. No model: the signals are explicit, each is returned with the passage that triggered it, and nothing written in a document can change the rules.
+- `src/services/part-store.mjs` — the parts library. A `Part` carries the twelve comparison attributes from `comparable.mjs`, which owns that vocabulary; `forComparison()` is the seam between the domain shape and the comparison shape, kept explicit rather than making one module understand both.
 - `src/domain/` — entity identity and the commercial memory spine (pure: no I/O). `ids.mjs` derives stable ids; `entities.mjs` defines Supplier, Part, Contract, CommercialCase and LearningRecord; `registry.mjs` resolves names and handles explicit, reversible merges. See `docs/DOMAIN_MODEL.md`.
 - `src/services/` — `case-store.mjs` and `outcome-store.mjs` persist cases and outcomes in `localStorage`. Both share one BigInt tagging format; the tag opens with a NUL byte, which is why grep calls `outcome-store.mjs` a binary file. Changing it would orphan everything already stored.
 - `fixtures/` — synthetic, fictional demonstration cases.

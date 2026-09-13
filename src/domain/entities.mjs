@@ -24,6 +24,11 @@
  */
 
 import { KIND, entityId, supplierId, partId, contractId, normaliseName, isId } from "./ids.mjs";
+import { ATTRIBUTES as COMPARISON_ATTRIBUTES } from "../calc/comparable.mjs";
+
+/* The comparison vocabulary is owned by comparable.mjs. Importing it here keeps
+   one definition rather than two that drift. */
+const COMPARISON_IDS = new Set(COMPARISON_ATTRIBUTES.map((a) => a.id));
 
 /** Bump when the meaning of a stored entity changes. */
 export const DOMAIN_SCHEMA = 1;
@@ -120,6 +125,20 @@ export function part(input = {}) {
   const number = req(input.number, "A part number");
   const now = input.now ?? new Date().toISOString();
 
+  /* The comparison attributes live here because they are what the part IS,
+     not a view of it. comparable.mjs owns the vocabulary; this validates
+     against it so a typo cannot become an attribute nothing will ever read. */
+  const attributes = {};
+  for (const key of Object.keys(input.attributes ?? {})) {
+    if (!COMPARISON_IDS.has(key)) throw new RangeError(`${key} is not a comparison attribute`);
+    const v = String(input.attributes[key] ?? "").trim();
+    if (v) attributes[key] = v;
+  }
+
+  if (input.unitPrice && typeof input.unitPrice.minor !== "bigint") {
+    throw new TypeError("A part's unitPrice must be Money — build it with moneyFromDecimal");
+  }
+
   return Object.freeze({
     ...base(KIND.PART, input.id ?? partId(sid, number), now),
     supplierId: sid,
@@ -129,6 +148,8 @@ export function part(input = {}) {
     material: nullable(input.material),
     specification: nullable(input.specification),
     annualVolume: Number.isInteger(input.annualVolume) ? input.annualVolume : null,
+    unitPrice: input.unitPrice ?? null,
+    attributes: Object.freeze(attributes),
     synthetic: input.synthetic !== false,
   });
 }

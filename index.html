@@ -1040,6 +1040,34 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   </div></section>
 </div>
 
+<!-- ============ PARTS ============ -->
+<div class="page" id="page-parts">
+  <section class="sec"><div class="wrap" style="max-width:1320px">
+    <h2 style="font-size:var(--bw-t-page);margin-bottom:4px">Parts</h2>
+    <p style="color:var(--bw-muted);font-size:var(--bw-t-body);margin-bottom:var(--bw-6);max-width:720px">Part numbers do not travel. Describe what a part <b style="color:var(--bw-text)">is</b> and it can be compared with everything else you buy, whatever it is called. Anything you leave blank stays unknown &mdash; it never counts as a match.</p>
+
+    <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+      <div class="bw-panel-head"><div class="bw-panel-title">Describe a part</div></div>
+      <div class="bw-fields">
+        <label class="bw-field">Supplier<input class="bwin" id="pt-supplier" placeholder="Meridian Fabrication Ltd"></label>
+        <label class="bw-field">Part number<input class="bwin" id="pt-number" placeholder="BRK-A-102"></label>
+        <label class="bw-field">Unit price<input class="bwin" id="pt-price" inputmode="decimal" placeholder="12.40"></label>
+        <label class="bw-field">Annual volume<input class="bwin" id="pt-volume" inputmode="numeric" placeholder="50000"></label>
+      </div>
+      <div id="pt-attrs" style="margin-top:var(--bw-3)"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--bw-4)">
+        <button class="bw-act bw-act-primary" data-pt-act="save">Save part</button>
+        <button class="bw-act bw-act-secondary" data-pt-act="example">Load synthetic example</button>
+        <button class="bw-act bw-act-text" data-pt-act="clear">Clear the form</button>
+      </div>
+      <div id="pt-msg" style="margin-top:var(--bw-3)"></div>
+    </div>
+
+    <div id="pt-library"></div>
+    <div id="pt-compare" style="margin-top:var(--bw-4)"></div>
+  </div></section>
+</div>
+
 <!-- ============ WORKSPACE ============ -->
 <div class="page" id="page-dash">
   <section class="sec"><div class="wrap" style="max-width:1320px">
@@ -1236,9 +1264,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <script>
 
 // ---------- Navigation ----------
-const LINKS=[["home","Home"],["dash","Workspace"],["inbox","Inbox"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Resources"],["academy","Academy"],["blog","Blog"],["contact","Project"]];
+const LINKS=[["home","Home"],["dash","Workspace"],["inbox","Inbox"],["parts","Parts"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Resources"],["academy","Academy"],["blog","Blog"],["contact","Project"]];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function")defBindAlts();if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
+function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="parts"&&typeof ptBind==="function")ptBind();if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function")defBindAlts();if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
   // Without this, activating a nav item changes the page but leaves focus where
   // it was, so a screen reader stays on the old content.
   var m=document.getElementById("main"); if(m)m.focus({preventScroll:true});}
@@ -1256,6 +1284,7 @@ function toggleMenu(){const m=document.getElementById("mobmenu");m.style.display
 const NAV_ICONS={
   home:'<path d="M3 10.5 12 4l9 6.5"/><path d="M5 10v9h14v-9"/>',
   dash:'<path d="M4 4h7v7H4z"/><path d="M13 4h7v4h-7z"/><path d="M13 11h7v9h-7z"/><path d="M4 14h7v6H4z"/>',
+  parts:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5"/><path d="M12 12v9"/>',
   inbox:'<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5 6h14l2 7v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5z"/>',
   ai:'<path d="M3 5h13a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 4v-4H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>',
   tools:'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
@@ -2797,6 +2826,170 @@ function defBatnaHTML(){
     +open
     +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.5">'+ciEsc(B.method)+'</p>'
     +'</div>';
+}
+
+/* ---------------------------------------------------------------- parts ---
+   A library of what things are, so comparison has something to read.
+   Everything here is rendered from the engines: the page describes a part and
+   shows a comparison, and computes none of it. */
+
+function ptAttrFields(){
+  var host=document.getElementById("pt-attrs");
+  if(!host||!window.BW.ATTRIBUTES)return;
+  host.innerHTML='<div class="eyebrow" style="margin-bottom:6px">What it is</div>'
+    +'<div class="bw-fields">'
+    +window.BW.ATTRIBUTES.map(function(a){
+      return '<label class="bw-field">'+ciEsc(a.label)
+        +'<input class="bwin" id="pt-a-'+attrEsc(a.id)+'" aria-label="'+attrEsc(a.label)+'"></label>';
+    }).join("")
+    +'</div>';
+}
+
+function ptVal(id){var el=document.getElementById(id);return el?String(el.value).trim():"";}
+
+function ptClear(){
+  ["pt-supplier","pt-number","pt-price","pt-volume"].forEach(function(i){
+    var el=document.getElementById(i); if(el)el.value="";
+  });
+  window.BW.ATTRIBUTES.forEach(function(a){
+    var el=document.getElementById("pt-a-"+a.id); if(el)el.value="";
+  });
+  var m=document.getElementById("pt-msg"); if(m)m.innerHTML="";
+}
+
+function ptExample(){
+  var v={"pt-supplier":"Meridian Fabrication Ltd","pt-number":"BRK-A-102","pt-price":"12.40","pt-volume":"50000"};
+  Object.keys(v).forEach(function(k){var el=document.getElementById(k); if(el)el.value=v[k];});
+  var a={material:"AL 6082",specification:"BS EN 573",process:"CNC milling",rawForm:"bar",
+    tolerance:"IT9",heatTreatment:"T6",inspection:"AQL 2.5",certification:"3.1",
+    sizeBand:"small",volumeBand:"50k",surfaceFinish:"anodised",geography:"UK"};
+  Object.keys(a).forEach(function(k){var el=document.getElementById("pt-a-"+k); if(el)el.value=a[k];});
+}
+
+function ptSave(){
+  var msg=document.getElementById("pt-msg");
+  var attrs={};
+  window.BW.ATTRIBUTES.forEach(function(a){
+    var v=ptVal("pt-a-"+a.id); if(v)attrs[a.id]=v;
+  });
+  /* The exact parser, not parseFloat and toFixed: a price typed as 12.405
+     would otherwise round through a float before it ever reached Money. */
+  var priceMinor=window.BW.parseAmount(ptVal("pt-price"));
+  var vol=ptVal("pt-volume").replace(/[^0-9]/g,"");
+
+  var p;
+  try{
+    p=window.BW.makePart({
+      supplier:ptVal("pt-supplier"),
+      number:ptVal("pt-number"),
+      attributes:attrs,
+      unitPrice:priceMinor===null?undefined:window.BW.money(priceMinor,"GBP",null),
+      annualVolume:vol?parseInt(vol,10):undefined
+    });
+  }catch(e){
+    msg.innerHTML='<p style="color:var(--bw-danger);font-size:13px;margin:0">'+ciEsc(String(e.message||e))+'</p>';
+    return;
+  }
+
+  var r=window.BW.savePart(p);
+  msg.innerHTML=r.ok
+    ? '<p style="color:var(--bw-success);font-size:13px;margin:0">Saved. '+r.count+' part(s) in the library.</p>'
+    : '<p style="color:var(--bw-danger);font-size:13px;margin:0">'+ciEsc(r.error)+'</p>';
+  if(r.ok)renderParts();
+}
+
+function ptLibraryHTML(){
+  var parts=[],st=null;
+  try{ parts=window.BW.loadParts()||[]; st=window.BW.partStoreStatus(); }catch(e){ return ""; }
+
+  if(!parts.length){
+    return '<div class="bw-panel"><div class="bw-panel-head"><div class="bw-panel-title">Library</div></div>'
+      +'<p style="font-size:var(--bw-t-body);color:var(--bw-muted);margin:0">Nothing recorded yet. Two described parts is the smallest library that can answer anything.</p></div>';
+  }
+
+  var rows=parts.map(function(p){
+    var described=Object.keys(p.attributes||{}).length;
+    return '<tr><td>'+ciEsc(p.number)+'</td>'
+      +'<td style="color:var(--bw-muted)">'+ciEsc(p.supplierId||"&mdash;")+'</td>'
+      +'<td class="n">'+(p.unitPrice?"GBP "+window.BW.moneyToDecimalString(p.unitPrice):'<span style="color:var(--bw-muted)">&mdash;</span>')+'</td>'
+      +'<td class="n">'+described+' of '+window.BW.ATTRIBUTES.length+'</td>'
+      +'<td class="n"><button class="bw-act bw-act-secondary" style="padding:5px 11px" data-pt-act="compare" data-pt="'+attrEsc(p.id)+'">Compare</button> '
+      +'<button class="bw-act bw-act-text" data-pt-act="delete" data-pt="'+attrEsc(p.id)+'">Delete</button></td></tr>';
+  }).join("");
+
+  return '<div class="bw-panel"><div class="bw-panel-head">'
+    +'<div class="bw-panel-title">Library ('+parts.length+')</div>'
+    +'<span class="bw-panel-action">'+st.described+' described &middot; '+st.priced+' priced</span></div>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Part</th><th>Supplier</th><th class="n">Unit price</th><th class="n">Described</th><th class="n">&nbsp;</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +(st.described<2?'<p style="font-size:var(--bw-t-meta);color:var(--bw-warning);margin:var(--bw-3) 0 0">Two described parts are needed before anything can be compared.</p>':'')
+    +'<p style="font-size:var(--bw-t-meta);color:var(--bw-muted);margin:var(--bw-3) 0 0">Stored in this browser only.</p></div>';
+}
+
+function ptCompare(id){
+  var out=document.getElementById("pt-compare");
+  if(!out||!window.BW.findComparable)return;
+  var parts=[];
+  try{ parts=(window.BW.loadParts()||[]).map(window.BW.forComparison); }catch(e){ return; }
+  var stored=[];
+  try{ stored=window.BW.loadParts()||[]; }catch(e){ stored=[]; }
+
+  var i=stored.findIndex(function(p){return p.id===id;});
+  if(i<0)return;
+  var target=parts[i];
+
+  var R=window.BW.findComparable(target,parts);
+  if(!R.best){
+    out.innerHTML='<div class="bw-panel"><div class="bw-panel-head"><div class="bw-panel-title">Comparable to '+ciEsc(target.ref)+'</div></div>'
+      +'<p style="font-size:var(--bw-t-body);color:var(--bw-muted);margin:0">'+ciEsc(R.note)+'</p></div>';
+    return;
+  }
+
+  var rows=R.matches.slice(0,6).map(function(m){
+    return '<tr><td>'+ciEsc(m.b)+'</td>'
+      +'<td class="n">'+window.BW.formatPercent(m.comparability)+'</td>'
+      +'<td>'+(m.thin?'<span class="bw-status bw-status--medium">barely compared</span>':'<span class="bw-status bw-status--evidenced">compared</span>')+'</td>'
+      +'<td style="color:var(--bw-muted)">'+(m.differed.length?ciEsc(m.differed.map(function(d){return d.label;}).join(", ")):"nothing recorded differs")+'</td></tr>';
+  }).join("");
+
+  var g=window.BW.priceGap(target,R.best.part);
+  var gapHTML=g.ok
+    ? '<p style="font-size:var(--bw-t-body);color:var(--bw-body);margin:var(--bw-4) 0 0;line-height:1.6">'+ciEsc(g.statement)+'</p>'
+      +'<p style="font-size:var(--bw-t-meta);color:var(--bw-muted);margin:var(--bw-2) 0 0;line-height:1.5">'+ciEsc(g.method)+'</p>'
+    : '<p style="font-size:var(--bw-t-meta);color:var(--bw-muted);margin:var(--bw-4) 0 0">'+ciEsc(g.reason)+'</p>';
+
+  out.innerHTML='<div class="bw-panel"><div class="bw-panel-head">'
+    +'<div class="bw-panel-title">Comparable to '+ciEsc(target.ref)+'</div></div>'
+    +'<p style="font-size:var(--bw-t-body);color:var(--bw-body);margin:0 0 var(--bw-3);line-height:1.6">'+ciEsc(R.best.statement)+'</p>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Part</th><th class="n">Comparable</th><th>Confidence</th><th>Differs on</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +gapHTML+'</div>';
+}
+
+function renderParts(){
+  var lib=document.getElementById("pt-library");
+  if(lib)lib.innerHTML=ptLibraryHTML();
+}
+
+function ptBind(){
+  var page=document.getElementById("page-parts");
+  if(!page||page.dataset.bound)return;
+  page.dataset.bound="1";
+  ptAttrFields();
+  renderParts();
+  page.addEventListener("click",function(e){
+    var t=e.target&&e.target.closest?e.target.closest("[data-pt-act]"):null;
+    if(!t)return;
+    var act=t.dataset.ptAct;
+    if(act==="save")ptSave();
+    else if(act==="clear")ptClear();
+    else if(act==="example")ptExample();
+    else if(act==="compare")ptCompare(t.dataset.pt);
+    else if(act==="delete"){window.BW.deletePart(t.dataset.pt);renderParts();
+      var c=document.getElementById("pt-compare"); if(c)c.innerHTML="";}
+  });
 }
 
 function defHistoryHTML(){
@@ -5064,6 +5257,9 @@ async function send(id,text){
   import { learningCorpus, whatWorks, captureGaps } from "./src/calc/learning.mjs";
   import { classify, nextActions } from "./src/intake/classify.mjs";
   import { alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL } from "./src/calc/batna.mjs";
+  import { comparablePart, compare, findComparable, priceGap, ATTRIBUTES } from "./src/calc/comparable.mjs";
+  import { part as makePart, savePart, loadParts, deletePart, storeStatus as partStoreStatus,
+           forComparison } from "./src/services/part-store.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
@@ -5086,6 +5282,8 @@ async function send(id,text){
                 learningCorpus, whatWorks, captureGaps, linkOutcome,
                 classify, nextActions,
                 alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL,
+                comparablePart, compare, findComparable, priceGap, ATTRIBUTES,
+                makePart, savePart, loadParts, deletePart, partStoreStatus, forComparison,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,
