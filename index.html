@@ -2144,38 +2144,57 @@ function defCaseListHTML(){
     return '<p style="font-size:12.5px;color:var(--muted);margin:0">No saved cases. <b style="color:var(--text)">Save case</b> keeps everything you have entered on this device, so a claim can be picked up days later.</p>'+withheld;
   }
 
+  /* Stage becomes a chip. It was a coloured word, which is the one thing a
+     status must never be on its own. */
+  var stageChip=function(status){
+    var v=status==="closed"?"evidenced":status==="analysed"?"review":status==="decided"?"approved":"";
+    return '<span class="bw-status'+(v?" bw-status--"+v:"")+'">'+ciEsc(status)+'</span>';
+  };
   var body=rows.map(function(c){
     var on=c.id===_defCaseId;
-    var colour=c.status==="closed"?"var(--muted)":c.status==="analysed"?"var(--lime)":"var(--text)";
-    return '<tr'+(on?' style="background:rgba(214,255,0,.06)"':'')+'>'
-      +'<td style="padding:7px 10px 7px 0">'+ciEsc(c.ref||"(no reference)")
-      +(on?' <span style="color:var(--lime);font-size:11px">open</span>':'')+'</td>'
-      +'<td style="padding:7px 10px">'+ciEsc(c.supplier||"&mdash;")+'</td>'
-      +'<td style="padding:7px 10px;color:'+colour+'">'+ciEsc(c.status)+'</td>'
-      +'<td style="padding:7px 10px;color:var(--muted);white-space:nowrap">'+ciEsc(String(c.updatedAt||"").slice(0,10))+'</td>'
-      +'<td style="padding:7px 0 7px 10px;text-align:right;white-space:nowrap">'
-      +'<button class="btn btn-ghost" style="padding:5px 11px;font-size:12px" onclick="defResumeCase(\''+ciEsc(c.id)+'\')">Resume</button> '
-      +'<button class="btn btn-ghost" style="padding:5px 11px;font-size:12px" onclick="defDeleteCase(\''+ciEsc(c.id)+'\')">Delete</button>'
+    return '<tr'+(on?' style="background:var(--bw-accent-soft)"':'')+'>'
+      +'<td>'+ciEsc(c.ref||"(no reference)")
+      +(on?' <span class="bw-status bw-status--supplied">open</span>':'')+'</td>'
+      +'<td>'+ciEsc(c.supplier||"&mdash;")+'</td>'
+      +'<td>'+stageChip(c.status)+'</td>'
+      +'<td class="n" style="color:var(--bw-muted)">'+ciEsc(String(c.updatedAt||"").slice(0,10))+'</td>'
+      +'<td class="n">'
+      +'<button class="bw-act bw-act-secondary" style="padding:5px 11px" data-case="'+attrEsc(c.id)+'" data-case-act="resume">Resume</button> '
+      +'<button class="bw-act bw-act-text" data-case="'+attrEsc(c.id)+'" data-case-act="delete">Delete</button>'
       +'</td></tr>';
   }).join("");
 
-  return '<div class="card" style="margin:0">'
+  return '<div class="bw-panel">'
     +defPortfolioLineHTML()
-    +'<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
-    +'<div class="eyebrow" style="margin:0">Saved cases ('+rows.length+')</div>'
-    +'<button class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px" onclick="defNewCase()">Start a new case</button></div>'
-    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;color:#CFCFCF">'
-    +'<thead><tr style="color:var(--muted);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase">'
-    +'<th style="text-align:left;padding-bottom:5px">Reference</th><th style="text-align:left;padding-bottom:5px">Supplier</th>'
-    +'<th style="text-align:left;padding-bottom:5px">Status</th><th style="text-align:left;padding-bottom:5px">Updated</th>'
-    +'<th style="text-align:right;padding-bottom:5px">&nbsp;</th></tr></thead><tbody>'+body+'</tbody></table></div>'
-    +'<p style="font-size:11.5px;color:var(--muted);margin:10px 0 0;line-height:1.5">Stored in this browser only. Nothing is sent anywhere, and clearing site data removes them.</p>'
+    +'<div class="bw-panel-head">'
+    +'<div class="bw-panel-title">Saved cases ('+rows.length+')</div>'
+    +'<button class="bw-act bw-act-secondary" data-case-act="new">Start a new case</button></div>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr>'
+    +'<th>Reference</th><th>Supplier</th><th>Stage</th><th class="n">Updated</th><th class="n">&nbsp;</th>'
+    +'</tr></thead><tbody>'+body+'</tbody></table></div>'
+    +'<p style="font-size:var(--bw-t-meta);color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.5">Stored in this browser only. Nothing is sent anywhere, and clearing site data removes them.</p>'
     +withheld+'</div>';
 }
 
 function defRenderCases(){
   var el=document.getElementById("def-cases");
-  if(el)el.innerHTML=defCaseListHTML();
+  if(!el)return;
+  el.innerHTML=defCaseListHTML();
+  /* Attached once. The rows are rebuilt on every save, resume and delete, so
+     per-button handlers would have to be reattached each time — and would put
+     three inline handlers back into the markup. */
+  if(!el.dataset.delegated){
+    el.dataset.delegated="1";
+    el.addEventListener("click",function(e){
+      var t=e.target&&e.target.closest?e.target.closest("[data-case-act]"):null;
+      if(!t)return;
+      var act=t.dataset.caseAct;
+      if(act==="new")defNewCase();
+      else if(act==="resume")defResumeCase(t.dataset.case);
+      else if(act==="delete")defDeleteCase(t.dataset.case);
+    });
+  }
 }
 
 /* ------------------------------------------------------------ portfolio ---
@@ -2623,12 +2642,12 @@ function defHistoryHTML(){
   var P=window.BW.formatPercent,M=window.BW.moneyToDecimalString;
   var rows=H.claims.map(function(c){
     var above=c.concededAboveWarranted>0n;
-    return '<tr><td style="padding:5px 10px 5px 0">'+ciEsc(c.at||("round "+c.round))+'</td>'
-      +'<td style="text-align:right;padding:5px 10px;font-variant-numeric:tabular-nums">'+P(c.requested)+'</td>'
-      +'<td style="text-align:right;padding:5px 10px;font-variant-numeric:tabular-nums;color:var(--lime)">'+P(c.warranted)+'</td>'
-      +'<td style="text-align:right;padding:5px 10px;font-variant-numeric:tabular-nums">'+P(c.agreed)+'</td>'
-      +'<td style="text-align:right;padding:5px 0 5px 10px;font-variant-numeric:tabular-nums;color:'+(above?"#FF5C5C":"var(--lime)")+'">'
-      +(above?c.currency+" "+M(c.concededAboveWarrantedAnnual):"&mdash;")+'</td></tr>';
+    return '<tr><td>'+ciEsc(c.at||("round "+c.round))+'</td>'
+      +'<td class="n">'+P(c.requested)+'</td>'
+      +'<td class="n" style="color:var(--bw-accent)">'+P(c.warranted)+'</td>'
+      +'<td class="n">'+P(c.agreed)+'</td>'
+      +'<td class="n" style="color:'+(above?"var(--bw-danger)":"var(--bw-success)")+'">'
+      +(above?ciEsc(c.currency)+" "+M(c.concededAboveWarrantedAnnual):"&mdash;")+'</td></tr>';
   }).join("");
 
   var repeats=H.drivers.filter(function(d){return d.claimedEveryRound&&!d.everEvidenced;});
@@ -2650,11 +2669,10 @@ function defHistoryHTML(){
   return '<div style="border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px">'
     +'<div class="eyebrow" style="margin-bottom:6px">Their record'+(H.synthetic?' <span style="color:var(--muted);text-transform:none;letter-spacing:0">(synthetic)</span>':'')+'</div>'
     +'<p style="font-size:13px;color:#CFCFCF;margin:0 0 10px;line-height:1.6">'+ciEsc(H.headline)+'</p>'
-    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;color:#CFCFCF">'
-    +'<thead><tr style="color:var(--muted);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase">'
-    +'<th style="text-align:left;padding-bottom:5px">When</th><th style="text-align:right;padding-bottom:5px">Asked</th>'
-    +'<th style="text-align:right;padding-bottom:5px">Evidenced</th><th style="text-align:right;padding-bottom:5px">Agreed</th>'
-    +'<th style="text-align:right;padding-bottom:5px">Above the evidence</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr>'
+    +'<th>When</th><th class="n">Asked</th><th class="n">Evidenced</th><th class="n">Agreed</th>'
+    +'<th class="n">Above the evidence</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
     +'<p style="font-size:12px;color:var(--muted);margin:8px 0 0">'+totals+'.</p>'
     +repeatHTML+workedHTML+defLearningHTML(H.supplierId)
     +(H.mixedCurrency?'<p style="font-size:11.5px;color:#FFB800;margin:8px 0 0">Claims span more than one currency, so totals are kept separate rather than added.</p>':"")

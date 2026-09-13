@@ -150,7 +150,7 @@ describe("layout degrades rather than shrinking until unreadable", () => {
 describe("Phase 1 changed nothing but the paint", () => {
   test("no inline handlers were added", () => {
     const handlers = (html.match(/\son(click|input|change|load|error|submit)=/g) || []).length;
-    assert.ok(handlers <= 135, `inline handlers rose to ${handlers}`);
+    assert.ok(handlers <= 132, `inline handlers rose to ${handlers}`);
   });
 
   test("the existing card and button classes are untouched", () => {

@@ -146,7 +146,7 @@ describe("the known CSP weakness is measured, not assumed away", () => {
     // Ratcheted down as delegation replaces them. Adding two capture fields
     // pushed this over 140 and the guard caught it; delegating the whole
     // argument row took it to 138 instead of raising the ceiling.
-    assert.ok(handlers <= 135, `inline handlers have grown to ${handlers}; they should be shrinking, not rising`);
+    assert.ok(handlers <= 132, `inline handlers have grown to ${handlers}; they should be shrinking, not rising`);
   });
 
   test("no new inline <script> blocks have appeared", () => {

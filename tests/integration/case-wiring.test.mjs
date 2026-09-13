@@ -19,6 +19,22 @@ import {
 
 const html = readFileSync("index.html", "utf8");
 
+/**
+ * The source of one named function.
+ *
+ * Slicing between two indexOf anchors has gone wrong four times in this
+ * codebase, always the same way: the file does not declare functions in call
+ * order, so the "end" anchor is often above the "start" one and the slice comes
+ * back empty or backwards. This finds the function and reads to the next
+ * top-level declaration, so there is no second anchor to get wrong.
+ */
+function fnSource(name) {
+  const start = html.indexOf(`function ${name}(`);
+  if (start < 0) throw new Error(`${name} not found in index.html`);
+  const end = html.indexOf("\nfunction ", start + 1);
+  return html.slice(start, end < 0 ? html.length : end);
+}
+
 /** Every def-* control the Defender page actually declares. */
 function declaredFields() {
   const page = html.slice(html.indexOf('id="page-tool-defender"'), html.indexOf('id="page-tool-sim"'));
@@ -33,7 +49,12 @@ function declaredFields() {
 /** A stub form carrying exactly those controls, plus the page's own functions. */
 function makeSandbox(store) {
   const els = new Map();
-  const mk = (id, type = "text") => ({ id, type, value: "", innerHTML: "", scrollIntoView() {} });
+  // dataset and addEventListener are on every real element; the case list now
+  // uses both to attach its delegated listener once.
+  const mk = (id, type = "text") => ({
+    id, type, value: "", innerHTML: "", dataset: {},
+    addEventListener() {}, scrollIntoView() {},
+  });
   for (const id of declaredFields()) els.set(id, mk(id));
   for (const id of ["def-cases", "def-calc", "def-out", "def-drivers", "def-extract"]) els.set(id, mk(id));
   els.set("oc-category", mk("oc-category"));
@@ -53,6 +74,9 @@ function makeSandbox(store) {
     document: { getElementById: (id) => els.get(id) ?? null },
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
+    // The page escaper for attribute values; the case list writes ids into
+    // data attributes and uses it exactly as the Inbox does.
+    attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
     console,
     _defRows: [],
     _defResult: null,
@@ -360,5 +384,43 @@ describe("storage that refuses", () => {
     s2._els.get("def-case").value = "SC-001";
     s2.defSaveCase();
     assert.match(s2._els.get("def-cases").innerHTML, /blocking local storage/);
+  });
+});
+
+describe("the case list actions are delegated", () => {
+  test("no inline handler survives in the list markup", () => {
+    const fn = fnSource("defCaseListHTML");
+    assert.ok(fn.length > 500, "defCaseListHTML was not found");
+    assert.equal(/onclick=/.test(fn), false, "three buttons regenerated on every render is three handlers");
+    assert.match(fn, /data-case-act="resume"/);
+    assert.match(fn, /data-case-act="delete"/);
+    assert.match(fn, /data-case-act="new"/);
+  });
+
+  test("the listener is attached once, not on every re-render", () => {
+    const fn = fnSource("defRenderCases");
+    assert.match(fn, /if\(!el\.dataset\.delegated\)/,
+      "the rows are rebuilt on every save; reattaching each time would pile up listeners");
+    assert.match(fn, /el\.addEventListener\("click"/);
+  });
+
+  test("resume, delete and new all route through it", () => {
+    const fn = fnSource("defRenderCases");
+    for (const act of ['act==="new"', 'act==="resume"', 'act==="delete"']) {
+      assert.ok(fn.includes(act), `${act} is not handled`);
+    }
+  });
+
+  test("the case id reaches the handler through an escaped attribute", () => {
+    const fn = fnSource("defCaseListHTML");
+    assert.match(fn, /data-case="'\+attrEsc\(c\.id\)\+'"/);
+  });
+
+  test("stage is a chip, not a coloured word", () => {
+    // A status that signals only in colour fails the moment it is printed or
+    // read by someone who cannot distinguish the hues.
+    const fn = fnSource("defCaseListHTML");
+    assert.match(fn, /var stageChip=function\(status\)/);
+    assert.match(fn, /bw-status/);
   });
 });
