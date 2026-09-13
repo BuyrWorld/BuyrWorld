@@ -856,6 +856,29 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   </div></section>
 </div>
 
+<!-- ============ INBOX ============ -->
+<div class="page" id="page-inbox">
+  <section class="sec"><div class="wrap">
+    <div class="eyebrow" style="margin-bottom:10px">Inbox</div>
+    <h2 style="font-size:34px;margin-bottom:10px">Start with the document, not the tool</h2>
+    <p style="color:var(--muted);max-width:680px;margin-bottom:28px;line-height:1.6">Paste a supplier letter, a contract, a quotation, spend data or meeting notes. This works out what it is, what can be read from it, what is missing, and which workflow it belongs to &mdash; then takes you there. <b style="color:var(--text)">No model is involved in that decision</b>, and it shows the passages it matched.</p>
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+        <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload a file<input type="file" id="inbox-file" accept=".txt,.csv,.md,.eml" data-act="file"></label>
+        <button class="btn btn-ghost" style="padding:10px 16px;font-size:13px" data-act="example">Load synthetic example</button>
+        <span class="fname" id="inbox-fname"></span>
+      </div>
+      <textarea class="bwin" id="inbox-text" rows="9" placeholder="Paste the document here." aria-label="Paste the document to classify"></textarea>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn btn-lime" data-act="run">What is this? &rarr;</button>
+        <button class="btn btn-ghost" data-act="clear">Clear</button>
+      </div>
+      <p style="color:var(--muted);font-size:11.5px;margin:10px 0 0;line-height:1.5">The text stays in this browser. Nothing is sent anywhere to classify it &mdash; the rules run here.</p>
+    </div>
+    <div id="inbox-out"></div>
+  </div></section>
+</div>
+
 <!-- ============ TEMPLATES ============ -->
 <div class="page" id="page-templates">
   <section class="sec"><div class="wrap">
@@ -1020,9 +1043,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <script>
 
 // ---------- Navigation ----------
-const LINKS=[["home","Home"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Resources"],["academy","Academy"],["blog","Blog"],["contact","Project"]];
+const LINKS=[["home","Home"],["inbox","Inbox"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Resources"],["academy","Academy"],["blog","Blog"],["contact","Project"]];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
+function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
   // Without this, activating a nav item changes the page but leaves focus where
   // it was, so a screen reader stays on the old content.
   var m=document.getElementById("main"); if(m)m.focus({preventScroll:true});}
@@ -1050,6 +1073,7 @@ const FEATURES=[
 ["Academy","Seven structured pathways and 38 modules — from first PO to CIPS-ready strategic sourcing.","academy",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/>'],
 ["Market Intelligence","Live markets, AI-searched commodity briefings, your exposure and a cost-shock simulator — the procurement market terminal.","market",'<path d="M3 20h18"/><path d="M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>']];
 const PILLARS=[
+["Inbox","Drop in a supplier letter, contract, quotation or spend file. It works out what it is and where it belongs.","inbox",'<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5 6h14l2 7v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5z"/>',"inbox"],
 ["Intelligence","Live markets, daily AI briefings, commodity & labour intel, your exposure mapped.","market",'<path d="M3 20h18"/><path d="M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>',"market"],
 ["Workflows","RFQs, quote comparisons, contract reviews, spend analysis, negotiation prep — done in minutes.","tools",'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2.2"/><circle cx="8" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/>',"tools"],
 ["Learn","Structured Academy pathways and a weekly blog — from first PO to category leadership and CIPS.","academy",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/>',"academy"],
@@ -2086,6 +2110,128 @@ function defLearningHTML(sid){
       ? '<p style="font-size:11.5px;color:#FFB800;margin:8px 0 0;line-height:1.5">'+ciEsc(gaps.note)+'</p>'
       : '')
     +'</div>';
+}
+
+/* ------------------------------------------------------------- inbox ---
+   Routing a document to the workflow it belongs to. The classification is
+   deterministic and local: it shows the passages it matched rather than
+   asserting an answer, and the runners-up are always offered so a wrong guess
+   is one click from being corrected instead of a dead end. */
+var _inboxResult=null;
+
+function inboxBind(){
+  var page=document.getElementById("page-inbox");
+  if(!page||page.dataset.delegated)return;
+  page.dataset.delegated="1";
+  page.addEventListener("click",function(e){
+    var t=e.target&&e.target.closest?e.target.closest("[data-act]"):null;
+    if(!t)return;
+    var act=t.dataset.act;
+    if(act==="run")inboxRun();
+    else if(act==="clear")inboxClear();
+    else if(act==="example")inboxExample();
+    else if(act==="tools")go("tools");
+    else if(act==="go")inboxGo(t.dataset.route,Boolean(t.dataset.extract));
+  });
+  page.addEventListener("change",function(e){
+    if(e.target&&e.target.dataset&&e.target.dataset.act==="file")inboxLoadFile(e.target);
+  });
+}
+
+function inboxClear(){
+  var t=document.getElementById("inbox-text"); if(t)t.value="";
+  var f=document.getElementById("inbox-fname"); if(f)f.textContent="";
+  var o=document.getElementById("inbox-out"); if(o)o.innerHTML="";
+  _inboxResult=null;
+}
+
+function inboxLoadFile(el){
+  var f=el&&el.files&&el.files[0]; if(!f)return;
+  var name=document.getElementById("inbox-fname");
+  // textContent, never innerHTML: a filename is supplied by whoever made the file.
+  if(name)name.textContent=f.name+" \u2713";
+  if(f.size>2*1024*1024){
+    document.getElementById("inbox-out").innerHTML='<p style="color:#FF5C5C;font-size:14px">That file is larger than 2MB. Paste the relevant part instead.</p>';
+    return;
+  }
+  var r=new FileReader();
+  r.onload=function(){ document.getElementById("inbox-text").value=String(r.result||"").slice(0,200000); inboxRun(f.name); };
+  r.readAsText(f);
+}
+
+function inboxExample(){
+  document.getElementById("inbox-text").value="Dear Customer,\n\nWe regret to inform you that, due to sustained increases in raw material and energy costs, we must apply a 9% price increase across all lines with effect from 1 September 2026.\n\nThe current price of GBP 100.00 per unit will be revised accordingly. Annual volume 50,000 units.\n\nThis is synthetic, fictional correspondence.";
+  var f=document.getElementById("inbox-fname"); if(f)f.textContent="";
+  inboxRun();
+}
+
+function inboxRun(filename){
+  var out=document.getElementById("inbox-out");
+  var text=(document.getElementById("inbox-text")||{value:""}).value;
+  if(!window.BW||!window.BW.classify){ out.innerHTML='<p style="color:#FF5C5C;font-size:14px">The classifier did not load. This page must be served over http rather than opened from the file system.</p>'; return; }
+
+  var R=window.BW.classify(text,{filename:filename||""});
+  _inboxResult=R;
+
+  if(R.kind==="unknown"){
+    out.innerHTML='<div class="card" style="margin:0"><div class="eyebrow" style="margin-bottom:6px">Not recognised</div>'
+      +'<p style="font-size:13.5px;color:#CFCFCF;margin:0 0 10px">'+ciEsc(R.note)+'</p>'
+      +'<button class="btn btn-ghost" data-act="tools">Browse the tools</button></div>';
+    return;
+  }
+
+  // A call, not a bare identifier: the innerHTML scanner flags loose names
+  // reaching markup, and satisfying it properly keeps that check meaningful.
+  var bandColour=function(){return R.band==="strong"?"var(--lime)":R.band==="likely"?"var(--text)":"#FFB800";};
+  var signals=R.signals.map(function(s){
+    return '<li style="margin:5px 0"><b>'+ciEsc(s.id.replace(/-/g," "))+'</b> '
+      +'<span style="color:var(--muted)">&ldquo;'+ciEsc(s.quote)+'&rdquo;</span></li>';
+  }).join("");
+
+  var present=R.present.length
+    ? '<div><div class="eyebrow" style="margin-bottom:6px">Found in the document</div><ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:var(--lime)">'
+      +R.present.map(function(x){return '<li>'+ciEsc(x.label)+'</li>';}).join("")+'</ul></div>'
+    : "";
+  var missing=R.missing.length
+    ? '<div><div class="eyebrow" style="margin-bottom:6px">Not found &mdash; you will be asked for these</div><ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:#FFB800">'
+      +R.missing.map(function(x){return '<li>'+ciEsc(x.label)+'</li>';}).join("")+'</ul></div>'
+    : "";
+
+  var actions=window.BW.nextActions(R).map(function(a){
+    return '<button class="btn '+(a.primary?"btn-lime":"btn-ghost")+'" style="'+(a.primary?"":"padding:9px 15px;font-size:13px")+'" '
+      +'data-act="go" data-route="'+attrEsc(a.route)+'" data-extract="'+(a.extract?"1":"")+'">'+ciEsc(a.label)+'</button>';
+  }).join(" ");
+
+  out.innerHTML='<div class="card" style="margin:0;border-color:'+bandColour()+'">'
+    +'<div class="eyebrow" style="margin-bottom:4px">Detected</div>'
+    +'<div style="font-family:\'Space Grotesk\';font-weight:700;font-size:24px;color:'+bandColour()+'">'+ciEsc(R.workflow.label)+'</div>'
+    +'<p style="color:var(--muted);font-size:12.5px;margin:4px 0 0">'+ciEsc(R.band)+' match &middot; '+R.matchedWeight+' of '+R.possibleWeight+' signals by weight'
+    +(R.note?' &middot; '+ciEsc(R.note):'')+'</p>'
+    +'<div class="eyebrow" style="margin:16px 0 6px">Why</div>'
+    +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:#CFCFCF">'+signals+'</ul>'
+    +((present||missing)?'<div class="grid2" style="gap:18px;margin-top:16px;align-items:start">'+present+missing+'</div>':'')
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">'+actions+'</div>'
+    +'<p style="color:var(--muted);font-size:11.5px;margin:14px 0 0;line-height:1.5">'+ciEsc(R.method)+'</p>'
+    +'</div>';
+}
+
+/* Hand the document to the workflow rather than making the person paste it
+   twice. Only the claim reviewer can read a letter today; the rest are opened
+   with the text carried across where they have somewhere to put it. */
+function inboxGo(route,extract){
+  var text=(document.getElementById("inbox-text")||{value:""}).value;
+  go(route);
+  if(route==="tool-defender"){
+    var letter=document.getElementById("def-letter");
+    if(letter)letter.value=text;
+    if(extract&&typeof defExtract==="function")defExtract();
+  }else if(route==="spend"){
+    var paste=document.getElementById("spend-paste");
+    if(paste)paste.value=text;
+  }else if(route==="tool-minutes"){
+    var notes=document.getElementById("min-notes");
+    if(notes)notes.value=text;
+  }
 }
 
 function defHistoryHTML(){
@@ -4344,6 +4490,7 @@ async function send(id,text){
   import { portfolio } from "./src/calc/portfolio.mjs";
   import { mapExposure, costShock, shareFrom, parseAmount } from "./src/calc/shock.mjs";
   import { learningCorpus, whatWorks, captureGaps } from "./src/calc/learning.mjs";
+  import { classify, nextActions } from "./src/intake/classify.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
@@ -4364,6 +4511,7 @@ async function send(id,text){
                 portfolio,
                 mapExposure, costShock, shareFrom, parseAmount,
                 learningCorpus, whatWorks, captureGaps, linkOutcome,
+                classify, nextActions,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,

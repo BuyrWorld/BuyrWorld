@@ -26,6 +26,8 @@ Priorities below are design intent, not progress. What has actually shipped:
 | 3. Governed guardrails and human approval | P2 | **Built** for the approval record. Autonomous negotiation remains deliberately unbuilt. |
 | 2. Structured negotiation preparation | P2 | **Built.** `negotiation.mjs` derives anchors, a hard line, a priced ladder and ordered rebuttals from the confirmed case. Preparation only — no supplier-facing automation. |
 
+| Universal intake and routing | P1 | **Built.** The Inbox classifies a pasted document deterministically, shows the passages it matched, states what is missing, and routes into the existing workflow carrying the text with it. |
+
 ## 1. Document ingestion and bid normalisation
 
 | | |
