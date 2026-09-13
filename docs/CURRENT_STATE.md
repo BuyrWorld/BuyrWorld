@@ -41,12 +41,14 @@ Genuinely working, worth preserving:
 | Spend Analyser | Real deterministic logic — Pareto, concentration, tail, category aggregation, XLSX export. Now extracted into `src/calc/spend.mjs` with exact arithmetic and 35 tests. |
 | Quote Comparator | Multi-file ingestion, normalisation, structured report output. |
 | Contract Intelligence | Clause-level review and redline generation; three sub-tools through one render path. |
-| Price-Increase Defender | The closest existing thing to the target workflow. Decomposes a supplier claim and drafts a rebuttal. |
+| Price-Increase Defender | The flagship workflow. Decomposes a supplier claim against exact arithmetic, assesses the evidence, and now carries the case through to a negotiating position via `src/calc/negotiation.mjs`. |
 | Market Intelligence | Four web-grounded panels, now returning real citations. |
 | Report/export shells | jsPDF and XLSX export shared by several tools. |
 
 Thin wrappers over a single prompt, low intrinsic value: Meeting Minutes, RFQ
-Generator, Negotiation Simulator, Supplier Discovery, Buyr AI chat.
+Generator, Supplier Discovery, Buyr AI chat. The standalone Negotiation Simulator
+is now superseded for claim cases by the computed plan on the Defender, and
+still does not know a case exists.
 
 ## Known weaknesses carried forward
 

@@ -33,7 +33,7 @@
  */
 
 import {
-  SCALE, money, moneyAdd, moneyScale, moneyTimesQuantity,
+  SCALE, money, moneyAdd, moneyApplyChange, moneyScale, moneyTimesQuantity,
   moneyToDecimalString, scaleDiv, ratioMul, ratioToPercentString,
 } from "./exact.mjs";
 import { partialAcceptance, delayEffect } from "./cost-bridge.mjs";
@@ -341,6 +341,9 @@ export function prepareNegotiation({ bridge, ev = null, position = {}, generated
   const lineAtCurrent = moneyTimesQuantity(unit, vol);
   const hardLine = Object.freeze({
     change: hardLineChange,
+    /* The unit price at the hard line. Callers that reach for the baseline
+       instead are right only when the hard line happens to be zero. */
+    unitPrice: moneyApplyChange(unit, hardLineChange),
     annualCost: moneyAdd(lineAtCurrent, moneyScale(lineAtCurrent, hardLineChange)),
     annualDelta: moneyScale(lineAtCurrent, hardLineChange),
     belowWarrantedBy: moneyScale(lineAtCurrent, bridge.warrantedChange - hardLineChange),

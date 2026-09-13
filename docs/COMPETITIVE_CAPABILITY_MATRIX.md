@@ -24,7 +24,7 @@ Priorities below are design intent, not progress. What has actually shipped:
 | 6. Fast, actionable commercial intelligence | P1 | **Built.** One click loads a fully worked synthetic case. |
 | 5. Governed data with traceable insight-to-outcome | P2 | **Built.** Outcome capture and aggregation close the loop. |
 | 3. Governed guardrails and human approval | P2 | **Built** for the approval record. Autonomous negotiation remains deliberately unbuilt. |
-| 2. Structured negotiation preparation | P2 | **Not built.** The existing simulator is not yet driven by confirmed case facts. |
+| 2. Structured negotiation preparation | P2 | **Built.** `negotiation.mjs` derives anchors, a hard line, a priced ladder and ordered rebuttals from the confirmed case. Preparation only — no supplier-facing automation. |
 
 ## 1. Document ingestion and bid normalisation
 

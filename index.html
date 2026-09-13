@@ -521,7 +521,17 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <span style="color:var(--muted);font-size:12px">Proposes values for the fields above. Nothing is used until you confirm it.</span>
       </div>
       <div id="def-extract" style="margin-top:12px"></div>
-      <input class="bwin" id="def-context" style="margin-top:10px" placeholder="Optional context: alternatives available, switching cost, contract notice period" aria-label="Optional context: alternatives available, switching cost, contract notic">
+      <div class="eyebrow" style="margin:18px 0 8px">5 &middot; Your position <span style="text-transform:none;letter-spacing:0">(optional &mdash; decides whether walking away is credible)</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">
+        <label style="font-size:12px;color:var(--muted)">Qualified alternatives<input class="bwin" id="def-alts" placeholder="how many" inputmode="numeric"></label>
+        <label style="font-size:12px;color:var(--muted)">Qualification weeks<input class="bwin" id="def-qual" placeholder="e.g. 12" inputmode="numeric"></label>
+        <label style="font-size:12px;color:var(--muted)">Notice period weeks<input class="bwin" id="def-notice" placeholder="e.g. 26" inputmode="numeric"></label>
+        <label style="font-size:12px;color:var(--muted)">Switching cost<input class="bwin" id="def-switch" placeholder="one-off total" inputmode="decimal"></label>
+        <label style="font-size:12px;color:var(--muted)">Criticality<select class="bwin" id="def-crit"><option value="">not stated</option><option value="standard">standard</option><option value="critical">critical</option><option value="single-source">single-source</option></select></label>
+      </div>
+      <div style="color:var(--muted);font-size:11.5px;margin-top:6px">Leave blank and the walk-away question is reported as unknown rather than guessed.</div>
+
+      <input class="bwin" id="def-context" style="margin-top:10px" placeholder="Optional context for the drafted reply" aria-label="Optional context: alternatives available, switching cost, contract notic">
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
         <button class="btn btn-lime" onclick="defCalc()">Calculate exposure</button>
@@ -1759,6 +1769,96 @@ function defCalc(){
   }
 }
 
+// The negotiation plan. Everything here is computed by src/calc/negotiation.mjs
+// from the bridge and the evidence already on screen — nothing is drafted by a
+// model, and nothing estimates what another supplier would charge.
+function defPosition(){
+  var g=function(id){var el=document.getElementById(id);return el?String(el.value).trim():"";};
+  var num=function(id){var t=g(id).replace(/[^0-9-]/g,"");return t===""?null:parseInt(t,10);};
+  var pos={criticality:g("def-crit")||null,alternatives:num("def-alts"),
+           qualificationWeeks:num("def-qual"),noticePeriodWeeks:num("def-notice")};
+  var sw=g("def-switch").replace(/[^0-9.]/g,"");
+  if(sw!==""){ try{ pos.switchingCost=window.BW.moneyFromDecimal(Number(sw).toFixed(2),String(g("def-currency")||"GBP").toUpperCase()); }catch(e){} }
+  return pos;
+}
+function defNegotiationHTML(r,cur){
+  if(!window.BW.prepareNegotiation)return"";
+  var N;
+  try{
+    var ev=null; try{ ev=window.BW.assessEvidence(r,{}); }catch(e){ ev=null; }
+    N=window.BW.prepareNegotiation({bridge:r,ev:ev,position:defPosition()});
+  }catch(e){ return ""; }
+  var P=window.BW.formatPercent,M=window.BW.moneyToDecimalString,C=window.BW.CREDIBILITY;
+  var money=function(m){return cur+" "+M(m);};
+
+  var anchor=function(label,pct,unit,annual,colour){
+    return '<div style="flex:1;min-width:150px"><div class="eyebrow" style="margin-bottom:4px">'+label+'</div>'
+      +'<div style="font-weight:700;font-size:20px;color:'+colour+';font-variant-numeric:tabular-nums">'+pct+'</div>'
+      +'<div style="color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums">'+cur+' '+M(unit)+' a unit &middot; '+money(annual)+' a year</div></div>';
+  };
+
+  var hard=N.hardLine.assessed
+    ? '<p style="font-size:13px;color:#CFCFCF;margin:0 0 10px">Hard line <b style="color:var(--lime)">'+P(N.hardLine.change)+'</b> &mdash; '
+      +money(N.hardLine.belowWarrantedBy)+' a year below the warranted figure. That is what survives if none of the unevidenced drivers is supported.</p>'
+    : '<p style="font-size:13px;color:#FFB800;margin:0 0 10px">No evidence assessment, so the hard line cannot be told apart from the warranted figure.</p>';
+
+  var challenges=N.ladder.challenges.length
+    ? '<div class="eyebrow" style="margin:14px 0 6px">Ask for these first</div><ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:#CFCFCF">'
+      +N.ladder.challenges.map(function(c){
+        return '<li><b>'+ciEsc(c.label)+'</b> &mdash; '+P(c.contribution)+' of the increase, worth <b style="color:var(--lime)">'+money(c.worthAnnually)+'</b> a year<br>'
+          +'<span style="color:var(--muted)">'+ciEsc(c.why)+'</span></li>';
+      }).join("")+'</ul>'
+    : "";
+
+  var ladder='<div class="eyebrow" style="margin:14px 0 6px">What each step costs</div>'
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;color:#CFCFCF">'
+    +'<thead><tr style="color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase">'
+    +'<th style="text-align:left;padding-bottom:6px">Position</th><th style="text-align:right;padding-bottom:6px">Accepted</th>'
+    +'<th style="text-align:right;padding-bottom:6px">Unit</th><th style="text-align:right;padding-bottom:6px">This step costs</th></tr></thead><tbody>'
+    +N.ladder.concessions.map(function(c){
+      return '<tr><td style="padding:6px 10px 6px 0">'+ciEsc(c.note.split(".")[0])
+        +(c.evidenced?' <span style="color:var(--lime);font-size:11px">evidenced</span>':' <span style="color:#FFB800;font-size:11px">a choice</span>')+'</td>'
+        +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'+P(c.acceptedChange)+'</td>'
+        +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'+M(c.acceptedUnitPrice)+'</td>'
+        +'<td style="text-align:right;padding:6px 0 6px 10px;font-variant-numeric:tabular-nums;color:'+(c.costOfThisStep.minor>0n?"#FF5C5C":"var(--lime)")+'">'+money(c.costOfThisStep)+'</td></tr>';
+    }).join("")+'</tbody></table></div>';
+
+  var defer=N.deferrals.map(function(d){
+    return d.months+' month'+(d.months>1?"s":"")+': '+money(d.firstYearAvoided)+' avoided in year one';
+  }).join(' &middot; ');
+
+  var rebut=N.rebuttals.length
+    ? '<div class="eyebrow" style="margin:14px 0 6px">What they will say</div><ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:#CFCFCF">'
+      +N.rebuttals.slice(0,8).map(function(x){
+        return '<li>'+ciEsc(x.theirPoint)+'<br><span style="color:var(--muted)">Ask for '+ciEsc(x.ask)+'</span>'
+          +(x.worthAnnually?' <b style="color:var(--lime)">'+money(x.worthAnnually)+' a year</b>':' <span style="color:var(--muted)">(nothing to recover &mdash; already treated as zero)</span>')+'</li>';
+      }).join("")+'</ul>'
+    : "";
+
+  var wcol=N.walkAway.credibility===C.CREDIBLE?"var(--lime)":N.walkAway.credibility===C.NOT_CREDIBLE?"#FF5C5C":"#FFB800";
+  var walk='<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">'
+    +'<div class="eyebrow" style="margin-bottom:4px">Walking away is <span style="color:'+wcol+'">'+ciEsc(N.walkAway.credibility)+'</span></div>'
+    +'<p style="font-size:12.5px;color:var(--muted);margin:0;line-height:1.6">'+ciEsc(N.walkAway.rule)+'</p>'
+    +(N.walkAway.breakeven?'<p style="font-size:12.5px;color:#CFCFCF;margin:8px 0 0;line-height:1.6">Switching pays back in about <b>'
+      +N.walkAway.breakeven.yearsApprox.toFixed(1)+' year'+(N.walkAway.breakeven.yearsApprox===1?"":"s")+'</b> &mdash; '+ciEsc(N.walkAway.breakeven.basis)
+      +' <span style="color:#FFB800">assumed</span>, because nobody has quoted an alternative.</p>':"")
+    +'</div>';
+
+  return '<div style="border:1px solid var(--lime);border-radius:12px;padding:14px 16px;margin-top:14px">'
+    +'<div class="eyebrow" style="margin-bottom:8px;color:var(--lime)">Negotiation plan</div>'
+    +'<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px">'
+    +anchor("Open at",P(N.openingPosition.openAt),N.hardLine.unitPrice,N.hardLine.annualCost,"var(--lime)")
+    +anchor("Target",P(N.openingPosition.target),r.unitPrice.warranted,N.anchors.warranted.annualCost,"var(--text)")
+    +anchor("Their ask",P(r.requestedChange),r.unitPrice.requested,N.anchors.requested.annualCost,"#FF5C5C")
+    +'</div>'
+    +'<p style="font-size:13px;color:#CFCFCF;margin:0 0 8px">In dispute: <b style="color:#FF5C5C">'+money(N.anchors.inDispute)+'</b> a year ('+P(N.anchors.inDisputeChange)+'). Everything below the target is arithmetic both sides can check.</p>'
+    +hard+challenges+ladder
+    +'<p style="font-size:12.5px;color:var(--muted);margin:10px 0 0">Deferral instead of money &mdash; '+defer+'.</p>'
+    +rebut+walk
+    +'<p style="color:var(--muted);font-size:11.5px;margin:12px 0 0;line-height:1.6">'+ciEsc(N.openingPosition.rule)+'</p>'
+    +'</div>';
+}
+
 function defRender(r,cur){
   var P=window.BW.formatPercent,M=window.BW.moneyToDecimalString;
   var over=r.unsupportedChange>0n;
@@ -1797,6 +1897,7 @@ function defRender(r,cur){
     +defVerifyHTML(r)
     +defCurrencyHTML(r)
     +defEvidenceHTML(r)
+    +defNegotiationHTML(r,cur)
     +(r.assumptions.length?'<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px"><div class="eyebrow" style="margin-bottom:6px">Assumptions</div><ul style="margin:0;padding-left:18px;color:var(--muted);font-size:12.5px;line-height:1.6">'+r.assumptions.map(function(x){return "<li>"+ciEsc(x.text)+"</li>";}).join("")+'</ul></div>':"")
     +'<p style="color:var(--muted);font-size:11.5px;margin-top:12px">'+ciEsc(r.formula)+'. Computed in exact integer arithmetic; no language model produced these figures.</p>'
     +'</div>';
@@ -3783,6 +3884,7 @@ async function send(id,text){
   import { createSeries, movementBetween } from "./src/calc/index-series.mjs";
   import { assessEvidence, formatWeight } from "./src/calc/evidence.mjs";
   import { labelFor, assumptionsToVerify, LEGEND } from "./src/calc/provenance.mjs";
+  import { prepareNegotiation, CREDIBILITY } from "./src/calc/negotiation.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
   import { fxRate } from "./src/calc/fx.mjs";
   import { buildDecisionPack } from "./src/calc/decision-pack.mjs";
@@ -3796,6 +3898,7 @@ async function send(id,text){
                 pc: ratioFromPercent, moneyFromDecimal, moneyToDecimalString,
                 createSeries, movementBetween, assessEvidence, formatWeight, fxRate,
                 labelFor, assumptionsToVerify, LEGEND,
+                prepareNegotiation, CREDIBILITY,
                 parseSpendCsv, analyseSpendExact, indicativeSavings,
                 buildDecisionPack, renderDecisionPackHTML,
                 recordOutcome, summariseOutcomes,

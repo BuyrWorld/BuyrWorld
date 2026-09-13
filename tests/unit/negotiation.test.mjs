@@ -66,6 +66,25 @@ describe("the hard line", () => {
     assert.equal(n.hardLine.assessed, true);
   });
 
+  test("it carries its own unit price, not the baseline", () => {
+    // These coincide only when the hard line is zero, which is exactly why
+    // reaching for the baseline instead looks correct until it isn't.
+    const n = prep({
+      drivers: [
+        {
+          id: "material", label: "Steel bar", weight: pc("42"), indexMovement: pc("10"),
+          evidence: {
+            weight: evidence(K.DOCUMENT, { label: "breakdown", quote: "42%" }),
+            movement: evidence(K.PUBLISHED, { label: "synthetic index" }),
+          },
+        },
+        { id: "labour", label: "Labour", weight: pc("18"), indexMovement: pc("5") },
+      ],
+    });
+    assert.equal(str(n.hardLine.unitPrice), "104.20");
+    assert.notEqual(str(n.hardLine.unitPrice), str(n.anchors.current.unitPrice));
+  });
+
   test("an evidenced driver holds its ground", () => {
     const n = prep({
       drivers: [

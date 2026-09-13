@@ -8,9 +8,9 @@ A dark-mode procurement web product at buyrworld.com. Single-page app served fro
 
 - `index.html` — the entire UI, state, router, prompts and report generation. Show/hide SPA routed by `go(page)`; Market Intelligence has its own sub-router `miGo()`.
 - `api/chat.js` — the only model endpoint. `maxDuration: 300`.
-- `/previews/` — 8 lowercase-hyphenated JPEGs for the paid templates.
+- `/previews/` — 8 lowercase-hyphenated JPEGs, the sample previews for the reference templates. Nothing is for sale.
 - Also in root: `buyrworld-social-card.png`, `robots.txt`, `sitemap.xml`.
-- `src/calc/` — the deterministic calculation engine (ES modules). `exact.mjs` is BigInt money and ratio arithmetic; `index-series.mjs` resolves index movement from a contractual base period with a lag; `cost-bridge.mjs` is the supplier-claim decomposition; `spend.mjs` is the spend analysis. Imported by `index.html` via one `<script type="module">` that mounts `window.BW`.
+- `src/calc/` — the deterministic calculation engine (ES modules). `exact.mjs` is BigInt money and ratio arithmetic; `index-series.mjs` resolves index movement from a contractual base period with a lag; `cost-bridge.mjs` is the supplier-claim decomposition; `spend.mjs` is the spend analysis; `negotiation.mjs` turns a finished case into a negotiating position. Imported by `index.html` via one `<script type="module">` that mounts `window.BW`.
 - `tests/` — Node's built-in runner. `node --test "tests/**/*.test.mjs"`.
 - `scripts/verify.mjs` — runs everything. Run it before any deploy.
 - `fixtures/` — synthetic, fictional demonstration cases.
