@@ -815,6 +815,21 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <button class="btn btn-lime" style="margin-top:12px" onclick="runComparator()">Compare quotes →</button>
       <div id="q-out" style="margin-top:18px"></div>
     </div>
+
+    <div class="bw-panel" style="margin-top:var(--bw-4)">
+      <div class="bw-panel-head"><div class="bw-panel-title">Normalise the numbers</div></div>
+      <p style="color:var(--bw-muted);font-size:var(--bw-t-body);margin:0 0 var(--bw-4);line-height:1.6">Sorting by unit price produces a ranking that looks decisive and is about nothing. Enter what each supplier actually quoted and this keeps the differences visible &mdash; <b style="color:var(--bw-text)">nothing is estimated into money</b>, and no supplier is recommended.</p>
+      <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+        <label class="bw-field">Volume compared<input class="bwin" id="qn-volume" inputmode="numeric" placeholder="50000"></label>
+      </div>
+      <div id="qn-list"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--bw-3)">
+        <button class="bw-act bw-act-secondary" data-qn-act="add">+ Add a quote</button>
+        <button class="bw-act bw-act-primary" data-qn-act="run">Normalise &rarr;</button>
+        <button class="bw-act bw-act-secondary" data-qn-act="example">Load synthetic example</button>
+      </div>
+      <div id="qn-out" style="margin-top:var(--bw-4)"></div>
+    </div>
   </div></section>
 </div>
 
@@ -1266,7 +1281,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 // ---------- Navigation ----------
 const LINKS=[["home","Home"],["dash","Workspace"],["inbox","Inbox"],["parts","Parts"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Resources"],["academy","Academy"],["blog","Blog"],["contact","Project"]];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="parts"&&typeof ptBind==="function")ptBind();if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function"){defBindAlts();if(typeof defShadowBind==="function")defShadowBind();}if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
+function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="tool-quotes"&&typeof qnBind==="function")qnBind();if(p==="parts"&&typeof ptBind==="function")ptBind();if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function"){defBindAlts();if(typeof defShadowBind==="function")defShadowBind();}if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
   // Without this, activating a nav item changes the page but leaves focus where
   // it was, so a screen reader stays on the old content.
   var m=document.getElementById("main"); if(m)m.focus({preventScroll:true});}
@@ -3142,6 +3157,148 @@ function defShadowBind(){
         if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length);}
       }
     }
+  });
+}
+
+/* ------------------------------------------------------------- sourcing ---
+   Bid normalisation. The page collects what was quoted; sourcing.mjs decides
+   what can honestly be compared and what cannot. */
+
+// [supplier, unitPrice, incoterm, moq, leadTimeWeeks, paymentTermsDays, validityDays, tooling]
+var _qnRows=[];
+
+function qnRow(a,i){
+  var f=function(k,label,ph,mode){
+    return '<label class="bw-field">'+ciEsc(label)
+      +'<input class="bwin" value="'+attrEsc(a[k]||"")+'" data-qn="'+i+'" data-qn-field="'+k+'"'
+      +(mode?' inputmode="'+mode+'"':'')+' placeholder="'+attrEsc(ph)+'" aria-label="'+attrEsc(label)+'"></label>';
+  };
+  return '<div style="border:1px solid var(--bw-border);border-radius:var(--bw-r-sm);padding:10px 12px;margin-bottom:8px">'
+    +'<div class="bw-fields">'
+    +f(0,"Supplier","Alpha Castings Ltd")
+    +f(1,"Unit price","12.40","decimal")
+    +f(2,"Incoterm","DDP")
+    +f(3,"Minimum order","1000","numeric")
+    +f(4,"Lead time (weeks)","6","numeric")
+    +f(5,"Payment terms (days)","60","numeric")
+    +f(6,"Validity (days)","30","numeric")
+    +f(7,"Tooling (one-off)","20000","decimal")
+    +'</div>'
+    +'<button class="bw-act bw-act-text" data-qn-act="remove" data-qn="'+i+'" aria-label="Remove this quote">&times; Remove</button>'
+    +'</div>';
+}
+
+function qnRender(){
+  var host=document.getElementById("qn-list");
+  if(!host)return;
+  host.innerHTML=_qnRows.length
+    ? _qnRows.map(qnRow).join("")
+    : '<p style="font-size:12.5px;color:var(--bw-muted);margin:0">Two quotes are the smallest comparison that says anything.</p>';
+  if(!host.dataset.delegated){
+    host.dataset.delegated="1";
+    var sync=function(e){
+      var t=e.target;
+      if(!t||!t.dataset||t.dataset.qn===undefined)return;
+      var row=_qnRows[Number(t.dataset.qn)];
+      if(row)row[Number(t.dataset.qnField)]=t.value;
+    };
+    host.addEventListener("input",sync);
+  }
+}
+
+function qnAdd(){_qnRows.push(["","","","","","","",""]);qnRender();}
+function qnRemove(i){_qnRows.splice(i,1);qnRender();}
+
+function qnExample(){
+  _qnRows=[
+    ["Alpha Castings Ltd","12.40","EXW","5000","10","30","30","20000"],
+    ["Bravo Precision","12.65","DDP","1000","6","60","30",""]
+  ];
+  var v=document.getElementById("qn-volume"); if(v)v.value="50000";
+  qnRender();
+}
+
+function qnRun(){
+  var out=document.getElementById("qn-out");
+  if(!out||!window.BW.compareQuotes)return;
+  var intOf=function(v){var t=String(v||"").replace(/[^0-9]/g,"");return t===""?undefined:parseInt(t,10);};
+  var moneyOf=function(v){var m=window.BW.parseAmount(v);return m===null?undefined:window.BW.money(m,"GBP",null);};
+
+  var quotes=[];
+  try{
+    quotes=_qnRows.filter(function(a){return String(a[0]).trim()&&String(a[1]).trim();}).map(function(a){
+      return window.BW.makeQuote({
+        supplier:String(a[0]).trim(),
+        unitPrice:moneyOf(a[1]),
+        quantity:intOf((document.getElementById("qn-volume")||{}).value),
+        incoterm:a[2],
+        moq:intOf(a[3]),
+        leadTimeWeeks:intOf(a[4]),
+        paymentTermsDays:intOf(a[5]),
+        validityDays:intOf(a[6]),
+        toolingCost:moneyOf(a[7])
+      });
+    });
+  }catch(e){
+    out.innerHTML='<p style="color:var(--bw-danger);font-size:13px;margin:0">'+ciEsc(String(e.message||e))+'</p>';
+    return;
+  }
+
+  var R;
+  try{ R=window.BW.compareQuotes(quotes,{quantity:intOf((document.getElementById("qn-volume")||{}).value)}); }
+  catch(e){ out.innerHTML='<p style="color:var(--bw-danger);font-size:13px;margin:0">'+ciEsc(String(e.message||e))+'</p>'; return; }
+
+  if(!R.ok){
+    out.innerHTML='<p style="color:var(--bw-muted);font-size:var(--bw-t-body);margin:0">'+ciEsc(R.reason)+'</p>';
+    return;
+  }
+
+  var M=window.BW.moneyToDecimalString;
+  var rows=R.byLanded.map(function(r){
+    return '<tr><td>'+ciEsc(r.supplier)+'</td>'
+      +'<td class="n">'+ciEsc(R.currency)+' '+M(r.headline)+'</td>'
+      +'<td class="n">'+(r.toolingPerUnit?M(r.toolingPerUnit):'<span style="color:var(--bw-muted)">&mdash;</span>')+'</td>'
+      +'<td class="n">'+ciEsc(R.currency)+' '+M(r.landed)+'</td></tr>';
+  }).join("");
+
+  var gaps=R.unpriced.map(function(u){
+    return '<li><b>'+ciEsc(u.label)+'</b> &mdash; '
+      +u.values.map(function(v){return ciEsc(v.suppliers.join(", "))+": "+ciEsc(v.value);}).join(" &middot; ")
+      +'<br><span style="color:var(--bw-muted)">'+ciEsc(u.why)+'</span></li>';
+  }).join("");
+
+  var qs=window.BW.questionsFor(R).slice(0,5).map(function(q){
+    return '<li>'+ciEsc(q.question)+'</li>';
+  }).join("");
+
+  out.innerHTML='<p style="font-size:var(--bw-t-body);color:var(--bw-body);margin:0 0 var(--bw-3);line-height:1.6">'+ciEsc(R.statement)+'</p>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Supplier</th><th class="n">Headline</th><th class="n">Tooling / unit</th><th class="n">Costed</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +'<p style="margin:var(--bw-3) 0 0">'
+    +(R.rankingSafe
+      ? '<span class="bw-status bw-status--evidenced">ranking complete</span>'
+      : '<span class="bw-status bw-status--high">ranking not safe</span>')
+    +(R.orderChangedByCosting?' <span class="bw-status bw-status--medium">costing changed the order</span>':'')
+    +'</p>'
+    +(gaps?'<div class="eyebrow" style="margin:var(--bw-4) 0 6px">Not costed</div><ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:var(--bw-body)">'+gaps+'</ul>':'')
+    +(qs?'<div class="eyebrow" style="margin:var(--bw-4) 0 6px">Ask before deciding</div><ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:var(--bw-body)">'+qs+'</ul>':'')
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.5">'+ciEsc(R.method)+'</p>';
+}
+
+function qnBind(){
+  var page=document.getElementById("page-tool-quotes");
+  if(!page||page.dataset.qnBound)return;
+  page.dataset.qnBound="1";
+  qnRender();
+  page.addEventListener("click",function(e){
+    var t=e.target&&e.target.closest?e.target.closest("[data-qn-act]"):null;
+    if(!t)return;
+    var act=t.dataset.qnAct;
+    if(act==="add")qnAdd();
+    else if(act==="run")qnRun();
+    else if(act==="example")qnExample();
+    else if(act==="remove")qnRemove(Number(t.dataset.qn));
   });
 }
 
@@ -5415,6 +5572,7 @@ async function send(id,text){
   import { comparablePart, compare, findComparable, priceGap, ATTRIBUTES } from "./src/calc/comparable.mjs";
   import { scanOpportunities, SEVERITY } from "./src/calc/radar.mjs";
   import { nextMoves, recordRound, MOVE } from "./src/calc/shadow.mjs";
+  import { quote as makeQuote, compareQuotes, questionsFor, SCOPE } from "./src/calc/sourcing.mjs";
   import { part as makePart, savePart, loadParts, deletePart, storeStatus as partStoreStatus,
            forComparison } from "./src/services/part-store.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
@@ -5442,6 +5600,7 @@ async function send(id,text){
                 comparablePart, compare, findComparable, priceGap, ATTRIBUTES,
                 scanOpportunities, SEVERITY,
                 nextMoves, recordRound, MOVE,
+                makeQuote, compareQuotes, questionsFor, SCOPE,
                 makePart, savePart, loadParts, deletePart, partStoreStatus, forComparison,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,

@@ -35,6 +35,8 @@ Priorities below are design intent, not progress. What has actually shipped:
 
 | Commercial opportunity radar | P2 | **Built and wired.** `radar.mjs` reads across spend, outcomes, cases, parts and suppliers and reports what is worth asking about, each finding carrying its rule, evidence, action and what is missing. A signal needing data nobody recorded does not fire, and the blind spots are listed so an empty result is legible. Findings are never totalled. |
 
+| Bid normalisation | P1 | **Built and wired.** `sourcing.mjs` computes a headline ranking and a costed one and keeps them apart. Tooling is spread over the stated volume; every other difference stays unpriced unless somebody costs it, and while any remain the ranking is reported as unsafe. No currency is converted without a dated, sourced rate, and no supplier is recommended. |
+
 ## 1. Document ingestion and bid normalisation
 
 | | |
