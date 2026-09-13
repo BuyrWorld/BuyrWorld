@@ -93,6 +93,17 @@ beforeEach(() => { store = makeStore(); sb = makeSandbox(store); });
 const set = (id, v) => { sb._els.get(id).value = v; };
 const get = (id) => sb._els.get(id).value;
 
+/* A bridge-shaped result: £100 a unit, 50,000 a year, 9% asked against 4%
+   evidenced, so 5pp — £250,000 a year — is unsupported. */
+const pc5 = 50_000_000n;
+const analysed = () => ({
+  requestedChange: 90_000_000n,
+  warrantedChange: 40_000_000n,
+  unsupportedChange: pc5,
+  annual: { unsupported: { minor: 250_000_00n, currency: "GBP", asOf: null } },
+  unitPrice: { baseline: { minor: 10_000n, currency: "GBP", asOf: null } },
+});
+
 describe("the page is wired to the store", () => {
   test("the store is imported and mounted", () => {
     assert.match(html, /from "\.\/src\/services\/case-store\.mjs"/);
@@ -206,9 +217,33 @@ describe("saving and resuming a case", () => {
     set("def-case", "SC-001"); sb.defSaveCase();
     assert.equal(listCases(store)[0].status, STATUS.DRAFT);
 
-    sb._defResult = { unitPrice: {} };
+    sb._defResult = analysed();
     sb.defSaveCase();
     assert.equal(listCases(store)[0].status, STATUS.ANALYSED);
+  });
+
+  test("a calculated case carries its figures, so exposure can be totalled", () => {
+    set("def-case", "SC-001");
+    sb._defResult = analysed();
+    sb.defSaveCase();
+
+    const sum = loadCase(listCases(store)[0].id, store).summary;
+    assert.equal(sum.currency, "GBP");
+    assert.equal(sum.annualUnsupportedMinor, 250_000_00n);
+    assert.equal(typeof sum.annualUnsupportedMinor, "bigint", "a float here would defeat the engine");
+    assert.equal(sum.unsupported, pc5);
+  });
+
+  test("a result the summary cannot be built from still saves the inputs", () => {
+    // The inputs are the irreplaceable part; the figures can be recomputed.
+    set("def-case", "SC-001"); set("def-price", "100.00");
+    sb._defResult = { unitPrice: {} };          // malformed on purpose
+    sb.defSaveCase();
+
+    const row = listCases(store)[0];
+    assert.equal(row.ref, "SC-001");
+    assert.equal(loadCase(row.id, store).data.fields["def-price"], "100.00");
+    assert.equal(loadCase(row.id, store).summary, null, "an absent summary is an unknown, not a zero");
   });
 
   test("resuming loads the other case and leaves nothing of this one behind", () => {

@@ -546,7 +546,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <div id="def-out" style="margin-top:18px"></div>
 
       <details style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px">
-        <summary style="cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:15px">5 &middot; Record what was agreed</summary>
+        <summary style="cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:15px">6 &middot; Record what was agreed</summary>
         <p style="color:var(--muted);font-size:13.5px;line-height:1.6;margin:10px 0 14px">Once the negotiation closes, record the outcome. The amount avoided is calculated from the analysis above &mdash; it is not typed in, because a saving somebody typed is not a saving. Outcomes stay in this browser and are never sent anywhere.</p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
           <label style="font-size:12px;color:var(--muted)">Agreed %<input class="bwin" id="oc-agreed" inputmode="decimal" placeholder="4.5"></label>
@@ -1834,6 +1834,20 @@ function defSaveCase(){
     status:_defResult?window.BW.CASE_STATUS.ANALYSED:window.BW.CASE_STATUS.DRAFT,
     data:defCollect()
   };
+  // Figures, not form values: the portfolio totals what is still in dispute
+  // across open cases, and re-deriving that from field strings would mean
+  // teaching it the form's shape.
+  // Wrapped: a case must never fail to save because its summary could not be
+  // built. The inputs are the irreplaceable part; the figures can be recomputed.
+  if(_defResult){try{
+    body.summary={
+      requested:_defResult.requestedChange,
+      warranted:_defResult.warrantedChange,
+      unsupported:_defResult.unsupportedChange,
+      annualUnsupportedMinor:_defResult.annual.unsupported.minor,
+      currency:_defResult.unitPrice.baseline.currency
+    };
+  }catch(e){ body.summary=undefined; }}
   var r=window.BW.saveCase(window.BW.newCase(body));
   var out=document.getElementById("def-cases");
   if(!r.ok){
@@ -1910,6 +1924,7 @@ function defCaseListHTML(){
   }).join("");
 
   return '<div class="card" style="margin:0">'
+    +defPortfolioLineHTML()
     +'<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
     +'<div class="eyebrow" style="margin:0">Saved cases ('+rows.length+')</div>'
     +'<button class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px" onclick="defNewCase()">Start a new case</button></div>'
@@ -1925,6 +1940,106 @@ function defCaseListHTML(){
 function defRenderCases(){
   var el=document.getElementById("def-cases");
   if(el)el.innerHTML=defCaseListHTML();
+}
+
+/* ------------------------------------------------------------ portfolio ---
+   The book of work. One question across every case: of the money nobody
+   evidenced, how much was actually kept. */
+function defPortfolio(){
+  if(!window.BW||!window.BW.portfolio)return null;
+  var outcomes=[],cases=[];
+  try{ outcomes=window.BW.loadOutcomes()||[]; }catch(e){ outcomes=[]; }
+  try{ cases=window.BW.loadCases?window.BW.loadCases():[]; }catch(e){ cases=[]; }
+  try{ return window.BW.portfolio({outcomes:outcomes,cases:cases}); }catch(e){ return null; }
+}
+
+/* One glanceable line for the case list, where a person actually lands. */
+function defPortfolioLineHTML(){
+  var P0=defPortfolio();
+  if(!P0||!P0.outcomes)return"";
+  var P=window.BW.formatPercent,M=window.BW.moneyToDecimalString;
+  var main=P0.resisted[0];
+  var bits=[];
+  if(main&&main.rate!==null)bits.push('<b style="color:var(--lime)">'+P(main.rate)+'</b> of the unevidenced ask resisted');
+  if(P0.coverage.rate!==null&&!P0.coverage.complete)
+    bits.push(P0.coverage.closed+' of '+P0.coverage.analysed+' analysed cases closed');
+  if(P0.inFlight.length)
+    bits.push(ciEsc(P0.inFlight[0].currency)+' '+M(P0.inFlight[0].unsupported)+' still in dispute');
+  if(!bits.length)return"";
+  return '<p style="font-size:12.5px;color:var(--muted);margin:0 0 10px">'+bits.join(' &middot; ')+'.</p>';
+}
+
+/* The full view, in the section where outcomes are recorded. */
+function defPortfolioHTML(){
+  var P0=defPortfolio();
+  if(!P0)return"";
+  var P=window.BW.formatPercent,M=window.BW.moneyToDecimalString;
+
+  if(!P0.outcomes){
+    return '<div class="card" style="margin:0 0 14px"><div class="eyebrow" style="margin-bottom:6px">Portfolio</div>'
+      +'<p style="font-size:13px;color:var(--muted);margin:0">'+ciEsc(P0.headline)+'</p>'
+      +(P0.openCases?'<p style="font-size:12.5px;color:var(--muted);margin:8px 0 0">'+P0.openCases+' case(s) open.</p>':'')
+      +'</div>';
+  }
+
+  var big=function(label,val,colour,sub){
+    return '<div style="flex:1;min-width:150px"><div class="eyebrow" style="margin-bottom:4px">'+label+'</div>'
+      +'<div style="font-weight:700;font-size:22px;color:'+colour+';font-variant-numeric:tabular-nums">'+val+'</div>'
+      +(sub?'<div style="color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums">'+sub+'</div>':'')+'</div>';
+  };
+
+  var heads=P0.resisted.map(function(r){
+    return big("Resisted ("+ciEsc(r.currency)+")",
+      r.rate===null?"&mdash;":P(r.rate),"var(--lime)",
+      ciEsc(r.currency)+" "+M(r.kept)+" kept of "+M(r.unsupported)+" unevidenced");
+  }).join("");
+
+  var flight=P0.inFlight.map(function(f){
+    return big("In dispute now",ciEsc(f.currency)+" "+M(f.unsupported),"#FFB800",f.cases+" open case(s)");
+  }).join("");
+
+  var landed=P0.landed
+    ? '<p style="font-size:13px;color:#CFCFCF;margin:12px 0 0">Settled at or below the evidenced position '
+      +'<b style="color:var(--lime)">'+P0.landed.atOrBelowEvidenced+'</b> time(s), above it <b style="color:#FF5C5C">'
+      +P0.landed.aboveEvidenced+'</b>'+(P0.landed.concededInFull?', of which '+P0.landed.concededInFull+' conceded in full':'')+'.</p>'
+    : "";
+
+  var rows=P0.suppliers.slice(0,6).map(function(sp){
+    return '<tr><td style="padding:6px 10px 6px 0">'+ciEsc(sp.supplier)+'</td>'
+      +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'+sp.claims+'</td>'
+      +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'
+      +(sp.rate===null?'<span style="color:var(--muted)">&mdash;</span>':P(sp.rate))+'</td>'
+      +'<td style="text-align:right;padding:6px 0 6px 10px;font-variant-numeric:tabular-nums;color:'
+      +(sp.conceded&&sp.conceded.minor>0n?"#FF5C5C":"var(--lime)")+'">'
+      +(sp.conceded===null?'<span style="color:#FFB800">mixed currency</span>':ciEsc(sp.currency)+" "+M(sp.conceded))+'</td></tr>';
+  }).join("");
+
+  var suppliers=P0.suppliers.length
+    ? '<div class="eyebrow" style="margin:16px 0 6px">Where the money went</div>'
+      +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;color:#CFCFCF">'
+      +'<thead><tr style="color:var(--muted);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase">'
+      +'<th style="text-align:left;padding-bottom:5px">Supplier</th><th style="text-align:right;padding-bottom:5px">Claims</th>'
+      +'<th style="text-align:right;padding-bottom:5px">Resisted</th><th style="text-align:right;padding-bottom:5px">Conceded unevidenced</th>'
+      +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
+    : "";
+
+  // Coverage sits with the number, not in a footnote. An aggregate that hides
+  // how thin it is invites being read as a track record.
+  var coverage=P0.coverage.rate!==null&&!P0.coverage.complete
+    ? '<p style="font-size:12.5px;color:#FFB800;margin:12px 0 0;line-height:1.6">Based on '+P0.coverage.closed
+      +' of '+P0.coverage.analysed+' analysed case(s). The rest have no outcome recorded, so this is not yet a track record.'
+      +(P0.openWithoutFigures?' '+P0.openWithoutFigures+' open case(s) have not been calculated and contribute no figure.':'')+'</p>'
+    : (P0.openWithoutFigures
+        ? '<p style="font-size:12.5px;color:var(--muted);margin:12px 0 0">'+P0.openWithoutFigures
+          +' open case(s) have not been calculated and contribute no figure.</p>'
+        : "");
+
+  return '<div class="card" style="margin:0 0 14px">'
+    +'<div class="eyebrow" style="margin-bottom:10px">Portfolio &mdash; '+P0.outcomes+' recorded outcome(s)</div>'
+    +'<div style="display:flex;gap:18px;flex-wrap:wrap">'+heads+flight+'</div>'
+    +landed+suppliers+coverage
+    +'<p style="color:var(--muted);font-size:11.5px;margin:12px 0 0;line-height:1.5">'+ciEsc(P0.method)+'</p>'
+    +'</div>';
 }
 
 function defHistoryHTML(){
@@ -2308,17 +2423,18 @@ function defRenderOutcomes(){
   ocRenderArgs();
   var all=window.BW.loadOutcomes();
   if(!all.length){
-    host.innerHTML='<p style="color:var(--muted);font-size:12.5px">No outcomes recorded yet. Until there are, there is no way to tell whether the analysis was any good.</p>';
+    host.innerHTML=defPortfolioHTML()+'<p style="color:var(--muted);font-size:12.5px">No outcomes recorded yet. Until there are, there is no way to tell whether the analysis was any good.</p>';
     return;
   }
   var sum=window.BW.summariseOutcomes(all),M=window.BW.moneyToDecimalString,P=window.BW.formatPercent;
+  var pf=defPortfolioHTML();
   var money=sum.byCurrency.map(function(b){return ciEsc(b.currency)+" "+M(b.avoidedAnnual)+" avoided across "+b.cases+" case(s)";}).join(" &middot; ");
   var args=sum.arguments.length
     ? '<div class="eyebrow" style="margin:12px 0 6px">What actually moves a supplier</div><ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:#CFCFCF">'
       +sum.arguments.map(function(a){return '<li><b>'+a.successRate+'%</b> — '+ciEsc(a.description)+' <span style="color:var(--muted)">(used '+a.used+')</span></li>';}).join("")
       +'</ul><p style="color:var(--muted);font-size:11px;margin-top:6px">'+ciEsc(sum.method)+'</p>'
     : "";
-  host.innerHTML='<div class="card" style="margin:0">'
+  host.innerHTML=pf+'<div class="card" style="margin:0">'
     +'<div class="eyebrow" style="margin-bottom:6px">Recorded outcomes ('+sum.count+')</div>'
     +'<div style="font-size:13.5px;color:#CFCFCF">'+money+' &middot; mean avoided '+P(sum.meanAvoidedChange)+'</div>'
     +args
@@ -4091,7 +4207,8 @@ async function send(id,text){
   import { labelFor, assumptionsToVerify, LEGEND } from "./src/calc/provenance.mjs";
   import { prepareNegotiation, CREDIBILITY } from "./src/calc/negotiation.mjs";
   import { supplierHistory } from "./src/calc/supplier-history.mjs";
-  import { newCase, saveCase, loadCase, listCases, deleteCase, setStatus,
+  import { portfolio } from "./src/calc/portfolio.mjs";
+  import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
   import { fxRate } from "./src/calc/fx.mjs";
@@ -4108,7 +4225,8 @@ async function send(id,text){
                 labelFor, assumptionsToVerify, LEGEND,
                 prepareNegotiation, CREDIBILITY,
                 supplierHistory,
-                newCase, saveCase, loadCase, listCases, deleteCase, setStatus,
+                portfolio,
+                newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,
                 parseSpendCsv, analyseSpendExact, indicativeSavings,
                 buildDecisionPack, renderDecisionPackHTML,

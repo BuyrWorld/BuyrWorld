@@ -69,6 +69,7 @@ function newId() {
  * @param {string} [input.category]
  * @param {string} [input.status]
  * @param {object} [input.data]      whatever the page needs to resume
+ * @param {object} [input.summary]   figures from the last calculation, if any
  * @param {boolean} [input.synthetic]
  */
 export function newCase(input = {}) {
@@ -86,6 +87,12 @@ export function newCase(input = {}) {
     // case is never presented as real.
     synthetic: input.synthetic !== false,
     outcomeRecorded: input.outcomeRecorded ?? false,
+    /* Figures from the last calculation, kept beside the form payload rather
+       than inside it: the portfolio totals what is still in dispute across open
+       cases, and re-deriving that from field strings would mean teaching it the
+       form's shape. Absent until a case has been calculated — and an absent
+       summary is an unknown, never a zero. */
+    summary: input.summary ?? null,
     data: input.data ?? {},
   };
 }

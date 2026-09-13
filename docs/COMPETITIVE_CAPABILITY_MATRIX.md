@@ -22,7 +22,7 @@ Priorities below are design intent, not progress. What has actually shipped:
 | 7. Clause extraction with source references | P1 | **Built.** Contract provisions extract with clause references, become `ContractConstraint` records once confirmed, and feed contradiction detection end to end. |
 | 1. Document ingestion and bid normalisation | P1 | **Built** for claim letters, supplier quotations and contracts. One shared grounding check across all three; quote comparison surfaces scope deviations rather than implying like-for-like. |
 | 6. Fast, actionable commercial intelligence | P1 | **Built.** One click loads a fully worked synthetic case. |
-| 5. Governed data with traceable insight-to-outcome | P2 | **Built.** Outcome capture, aggregation, and per-supplier history close the loop: a second claim from the same supplier is read against what happened to the first. |
+| 5. Governed data with traceable insight-to-outcome | P2 | **Built.** Outcome capture, per-supplier history and a portfolio view close the loop. The headline measure is the share of the unevidenced ask actually resisted, reported alongside how many analysed cases have an outcome recorded. |
 | 3. Governed guardrails and human approval | P2 | **Built** for the approval record. Autonomous negotiation remains deliberately unbuilt. |
 | 2. Structured negotiation preparation | P2 | **Built.** `negotiation.mjs` derives anchors, a hard line, a priced ladder and ordered rebuttals from the confirmed case. Preparation only — no supplier-facing automation. |
 
