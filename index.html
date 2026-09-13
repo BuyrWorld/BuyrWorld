@@ -712,6 +712,11 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       </div>
       <div style="color:var(--muted);font-size:11.5px;margin-top:6px">Leave blank and the walk-away question is reported as unknown rather than guessed.</div>
 
+      <div class="eyebrow" style="margin:18px 0 6px">Alternatives <span style="text-transform:none;letter-spacing:0">(who could actually replace them)</span></div>
+      <p style="color:var(--muted);font-size:11.5px;margin:0 0 10px;line-height:1.5">A name is not a fallback. Tick only what you have on file &mdash; anything unticked is treated as unknown, and an alternative nobody has checked will not be counted as leverage.</p>
+      <div id="def-alts-list"></div>
+      <button class="bw-act bw-act-secondary" style="margin-top:8px" data-alt-act="add">+ Add an alternative</button>
+
       <input class="bwin" id="def-context" style="margin-top:10px" placeholder="Optional context for the drafted reply" aria-label="Optional context: alternatives available, switching cost, contract notic">
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
@@ -1233,7 +1238,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 // ---------- Navigation ----------
 const LINKS=[["home","Home"],["dash","Workspace"],["inbox","Inbox"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Resources"],["academy","Academy"],["blog","Blog"],["contact","Project"]];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
+function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function")defBindAlts();if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
   // Without this, activating a nav item changes the page but leaves focus where
   // it was, so a screen reader stays on the old content.
   var m=document.getElementById("main"); if(m)m.focus({preventScroll:true});}
@@ -2644,6 +2649,156 @@ function renderDash(){
     +'</div>';
 }
 
+/* -------------------------------------------------------------- BATNA ---
+   Capturing alternatives, and assessing whether any of them is real.
+
+   The six tick boxes are the material attributes from batna.mjs. A tick means
+   "I have this on file", which is why it maps to a supplied fact and an
+   untouched box maps to unknown rather than to no. Nothing here infers a
+   capability from a supplier's name. */
+
+// [supplier, readiness, qualificationWeeks, [checked x6]]
+var _defAlts=[];
+
+/* Add and remove sit outside the rebuilt list, so they get their own delegated
+   listener on the page. Attached once, on first visit. */
+function defBindAlts(){
+  var page=document.getElementById("page-tool-defender");
+  if(!page||page.dataset.altsBound)return;
+  page.dataset.altsBound="1";
+  page.addEventListener("click",function(e){
+    var t=e.target&&e.target.closest?e.target.closest("[data-alt-act]"):null;
+    if(!t)return;
+    if(t.dataset.altAct==="add")defAddAlt();
+    else if(t.dataset.altAct==="remove")defRemoveAlt(Number(t.dataset.alt));
+  });
+  defRenderAlts();
+}
+
+function defAltRow(a,i){
+  var checks=window.BW.MATERIAL.map(function(m,k){
+    return '<label class="bw-field" style="display:flex;align-items:center;gap:6px;font-size:11.5px">'
+      /* The visible text follows the box inside the label, which a browser
+         associates but a reader of the markup cannot rely on. An explicit name
+         also reads better aloud: "holds the required certifications, checkbox". */
+      +'<input type="checkbox" aria-label="'+attrEsc(m.label)+'" data-alt="'+i+'" data-alt-field="c'+k+'"'+(a[3][k]?' checked':'')+' style="accent-color:var(--bw-accent)">'
+      +ciEsc(m.label)+'</label>';
+  }).join("");
+  return '<div style="border:1px solid var(--bw-border);border-radius:var(--bw-r-sm);padding:10px 12px;margin-bottom:8px">'
+    +'<div style="display:grid;grid-template-columns:1fr 150px 110px 34px;gap:8px">'
+    +'<input class="bwin" value="'+attrEsc(a[0])+'" data-alt="'+i+'" data-alt-field="name" placeholder="Supplier name" aria-label="Alternative supplier name">'
+    +'<select class="bwin" data-alt="'+i+'" data-alt-field="readiness" aria-label="How far along this alternative is">'
+    +'<option value="candidate"'+(a[1]==="candidate"?" selected":"")+'>Candidate</option>'
+    +'<option value="in-qualification"'+(a[1]==="in-qualification"?" selected":"")+'>In qualification</option>'
+    +'<option value="qualified"'+(a[1]==="qualified"?" selected":"")+'>Qualified</option></select>'
+    +'<input class="bwin" value="'+attrEsc(a[2])+'" data-alt="'+i+'" data-alt-field="weeks" inputmode="numeric" placeholder="Weeks to qualify" aria-label="Weeks to qualify this alternative">'
+    +'<button class="bw-act bw-act-text" data-alt-act="remove" data-alt="'+i+'" aria-label="Remove this alternative">&times;</button>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px;margin-top:8px">'+checks+'</div>'
+    +'</div>';
+}
+
+function defRenderAlts(){
+  var host=document.getElementById("def-alts-list");
+  if(!host)return;
+  host.innerHTML=_defAlts.length
+    ? _defAlts.map(defAltRow).join("")
+    : '<p style="font-size:12px;color:var(--bw-muted);margin:0">None recorded. Without one, walking away is reported as having nowhere to go &mdash; which is the honest answer.</p>';
+
+  /* Delegated once. The rows are rebuilt on every edit, so per-field handlers
+     would have to be reattached and would put nine inline handlers back per
+     alternative. */
+  if(!host.dataset.delegated){
+    host.dataset.delegated="1";
+    var sync=function(e){
+      var t=e.target;
+      if(!t||!t.dataset||t.dataset.alt===undefined)return;
+      var row=_defAlts[Number(t.dataset.alt)];
+      if(!row)return;
+      var f=t.dataset.altField;
+      if(f==="name")row[0]=t.value;
+      else if(f==="readiness")row[1]=t.value;
+      else if(f==="weeks")row[2]=t.value;
+      else if(f&&f.charAt(0)==="c")row[3][Number(f.slice(1))]=t.checked;
+    };
+    host.addEventListener("input",sync);
+    host.addEventListener("change",sync);
+  }
+}
+
+function defAddAlt(){_defAlts.push(["","candidate","",[false,false,false,false,false,false]]);defRenderAlts();}
+function defRemoveAlt(i){_defAlts.splice(i,1);defRenderAlts();}
+
+/* Build the assessment from what was actually recorded. */
+function defBatna(){
+  if(!window.BW||!window.BW.assessBatna)return null;
+  var named=_defAlts.filter(function(a){return String(a[0]).trim();});
+  var pos=defPosition();
+  if(!named.length&&pos.alternatives==null&&!pos.criticality)return null;
+
+  var alts=[];
+  try{
+    alts=named.map(function(a){
+      var facts={};
+      window.BW.MATERIAL.forEach(function(m,k){
+        if(a[3][k])facts[m.id]=window.BW.fact("on file",window.BW.KNOWN.SUPPLIED);
+      });
+      var w=String(a[2]).replace(/[^0-9]/g,"");
+      return window.BW.alternative({
+        supplier:String(a[0]).trim(),
+        readiness:a[1],
+        qualificationWeeks:w===""?null:parseInt(w,10),
+        facts:facts
+      });
+    });
+  }catch(e){ return null; }
+
+  try{
+    return window.BW.assessBatna({
+      alternatives:alts,
+      noticePeriodWeeks:pos.noticePeriodWeeks,
+      criticality:pos.criticality,
+      switchingCost:pos.switchingCost
+    });
+  }catch(e){ return null; }
+}
+
+/* The panel. Strength is a band with its rule, never a score. */
+function defBatnaHTML(){
+  var B=defBatna();
+  if(!B)return"";
+  var S=window.BW.STRENGTH;
+  var chip=B.strength===S.STRONG?"evidenced":B.strength===S.MODERATE?"review":B.strength===S.WEAK?"medium":"high";
+
+  var rows=B.alternatives.map(function(a){
+    return '<tr><td>'+ciEsc(a.supplier)+'</td>'
+      +'<td>'+ciEsc(a.readiness)+'</td>'
+      +'<td>'+(a.usableInNotice
+        ?'<span class="bw-status bw-status--evidenced">usable</span>'
+        :'<span class="bw-status bw-status--high">not in time</span>')+'</td>'
+      +'<td class="n">'+a.evidencedCount+' of '+window.BW.MATERIAL.length+'</td>'
+      +'<td style="color:var(--bw-muted)">'+ciEsc(a.timing)+'</td></tr>';
+  }).join("");
+
+  var open=B.openQuestions.length
+    ? '<div class="eyebrow" style="margin:var(--bw-4) 0 6px">What would change this</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:var(--bw-body)">'
+      +B.openQuestions.slice(0,6).map(function(q){return '<li>'+ciEsc(q)+'</li>';}).join("")+'</ul>'
+    : "";
+
+  return '<div style="border-top:1px solid var(--bw-border);margin-top:var(--bw-4);padding-top:var(--bw-3)">'
+    +'<div class="eyebrow" style="margin-bottom:6px">The alternative to agreeing is '
+    +'<span class="bw-status bw-status--'+chip+'">'+ciEsc(B.strength)+'</span>'
+    +(B.cappedByEvidence?' <span class="bw-status bw-status--medium">capped by evidence</span>':'')+'</div>'
+    +'<p style="font-size:12.5px;color:var(--bw-body);margin:0 0 var(--bw-3);line-height:1.6">'+ciEsc(B.rule)+'</p>'
+    +(rows?'<div class="bw-table-wrap"><table class="bw-table">'
+      +'<thead><tr><th>Supplier</th><th>Stage</th><th>In time</th><th class="n">Checked</th><th>Timing</th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></div>':'')
+    +open
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.5">'+ciEsc(B.method)+'</p>'
+    +'</div>';
+}
+
 function defHistoryHTML(){
   if(!window.BW.supplierHistory||!window.BW.loadOutcomes)return"";
   var el=document.getElementById("def-supplier");
@@ -2708,7 +2863,7 @@ function defNegotiationHTML(r,cur){
   var N;
   try{
     var ev=null; try{ ev=window.BW.assessEvidence(r,{}); }catch(e){ ev=null; }
-    N=window.BW.prepareNegotiation({bridge:r,ev:ev,position:defPosition()});
+    N=window.BW.prepareNegotiation({bridge:r,ev:ev,position:defPosition(),batna:defBatna()});
   }catch(e){ return ""; }
   var P=window.BW.formatPercent,M=window.BW.moneyToDecimalString,C=window.BW.CREDIBILITY;
   var money=function(m){return cur+" "+M(m);};
@@ -2782,7 +2937,7 @@ function defNegotiationHTML(r,cur){
     +'<p style="font-size:13px;color:#CFCFCF;margin:0 0 8px">In dispute: <b style="color:#FF5C5C">'+money(N.anchors.inDispute)+'</b> a year ('+P(N.anchors.inDisputeChange)+'). Everything below the target is arithmetic both sides can check.</p>'
     +hard+challenges+ladder
     +'<p style="font-size:12.5px;color:var(--muted);margin:10px 0 0">Deferral instead of money &mdash; '+defer+'.</p>'
-    +rebut+walk
+    +rebut+walk+defBatnaHTML()
     +'<p style="color:var(--muted);font-size:11.5px;margin:12px 0 0;line-height:1.6">'+ciEsc(N.openingPosition.rule)+'</p>'
     +'</div>';
 }
@@ -4908,6 +5063,7 @@ async function send(id,text){
   import { mapExposure, costShock, shareFrom, parseAmount } from "./src/calc/shock.mjs";
   import { learningCorpus, whatWorks, captureGaps } from "./src/calc/learning.mjs";
   import { classify, nextActions } from "./src/intake/classify.mjs";
+  import { alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL } from "./src/calc/batna.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
@@ -4929,6 +5085,7 @@ async function send(id,text){
                 mapExposure, costShock, shareFrom, parseAmount,
                 learningCorpus, whatWorks, captureGaps, linkOutcome,
                 classify, nextActions,
+                alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,

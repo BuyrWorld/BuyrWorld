@@ -28,7 +28,7 @@ Priorities below are design intent, not progress. What has actually shipped:
 
 | Universal intake and routing | P1 | **Built.** The Inbox classifies a pasted document deterministically, shows the passages it matched, states what is missing, and routes into the existing workflow carrying the text with it. |
 
-| BATNA assessment | P2 | **Built.** `batna.mjs` turns a discovered name into an assessed alternative: whether it could be in place inside the notice period, what is still unknown about it, and a strength band capped by evidence. It drives the negotiation walk-away verdict. No capability is inferred from a name or a website. |
+| BATNA assessment | P2 | **Built and wired.** Alternatives are captured on the Defender with a tick per material attribute meaning "on file"; anything untouched stays unknown. `batna.mjs` assesses whether each could be in place inside the notice period, caps strength by evidence, and drives the negotiation walk-away verdict. No capability is inferred from a name or a website. |
 
 ## 1. Document ingestion and bid normalisation
 
