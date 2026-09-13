@@ -2672,10 +2672,11 @@ function defNegotiationHTML(r,cur){
   var P=window.BW.formatPercent,M=window.BW.moneyToDecimalString,C=window.BW.CREDIBILITY;
   var money=function(m){return cur+" "+M(m);};
 
-  var anchor=function(label,pct,unit,annual,colour){
-    return '<div style="flex:1;min-width:150px"><div class="eyebrow" style="margin-bottom:4px">'+label+'</div>'
-      +'<div style="font-weight:700;font-size:20px;color:'+colour+';font-variant-numeric:tabular-nums">'+pct+'</div>'
-      +'<div style="color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums">'+cur+' '+M(unit)+' a unit &middot; '+money(annual)+' a year</div></div>';
+  var anchor=function(label,pct,unit,annual,variant){
+    return '<div class="bw-metric'+(variant?" bw-metric--"+variant:"")+'">'
+      +'<div class="bw-metric-label">'+label+'</div>'
+      +'<div class="bw-metric-value">'+pct+'</div>'
+      +'<div class="bw-metric-sub">'+cur+' '+M(unit)+' a unit &middot; '+money(annual)+' a year</div></div>';
   };
 
   var hard=N.hardLine.assessed
@@ -2716,9 +2717,11 @@ function defNegotiationHTML(r,cur){
       }).join("")+'</ul>'
     : "";
 
-  var wcol=N.walkAway.credibility===C.CREDIBLE?"var(--lime)":N.walkAway.credibility===C.NOT_CREDIBLE?"#FF5C5C":"#FFB800";
-  var walk='<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">'
-    +'<div class="eyebrow" style="margin-bottom:4px">Walking away is <span style="color:'+wcol+'">'+ciEsc(N.walkAway.credibility)+'</span></div>'
+  /* A chip rather than a coloured word: the state has to survive a
+     colour-blind reading, and the label carries it either way. */
+  var wchip=N.walkAway.credibility===C.CREDIBLE?"evidenced":N.walkAway.credibility===C.NOT_CREDIBLE?"high":"medium";
+  var walk='<div style="border-top:1px solid var(--bw-border);margin-top:var(--bw-4);padding-top:var(--bw-3)">'
+    +'<div class="eyebrow" style="margin-bottom:var(--bw-2)">Walking away is <span class="bw-status bw-status--'+wchip+'">'+ciEsc(N.walkAway.credibility)+'</span></div>'
     +'<p style="font-size:12.5px;color:var(--muted);margin:0;line-height:1.6">'+ciEsc(N.walkAway.rule)+'</p>'
     +(N.walkAway.breakeven?'<p style="font-size:12.5px;color:#CFCFCF;margin:8px 0 0;line-height:1.6">Switching pays back in about <b>'
       +N.walkAway.breakeven.yearsApprox.toFixed(1)+' year'+(N.walkAway.breakeven.yearsApprox===1?"":"s")+'</b> &mdash; '+ciEsc(N.walkAway.breakeven.basis)
@@ -2728,10 +2731,10 @@ function defNegotiationHTML(r,cur){
   return '<div style="border:1px solid var(--lime);border-radius:12px;padding:14px 16px;margin-top:14px">'
     +'<div class="eyebrow" style="margin-bottom:8px;color:var(--lime)">Negotiation plan</div>'
     +defHistoryHTML()
-    +'<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px">'
-    +anchor("Open at",P(N.openingPosition.openAt),N.hardLine.unitPrice,N.hardLine.annualCost,"var(--lime)")
-    +anchor("Target",P(N.openingPosition.target),r.unitPrice.warranted,N.anchors.warranted.annualCost,"var(--text)")
-    +anchor("Their ask",P(r.requestedChange),r.unitPrice.requested,N.anchors.requested.annualCost,"#FF5C5C")
+    +'<div class="bw-metric-grid" style="margin-bottom:var(--bw-3)">'
+    +anchor("Open at",P(N.openingPosition.openAt),N.hardLine.unitPrice,N.hardLine.annualCost,"accent")
+    +anchor("Target",P(N.openingPosition.target),r.unitPrice.warranted,N.anchors.warranted.annualCost,"")
+    +anchor("Their ask",P(r.requestedChange),r.unitPrice.requested,N.anchors.requested.annualCost,"danger")
     +'</div>'
     +'<p style="font-size:13px;color:#CFCFCF;margin:0 0 8px">In dispute: <b style="color:#FF5C5C">'+money(N.anchors.inDispute)+'</b> a year ('+P(N.anchors.inDisputeChange)+'). Everything below the target is arithmetic both sides can check.</p>'
     +hard+challenges+ladder
@@ -2747,26 +2750,29 @@ function defRender(r,cur){
   var rows=r.contributions.map(function(c){
     var pw=window.BW.labelFor({provenance:c.provenance,evidence:c.evidence&&c.evidence.weight});
     var pm=window.BW.labelFor({provenance:c.provenance,evidence:c.evidence&&c.evidence.movement,lineage:c.lineage});
-    return '<tr><td style="padding:6px 10px 6px 0">'+ciEsc(c.label)+provChip(pw)+'</td>'
-      +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'+P(c.weight)+'</td>'
-      +'<td style="text-align:right;padding:6px 10px;font-variant-numeric:tabular-nums">'+P(c.indexMovement)+provChip(pm)+'</td>'
-      +'<td style="text-align:right;padding:6px 0 6px 10px;color:var(--lime);font-variant-numeric:tabular-nums">'+P(c.contribution)+'</td></tr>'
+    return '<tr><td>'+ciEsc(c.label)+provChip(pw)+'</td>'
+      +'<td class="n">'+P(c.weight)+'</td>'
+      +'<td class="n">'+P(c.indexMovement)+provChip(pm)+'</td>'
+      +'<td class="n" style="color:var(--bw-accent)">'+P(c.contribution)+'</td></tr>'
       +(c.lineage?'<tr><td colspan="4" style="padding:0 0 8px 0;color:var(--muted);font-size:11.5px">'+ciEsc(c.lineage)+(c.basis?' — their base '+ciEsc(c.basis.claimedBase)+' would give '+P(c.basis.overstatement)+' more':'')+'</td></tr>':"");
   }).join("");
-  var big=function(label,val,colour){
-    return '<div style="flex:1;min-width:150px"><div class="eyebrow" style="margin-bottom:4px">'+label
-      +'</div><div style="font-weight:700;font-size:22px;color:'+colour+';font-variant-numeric:tabular-nums">'+val+'</div></div>';
+  /* The shared metric. The percentage leads because it is what is argued
+     over; the unit price sits beneath it as the thing it resolves to. */
+  var big=function(label,pct,money,variant){
+    return '<div class="bw-metric'+(variant?" bw-metric--"+variant:"")+'">'
+      +'<div class="bw-metric-label">'+label+'</div>'
+      +'<div class="bw-metric-value">'+pct+'</div>'
+      +'<div class="bw-metric-sub">'+cur+' '+money+'</div></div>';
   };
-  return '<div class="card" style="margin:0">'
-    +'<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px">'
-    +big("Requested",P(r.requestedChange)+" &middot; "+cur+" "+M(r.unitPrice.requested),"var(--text)")
-    +big("Warranted by evidence",P(r.warrantedChange)+" &middot; "+cur+" "+M(r.unitPrice.warranted),"var(--lime)")
-    +big(over?"Unsupported":"Difference",P(r.unsupportedChange)+" &middot; "+cur+" "+M(r.delta.unsupported),over?"#FF5C5C":"var(--lime)")
+  return '<div class="bw-panel">'
+    +'<div class="bw-metric-grid" style="margin-bottom:var(--bw-5)">'
+    +big("Requested",P(r.requestedChange),M(r.unitPrice.requested),"")
+    +big("Warranted by evidence",P(r.warrantedChange),M(r.unitPrice.warranted),"accent")
+    +big(over?"Unsupported":"Difference",P(r.unsupportedChange),M(r.delta.unsupported),over?"danger":"accent")
     +'</div>'
-    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13.5px;color:#CFCFCF">'
-    +'<thead><tr style="color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase">'
-    +'<th style="text-align:left;padding-bottom:6px">Driver</th><th style="text-align:right;padding-bottom:6px">Weight</th>'
-    +'<th style="text-align:right;padding-bottom:6px">Movement</th><th style="text-align:right;padding-bottom:6px">Contribution</th>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr>'
+    +'<th>Driver</th><th class="n">Weight</th><th class="n">Movement</th><th class="n">Contribution</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
     +(r.constraintApplied?'<p style="color:#FFB800;font-size:12.5px;margin-top:10px">Contract '+ciEsc(r.constraintApplied)+' applied. The driver evidence alone would support '+P(r.warrantedBeforeConstraints)+'.</p>':"")
     +'<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px;font-size:13.5px;color:#CFCFCF;line-height:1.7">'
