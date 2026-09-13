@@ -241,3 +241,50 @@ describe("the empty capture state", () => {
     assert.match(host.innerHTML, /which is the honest answer/);
   });
 });
+
+describe("the shadow negotiator is wired in", () => {
+  test("the engine is imported and mounted", () => {
+    assert.match(html, /from "\.\/src\/calc\/shadow\.mjs"/);
+    const mount = (html.match(/window\.BW\s*=\s*\{([\s\S]*?)\};/) || [])[1] || "";
+    for (const name of ["nextMoves", "recordRound"]) {
+      assert.match(mount, new RegExp(name), `${name} is not exposed`);
+    }
+  });
+
+  test("it renders inside the negotiation plan, after the BATNA panel", () => {
+    assert.match(html, /\+rebut\+walk\+defBatnaHTML\(\)\+defShadowHTML\(r\)/);
+  });
+
+  test("the offer field is named for a screen reader", () => {
+    assert.match(html, /id="sh-offer"[^>]*aria-label="Their current offer, percent"/);
+  });
+
+  test("it computes nothing in the page", () => {
+    const fn = fnSource("defShadowHTML");
+    assert.ok(fn.length > 500);
+    const code = fn.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    assert.equal(/parseFloat|toFixed|\*\s*100/.test(code), false);
+    assert.match(fn, /defShadow\(r\)/);
+  });
+
+  test("marking a move done is delegated, not an inline handler per move", () => {
+    const fn = fnSource("defShadowBind");
+    assert.match(fn, /page\.addEventListener\("click"/);
+    assert.match(fn, /data-sh-act/);
+    const html_fn = fnSource("defShadowHTML");
+    assert.equal(/onclick=/.test(html_fn), false);
+  });
+
+  test("the round state is not persisted", () => {
+    // It is the state of one conversation, not a record. Storing it would make
+    // a half-finished meeting look like a case.
+    assert.match(html, /var _shadowLive=\{round:1,offer:"",asked:\[\],shown:\[\]\}/);
+    assert.equal(/saveCase\([^)]*_shadowLive/.test(html), false);
+  });
+
+  test("a spent move is remembered so it is not suggested twice", () => {
+    const fn = fnSource("defShadowDone");
+    assert.match(fn, /_shadowLive\.asked\.push\(id\)/);
+    assert.match(fn, /_shadowLive\.round\+\+/);
+  });
+});

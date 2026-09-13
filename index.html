@@ -1266,7 +1266,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 // ---------- Navigation ----------
 const LINKS=[["home","Home"],["dash","Workspace"],["inbox","Inbox"],["parts","Parts"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Resources"],["academy","Academy"],["blog","Blog"],["contact","Project"]];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="parts"&&typeof ptBind==="function")ptBind();if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function")defBindAlts();if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
+function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="parts"&&typeof ptBind==="function")ptBind();if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function"){defBindAlts();if(typeof defShadowBind==="function")defShadowBind();}if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
   // Without this, activating a nav item changes the page but leaves focus where
   // it was, so a screen reader stays on the old content.
   var m=document.getElementById("main"); if(m)m.focus({preventScroll:true});}
@@ -3055,6 +3055,96 @@ function ptBind(){
   });
 }
 
+/* --------------------------------------------------------------- shadow ---
+   What to do next, during the conversation. The person runs the meeting; this
+   sits beside them, recommends one move, says which rule produced it, and
+   remembers what has already been spent so it does not suggest it twice. */
+
+var _shadowLive={round:1,offer:"",asked:[],shown:[]};
+
+function defShadow(r){
+  if(!window.BW||!window.BW.nextMoves)return null;
+  var ev=null; try{ ev=window.BW.assessEvidence(r,{}); }catch(e){ ev=null; }
+  var N; try{ N=window.BW.prepareNegotiation({bridge:r,ev:ev,position:defPosition(),batna:defBatna()}); }catch(e){ return null; }
+  var offer=null;
+  var typed=String(_shadowLive.offer).replace(/[^0-9.\-]/g,"");
+  if(typed!==""){ try{ offer=window.BW.pc(typed); }catch(e){ offer=null; } }
+  try{
+    return window.BW.nextMoves({
+      bridge:r, negotiation:N, batna:defBatna(), history:defSupplierRecord(),
+      live:{round:_shadowLive.round,supplierOffer:offer,asked:_shadowLive.asked,shown:_shadowLive.shown}
+    });
+  }catch(e){ return null; }
+}
+
+function defShadowHTML(r){
+  var S=defShadow(r);
+  if(!S)return"";
+  var M=window.BW.moneyToDecimalString;
+
+  var chipFor=function(kind){
+    return kind==="ask"?"supplied":kind==="challenge"?"high":kind==="show"?"review"
+      :kind==="hold"?"evidenced":kind==="walk"?"evidenced":kind==="defer"?"review":"medium";
+  };
+
+  var moves=S.moves.slice(0,5).map(function(m){
+    return '<div class="bw-list-row" style="align-items:flex-start">'
+      +'<div class="bw-list-main">'
+      +'<div class="bw-list-title"><span class="bw-status bw-status--'+chipFor(m.kind)+'">'+ciEsc(m.kind)+'</span> '+ciEsc(m.headline)+'</div>'
+      +'<div class="bw-list-sub" style="margin-top:3px">'+ciEsc(m.rule)+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;white-space:nowrap">'
+      +(m.worth?'<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-variant-numeric:tabular-nums">'+ciEsc(S.position.offer===null?"":"")+'GBP '+M(m.worth)+'</div>':'<div style="color:var(--bw-muted);font-size:var(--bw-t-meta)">not quantified</div>')
+      +'<button class="bw-act bw-act-text" data-sh-act="done" data-sh="'+attrEsc(m.id)+'" data-sh-kind="'+attrEsc(m.kind)+'">Mark done</button>'
+      +'</div></div>';
+  }).join("");
+
+  return '<div style="border-top:1px solid var(--bw-border);margin-top:var(--bw-4);padding-top:var(--bw-3)">'
+    +'<div class="bw-panel-head" style="margin-bottom:var(--bw-2)">'
+    +'<div class="eyebrow" style="margin:0">Next move &mdash; round '+S.round+'</div>'
+    +'<label class="bw-field" style="display:flex;align-items:center;gap:6px">Their offer %'
+    +'<input class="bwin" id="sh-offer" style="max-width:90px" inputmode="decimal" value="'+attrEsc(_shadowLive.offer)+'" aria-label="Their current offer, percent"></label>'
+    +'</div>'
+    +'<p style="font-size:var(--bw-t-body);color:var(--bw-body);margin:0 0 var(--bw-3)">'+ciEsc(S.position.statement)+'</p>'
+    +moves
+    +(S.riskIfAccepted?'<p style="font-size:12.5px;color:var(--bw-danger);margin:var(--bw-3) 0 0">'+ciEsc(S.riskIfAccepted.statement)+' That is GBP '+M(S.riskIfAccepted.annual)+' a year.</p>':'')
+    +'<div class="eyebrow" style="margin:var(--bw-4) 0 6px">Do not concede</div>'
+    +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:var(--bw-body)">'
+    +S.doNotConcede.map(function(d){return '<li>'+ciEsc(d)+'</li>';}).join("")+'</ul>'
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.5">'+ciEsc(S.method)+'</p>'
+    +'</div>';
+}
+
+/* Marking a move done advances the round and stops it being suggested again.
+   Nothing is stored: this is the state of one conversation. */
+function defShadowDone(id,kind){
+  if(kind==="ask")_shadowLive.asked.push(id);
+  else _shadowLive.shown.push(id);
+  _shadowLive.round++;
+  if(_defResult)document.getElementById("def-out").innerHTML=defRender(_defResult,String((document.getElementById("def-currency")||{value:"GBP"}).value||"GBP").toUpperCase());
+}
+
+function defShadowBind(){
+  var page=document.getElementById("page-tool-defender");
+  if(!page||page.dataset.shBound)return;
+  page.dataset.shBound="1";
+  page.addEventListener("click",function(e){
+    var t=e.target&&e.target.closest?e.target.closest("[data-sh-act]"):null;
+    if(t&&t.dataset.shAct==="done")defShadowDone(t.dataset.sh,t.dataset.shKind);
+  });
+  page.addEventListener("input",function(e){
+    if(e.target&&e.target.id==="sh-offer"){
+      _shadowLive.offer=e.target.value;
+      if(_defResult){
+        var out=document.getElementById("def-out");
+        if(out)out.innerHTML=defRender(_defResult,String((document.getElementById("def-currency")||{value:"GBP"}).value||"GBP").toUpperCase());
+        var f=document.getElementById("sh-offer");
+        if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length);}
+      }
+    }
+  });
+}
+
 function defHistoryHTML(){
   if(!window.BW.supplierHistory||!window.BW.loadOutcomes)return"";
   var el=document.getElementById("def-supplier");
@@ -3193,7 +3283,7 @@ function defNegotiationHTML(r,cur){
     +'<p style="font-size:13px;color:#CFCFCF;margin:0 0 8px">In dispute: <b style="color:#FF5C5C">'+money(N.anchors.inDispute)+'</b> a year ('+P(N.anchors.inDisputeChange)+'). Everything below the target is arithmetic both sides can check.</p>'
     +hard+challenges+ladder
     +'<p style="font-size:12.5px;color:var(--muted);margin:10px 0 0">Deferral instead of money &mdash; '+defer+'.</p>'
-    +rebut+walk+defBatnaHTML()
+    +rebut+walk+defBatnaHTML()+defShadowHTML(r)
     +'<p style="color:var(--muted);font-size:11.5px;margin:12px 0 0;line-height:1.6">'+ciEsc(N.openingPosition.rule)+'</p>'
     +'</div>';
 }
@@ -5324,6 +5414,7 @@ async function send(id,text){
   import { alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL } from "./src/calc/batna.mjs";
   import { comparablePart, compare, findComparable, priceGap, ATTRIBUTES } from "./src/calc/comparable.mjs";
   import { scanOpportunities, SEVERITY } from "./src/calc/radar.mjs";
+  import { nextMoves, recordRound, MOVE } from "./src/calc/shadow.mjs";
   import { part as makePart, savePart, loadParts, deletePart, storeStatus as partStoreStatus,
            forComparison } from "./src/services/part-store.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
@@ -5350,6 +5441,7 @@ async function send(id,text){
                 alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL,
                 comparablePart, compare, findComparable, priceGap, ATTRIBUTES,
                 scanOpportunities, SEVERITY,
+                nextMoves, recordRound, MOVE,
                 makePart, savePart, loadParts, deletePart, partStoreStatus, forComparison,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,

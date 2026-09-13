@@ -24,6 +24,7 @@ Priorities below are design intent, not progress. What has actually shipped:
 | 6. Fast, actionable commercial intelligence | P1 | **Built.** One click loads a fully worked synthetic case. |
 | 5. Governed data with traceable insight-to-outcome | P2 | **Built.** Outcome capture, per-supplier history, a portfolio view, and outcome learning close the loop. An outcome links back to the case it resolved; arguments record the evidence requested and what the supplier did, and aggregate into patterns that always carry their denominator. |
 | 3. Governed guardrails and human approval | P2 | **Built** for the approval record. Autonomous negotiation remains deliberately unbuilt. |
+| Shadow negotiator | P2 | **Built and wired.** `shadow.mjs` recommends the next move during a live conversation from the case on file, ordered so a concession is never suggested above an outstanding evidence request, and records what was actually done against what was recommended. Advisory only: no supplier-facing automation. |
 | 2. Structured negotiation preparation | P2 | **Built.** `negotiation.mjs` derives anchors, a hard line, a priced ladder and ordered rebuttals from the confirmed case. Preparation only — no supplier-facing automation. |
 
 | Universal intake and routing | P1 | **Built.** The Inbox classifies a pasted document deterministically, shows the passages it matched, states what is missing, and routes into the existing workflow carrying the text with it. |
