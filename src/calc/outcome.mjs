@@ -18,7 +18,7 @@ import { ONE, scaleDiv, moneyScale, moneyTimesQuantity, moneyToDecimalString } f
 import { formatPercent } from "./cost-bridge.mjs";
 import { periodsBetween } from "./index-series.mjs";
 import { EVIDENCE_KIND } from "./evidence.mjs";
-import { supplierId } from "../domain/ids.mjs";
+import { supplierId, entityId, KIND } from "../domain/ids.mjs";
 
 /**
  * Whether a driver carried evidence, decided the same way assessEvidence
@@ -114,7 +114,18 @@ export function recordOutcome(input) {
   const worked = argumentsUsed.filter((a) => a.worked === true).map((a) => a.id);
   const didNot = argumentsUsed.filter((a) => a.worked === false).map((a) => a.id);
 
+  /* An identity, so a learning record has something to point at. Deterministic
+     from what makes this outcome distinct — the case it resolves, when it was
+     recorded, and what was agreed — so re-recording the same settlement does
+     not produce a second one. */
+  const sid = meta.supplierId ?? (meta.supplier ? supplierId(meta.supplier) : null);
+  const outcomeId = meta.outcomeId ?? entityId(
+    KIND.OUTCOME,
+    [meta.caseId ?? meta.caseRef ?? sid ?? "unattributed", meta.recordedAt ?? "", agreedChange.toString()].join("|")
+  );
+
   return Object.freeze({
+    id: outcomeId,
     meta: Object.freeze({
       caseRef: meta.caseRef ?? null,
       /* The name as it was written, kept verbatim — it is what the document
@@ -124,7 +135,7 @@ export function recordOutcome(input) {
          not supplied, which is why records written before this existed need no
          migration: the same name has always produced the same id. */
       supplier: meta.supplier ?? null,
-      supplierId: meta.supplierId ?? (meta.supplier ? supplierId(meta.supplier) : null),
+      supplierId: sid,
       caseId: meta.caseId ?? null,
       category: meta.category ?? null,
       synthetic: meta.synthetic !== false,

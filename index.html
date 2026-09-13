@@ -2055,6 +2055,39 @@ function defSupplierRecord(){
   }catch(e){ return null; }
 }
 
+// What has actually moved this supplier, derived from recorded arguments.
+// Sample size is shown on every line: a perfect rate on one case is an
+// anecdote, and presenting it as a pattern is how a note becomes a belief.
+function defLearningHTML(sid){
+  if(!window.BW||!window.BW.whatWorks||!window.BW.loadOutcomes)return"";
+  var corpus;
+  try{ corpus=window.BW.learningCorpus(window.BW.loadOutcomes()||[]); }catch(e){ return ""; }
+  if(!corpus.length)return"";
+
+  var W;
+  try{ W=window.BW.whatWorks(corpus,{supplier:sid}); }catch(e){ return ""; }
+  if(!W.records)return"";
+
+  var rows=W.patterns.slice(0,6).map(function(p){
+    return '<li style="margin:4px 0">'+ciEsc(p.statement)
+      +(p.thinEvidence?' <span style="color:#FFB800">thin</span>':'')
+      +(p.evidenceRequested.length
+        ? '<br><span style="color:var(--muted)">Asked for: '+p.evidenceRequested.map(ciEsc).join("; ")+'</span>'
+        : '')
+      +'</li>';
+  }).join("");
+
+  var gaps=window.BW.captureGaps(corpus.filter(function(r){return r.supplierId===W.supplierId;}));
+  return '<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">'
+    +'<div class="eyebrow" style="margin-bottom:4px">What has worked against them</div>'
+    +'<p style="font-size:12px;color:var(--muted);margin:0 0 6px">'+ciEsc(W.headline)+'</p>'
+    +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.5;color:#CFCFCF">'+rows+'</ul>'
+    +(gaps.missingEvidence||gaps.missingResponse||gaps.missingResult
+      ? '<p style="font-size:11.5px;color:#FFB800;margin:8px 0 0;line-height:1.5">'+ciEsc(gaps.note)+'</p>'
+      : '')
+    +'</div>';
+}
+
 function defHistoryHTML(){
   if(!window.BW.supplierHistory||!window.BW.loadOutcomes)return"";
   var el=document.getElementById("def-supplier");
@@ -2109,7 +2142,7 @@ function defHistoryHTML(){
     +'<th style="text-align:right;padding-bottom:5px">Evidenced</th><th style="text-align:right;padding-bottom:5px">Agreed</th>'
     +'<th style="text-align:right;padding-bottom:5px">Above the evidence</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
     +'<p style="font-size:12px;color:var(--muted);margin:8px 0 0">'+totals+'.</p>'
-    +repeatHTML+workedHTML
+    +repeatHTML+workedHTML+defLearningHTML(H.supplierId)
     +(H.mixedCurrency?'<p style="font-size:11.5px;color:#FFB800;margin:8px 0 0">Claims span more than one currency, so totals are kept separate rather than added.</p>':"")
     +'<p style="font-size:11.5px;color:var(--muted);margin:8px 0 0;line-height:1.5">'+ciEsc(H.method)+'</p>'
     +'</div>';
@@ -2363,22 +2396,46 @@ function defApplyExtract(){
    The amount avoided is computed from the analysis, never typed. Records stay
    in this browser; nothing is sent anywhere. -------------------------------- */
 
-let _ocArgs=[["",""]];   // [description, worked: "yes"|"no"|""]
+// [description, worked, evidenceRequested, supplierResponse]
+// The last two are what make a record teachable: "freight was challenged" is a
+// note, "freight was challenged, carrier invoices were requested, none were
+// provided" is something the next case can act on.
+let _ocArgs=[["","","",""]];
 function ocRenderArgs(){
   var host=document.getElementById("oc-args"); if(!host)return;
+  /* One listener for every field in every row, attached once. The rows are
+     rebuilt on add and remove, so per-element listeners would have to be
+     reattached each time; delegation survives the re-render and keeps four
+     inline handlers out of the markup. */
+  if(!host.dataset.delegated){
+    host.dataset.delegated="1";
+    var sync=function(e){
+      var t=e.target;
+      if(!t||!t.dataset||t.dataset.arg===undefined)return;
+      var row=_ocArgs[Number(t.dataset.arg)];
+      if(row)row[Number(t.dataset.field)]=t.value;
+    };
+    host.addEventListener("input",sync);
+    host.addEventListener("change",sync);
+  }
   host.innerHTML=_ocArgs.map(function(a,i){
-    return '<div style="display:grid;grid-template-columns:1fr 118px 34px;gap:8px;margin-bottom:6px">'
-      +'<input class="bwin" value="'+attrEsc(a[0])+'" oninput="_ocArgs['+i+'][0]=this.value" placeholder="e.g. 40% of cost unexplained" aria-label="E.g. 40% of cost unexplained">'
-      +'<select class="bwin" aria-label="Did this argument move the supplier" onchange="_ocArgs['+i+'][1]=this.value">'
+    return '<div style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px">'
+      +'<div style="display:grid;grid-template-columns:1fr 118px 34px;gap:8px">'
+      +'<input class="bwin" value="'+attrEsc(a[0])+'" data-arg="'+i+'" data-field="0" placeholder="e.g. 40% of cost unexplained" aria-label="The argument you made">'
+      +'<select class="bwin" aria-label="Did this argument move the supplier" data-arg="'+i+'" data-field="1">'
       +'<option value=""'+(a[1]===""?" selected":"")+'>Unknown</option>'
       +'<option value="yes"'+(a[1]==="yes"?" selected":"")+'>Moved them</option>'
       +'<option value="no"'+(a[1]==="no"?" selected":"")+'>Did not</option></select>'
-      +'<button class="btn btn-ghost" style="padding:6px 9px;font-size:12px" onclick="ocRemoveArg('+i+')" aria-label="Remove">&times;</button>'
-      +'</div>';
+      +'<button class="btn btn-ghost" style="padding:6px 9px;font-size:12px" onclick="ocRemoveArg('+i+')" aria-label="Remove this argument">&times;</button>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">'
+      +'<input class="bwin" value="'+attrEsc(a[2]||"")+'" data-arg="'+i+'" data-field="2" placeholder="Evidence you asked for" aria-label="Evidence you asked for">'
+      +'<input class="bwin" value="'+attrEsc(a[3]||"")+'" data-arg="'+i+'" data-field="3" placeholder="What the supplier did" aria-label="What the supplier did">'
+      +'</div></div>';
   }).join("");
 }
-function ocAddArg(){_ocArgs.push(["",""]);ocRenderArgs();}
-function ocRemoveArg(i){_ocArgs.splice(i,1);if(!_ocArgs.length)_ocArgs.push(["",""]);ocRenderArgs();}
+function ocAddArg(){_ocArgs.push(["","","",""]);ocRenderArgs();}
+function ocRemoveArg(i){_ocArgs.splice(i,1);if(!_ocArgs.length)_ocArgs.push(["","","",""]);ocRenderArgs();}
 function ocMsg(html){var el=document.getElementById("oc-msg");if(el)el.innerHTML=html;}
 
 function ocSave(){
@@ -2399,17 +2456,27 @@ function ocSave(){
       argumentsUsed:_ocArgs.filter(function(a){return a[0].trim();}).map(function(a,i){
         return {id:"arg-"+i+"-"+a[0].trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,40),
                 description:a[0].trim(),
+                evidenceRequested:(a[2]||"").trim()||null,
+                supplierResponse:(a[3]||"").trim()||null,
                 worked:a[1]==="yes"?true:a[1]==="no"?false:null};
       }),
       decision:{by:v("oc-by")||null,at:new Date().toISOString().slice(0,10)},
       reviewDate:v("oc-review")||null,
       lessons:v("oc-lessons")||"",
       meta:{caseRef:v("def-case")||null,supplier:v("def-supplier")||null,category:v("oc-category")||null,
+            caseId:_defCaseId||null,
             synthetic:true,recordedAt:new Date().toISOString().slice(0,10)},
     });
     var r=window.BW.saveOutcome(rec);
     if(!r.ok){ocMsg('<p style="color:#FF5C5C;font-size:13.5px">'+ciEsc(r.error)+'</p>');return;}
-    ocMsg('<p style="color:var(--lime);font-size:13.5px">Recorded. '+ciEsc(rec.learning.headline)+'</p>');
+    // Close the loop both ways: the outcome knows its case, and the case
+    // knows it was resolved. Without this the corpus cannot be traced back.
+    var linked="";
+    if(_defCaseId&&window.BW.linkOutcome){
+      var lr=window.BW.linkOutcome(_defCaseId,rec.id);
+      if(lr.ok){ linked=" Linked to the saved case."; defRenderCases(); }
+    }
+    ocMsg('<p style="color:var(--lime);font-size:13.5px">Recorded. '+ciEsc(rec.learning.headline)+ciEsc(linked)+'</p>');
     defRenderOutcomes();
   }catch(e){
     ocMsg('<p style="color:#FF5C5C;font-size:13.5px">'+ciEsc(String(e.message||e))+'</p>');
@@ -4276,7 +4343,8 @@ async function send(id,text){
   import { supplierHistory } from "./src/calc/supplier-history.mjs";
   import { portfolio } from "./src/calc/portfolio.mjs";
   import { mapExposure, costShock, shareFrom, parseAmount } from "./src/calc/shock.mjs";
-  import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
+  import { learningCorpus, whatWorks, captureGaps } from "./src/calc/learning.mjs";
+  import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
   import { fxRate } from "./src/calc/fx.mjs";
@@ -4295,6 +4363,7 @@ async function send(id,text){
                 supplierHistory,
                 portfolio,
                 mapExposure, costShock, shareFrom, parseAmount,
+                learningCorpus, whatWorks, captureGaps, linkOutcome,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,

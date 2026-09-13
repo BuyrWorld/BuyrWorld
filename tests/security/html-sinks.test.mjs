@@ -144,7 +144,10 @@ describe("the known CSP weakness is measured, not assumed away", () => {
     // This is the number that must reach zero before script-src can drop
     // 'unsafe-inline'. It is asserted as a ceiling so it can only go down.
     assert.ok(handlers > 0, "if this is zero, remove unsafe-inline from the CSP and delete this test");
-    assert.ok(handlers <= 140, `inline handlers have grown to ${handlers}; they should be shrinking, not rising`);
+    // Ratcheted down as delegation replaces them. Adding two capture fields
+    // pushed this over 140 and the guard caught it; delegating the whole
+    // argument row took it to 138 instead of raising the ceiling.
+    assert.ok(handlers <= 138, `inline handlers have grown to ${handlers}; they should be shrinking, not rising`);
   });
 
   test("no new inline <script> blocks have appeared", () => {
