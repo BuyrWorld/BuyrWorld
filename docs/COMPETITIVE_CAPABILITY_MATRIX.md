@@ -30,6 +30,8 @@ Priorities below are design intent, not progress. What has actually shipped:
 
 | BATNA assessment | P2 | **Built and wired.** Alternatives are captured on the Defender with a tick per material attribute meaning "on file"; anything untouched stays unknown. `batna.mjs` assesses whether each could be in place inside the notice period, caps strength by evidence, and drives the negotiation walk-away verdict. No capability is inferred from a name or a website. |
 
+| Comparable parts | P2 | **Built.** `comparable.mjs` compares on twelve weighted attributes rather than on part number, names what matched and what differed, and reports comparability against checkable weight with coverage beside it. The price gap is split into what stated differences account for and what nothing does. It never calls a part overpriced. Not yet wired to a screen. |
+
 ## 1. Document ingestion and bid normalisation
 
 | | |
