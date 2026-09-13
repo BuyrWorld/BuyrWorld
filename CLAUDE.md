@@ -13,6 +13,7 @@ A dark-mode procurement web product at buyrworld.com. Single-page app served fro
 - `src/calc/` — the deterministic calculation engine (ES modules). `exact.mjs` is BigInt money and ratio arithmetic; `index-series.mjs` resolves index movement from a contractual base period with a lag; `cost-bridge.mjs` is the supplier-claim decomposition; `spend.mjs` is the spend analysis; `negotiation.mjs` turns a finished case into a negotiating position; `supplier-history.mjs` reads the recorded outcomes back by supplier. Imported by `index.html` via one `<script type="module">` that mounts `window.BW`.
 - `tests/` — Node's built-in runner. `node --test "tests/**/*.test.mjs"`.
 - `scripts/verify.mjs` — runs everything. Run it before any deploy.
+- `src/services/` — `case-store.mjs` and `outcome-store.mjs` persist cases and outcomes in `localStorage`. Both share one BigInt tagging format; the tag opens with a NUL byte, which is why grep calls `outcome-store.mjs` a binary file. Changing it would orphan everything already stored.
 - `fixtures/` — synthetic, fictional demonstration cases.
 
 Deploys are GitHub → Vercel. Pushing to `main` deploys production.

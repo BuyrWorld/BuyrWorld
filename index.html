@@ -487,6 +487,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <h3 style="font-size:20px;margin-bottom:6px">Supplier Claim Review</h3>
       <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:14px">Enter the baseline and the cost drivers the supplier is claiming. The exposure is calculated in exact arithmetic &mdash; no language model produces any figure here. Drafting the response is a separate, optional step.</p>
 
+      <div id="def-cases" style="margin-bottom:20px"></div>
+
       <div class="eyebrow" style="margin-bottom:8px">1 &middot; Baseline and request</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">
         <label style="font-size:12px;color:var(--muted)">Case reference<input class="bwin" id="def-case" placeholder="SC-001"></label>
@@ -535,6 +537,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
         <button class="btn btn-lime" onclick="defCalc()">Calculate exposure</button>
+        <button class="btn btn-ghost" onclick="defSaveCase()">Save case</button>
         <button class="btn btn-ghost" onclick="defLoadExample()">Load synthetic example</button>
         <button class="btn btn-ghost" onclick="runDefender()">Draft the response</button>
         <button class="btn btn-ghost" onclick="defDecisionPack()">Decision pack</button>
@@ -1019,7 +1022,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 // ---------- Navigation ----------
 const LINKS=[["home","Home"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Resources"],["academy","Academy"],["blog","Blog"],["contact","Project"]];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
+function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
   // Without this, activating a nav item changes the page but leaves focus where
   // it was, so a screen reader stays on the old content.
   var m=document.getElementById("main"); if(m)m.focus({preventScroll:true});}
@@ -1783,6 +1786,147 @@ function defPosition(){
 }
 // What this supplier has done before. Read from the outcomes already stored by
 // the outcome capture — no new data collection, and no figure computed here.
+/* ---------------------------------------------------------------- cases ---
+   Saving and resuming a supplier claim. The payload is collected from the form
+   rather than from a hand-written list of field names: a field added to the
+   page later is captured without anyone remembering to come back here, which
+   is the failure this shape exists to prevent. */
+var _defCaseId=null;
+
+function defFields(){
+  var page=document.getElementById("page-tool-defender");
+  if(!page||!page.querySelectorAll)return[];
+  var els=page.querySelectorAll('input[id^="def-"],select[id^="def-"],textarea[id^="def-"]');
+  return [].slice.call(els).filter(function(el){return el.type!=="file";});
+}
+
+function defCollect(){
+  var data={fields:{},drivers:[]};
+  defFields().forEach(function(el){data.fields[el.id]=el.value;});
+  try{ data.drivers=JSON.parse(JSON.stringify(_defRows||[])); }catch(e){ data.drivers=[]; }
+  return data;
+}
+
+function defRestore(data){
+  var f=(data&&data.fields)||{};
+  // Fields absent from the saved case are cleared, not left alone. Resuming a
+  // case must not quietly inherit the last one's numbers.
+  defFields().forEach(function(el){
+    el.value=Object.prototype.hasOwnProperty.call(f,el.id)?f[el.id]:"";
+  });
+  if(data&&Array.isArray(data.drivers)){
+    try{ _defRows=JSON.parse(JSON.stringify(data.drivers)); }catch(e){}
+    if(typeof defRenderDrivers==="function")defRenderDrivers();
+  }
+}
+
+function defCaseVal(id){var el=document.getElementById(id);return el?String(el.value).trim():"";}
+
+function defSaveCase(){
+  if(!window.BW||!window.BW.saveCase)return;
+  var existing=_defCaseId?window.BW.loadCase(_defCaseId):null;
+  var body={
+    id:existing?existing.id:undefined,
+    createdAt:existing?existing.createdAt:undefined,
+    ref:defCaseVal("def-case")||null,
+    supplier:defCaseVal("def-supplier")||null,
+    category:defCaseVal("oc-category")||null,
+    status:_defResult?window.BW.CASE_STATUS.ANALYSED:window.BW.CASE_STATUS.DRAFT,
+    data:defCollect()
+  };
+  var r=window.BW.saveCase(window.BW.newCase(body));
+  var out=document.getElementById("def-cases");
+  if(!r.ok){
+    if(out)out.innerHTML='<p style="color:#FF5C5C;font-size:13px;margin:0 0 10px">'+ciEsc(r.error)+'</p>'+defCaseListHTML();
+    return;
+  }
+  _defCaseId=r.id;
+  defRenderCases();
+}
+
+function defResumeCase(id){
+  if(!window.BW||!window.BW.loadCase)return;
+  var c=window.BW.loadCase(id);
+  if(!c)return;
+  _defCaseId=c.id;
+  defRestore(c.data);
+  // The analysis is not restored, only the inputs it was built from. A stored
+  // result could have come from a different engine; recalculating is cheap and
+  // is the only way the figures on screen are guaranteed to be this build's.
+  _defResult=null;
+  var calc=document.getElementById("def-calc"); if(calc)calc.innerHTML="";
+  var o=document.getElementById("def-out"); if(o)o.innerHTML="";
+  defRenderCases();
+  var top=document.getElementById("page-tool-defender");
+  if(top&&top.scrollIntoView)top.scrollIntoView({block:"start"});
+}
+
+function defDeleteCase(id){
+  if(!window.BW||!window.BW.deleteCase)return;
+  window.BW.deleteCase(id);
+  if(_defCaseId===id)_defCaseId=null;
+  defRenderCases();
+}
+
+function defNewCase(){
+  _defCaseId=null;
+  _defResult=null;
+  defRestore({fields:{},drivers:[["","","","direct","","","",""]]});
+  var calc=document.getElementById("def-calc"); if(calc)calc.innerHTML="";
+  var o=document.getElementById("def-out"); if(o)o.innerHTML="";
+  defRenderCases();
+}
+
+function defCaseListHTML(){
+  if(!window.BW||!window.BW.listCases)return"";
+  var rows=[],st=null;
+  try{ rows=window.BW.listCases()||[]; st=window.BW.storeStatus(); }catch(e){ return ""; }
+
+  var withheld=(st&&st.unreadable)
+    ? '<p style="font-size:12px;color:#FFB800;margin:8px 0 0">'+st.unreadable
+      +' case(s) were saved by a different version and cannot be opened here. They have not been deleted.</p>'
+    : "";
+
+  if(!rows.length){
+    if(st&&!st.available){
+      return '<p style="font-size:12.5px;color:#FFB800;margin:0">This browser is blocking local storage, so cases cannot be saved on this device.</p>';
+    }
+    return '<p style="font-size:12.5px;color:var(--muted);margin:0">No saved cases. <b style="color:var(--text)">Save case</b> keeps everything you have entered on this device, so a claim can be picked up days later.</p>'+withheld;
+  }
+
+  var body=rows.map(function(c){
+    var on=c.id===_defCaseId;
+    var colour=c.status==="closed"?"var(--muted)":c.status==="analysed"?"var(--lime)":"var(--text)";
+    return '<tr'+(on?' style="background:rgba(214,255,0,.06)"':'')+'>'
+      +'<td style="padding:7px 10px 7px 0">'+ciEsc(c.ref||"(no reference)")
+      +(on?' <span style="color:var(--lime);font-size:11px">open</span>':'')+'</td>'
+      +'<td style="padding:7px 10px">'+ciEsc(c.supplier||"&mdash;")+'</td>'
+      +'<td style="padding:7px 10px;color:'+colour+'">'+ciEsc(c.status)+'</td>'
+      +'<td style="padding:7px 10px;color:var(--muted);white-space:nowrap">'+ciEsc(String(c.updatedAt||"").slice(0,10))+'</td>'
+      +'<td style="padding:7px 0 7px 10px;text-align:right;white-space:nowrap">'
+      +'<button class="btn btn-ghost" style="padding:5px 11px;font-size:12px" onclick="defResumeCase(\''+ciEsc(c.id)+'\')">Resume</button> '
+      +'<button class="btn btn-ghost" style="padding:5px 11px;font-size:12px" onclick="defDeleteCase(\''+ciEsc(c.id)+'\')">Delete</button>'
+      +'</td></tr>';
+  }).join("");
+
+  return '<div class="card" style="margin:0">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
+    +'<div class="eyebrow" style="margin:0">Saved cases ('+rows.length+')</div>'
+    +'<button class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px" onclick="defNewCase()">Start a new case</button></div>'
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;color:#CFCFCF">'
+    +'<thead><tr style="color:var(--muted);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase">'
+    +'<th style="text-align:left;padding-bottom:5px">Reference</th><th style="text-align:left;padding-bottom:5px">Supplier</th>'
+    +'<th style="text-align:left;padding-bottom:5px">Status</th><th style="text-align:left;padding-bottom:5px">Updated</th>'
+    +'<th style="text-align:right;padding-bottom:5px">&nbsp;</th></tr></thead><tbody>'+body+'</tbody></table></div>'
+    +'<p style="font-size:11.5px;color:var(--muted);margin:10px 0 0;line-height:1.5">Stored in this browser only. Nothing is sent anywhere, and clearing site data removes them.</p>'
+    +withheld+'</div>';
+}
+
+function defRenderCases(){
+  var el=document.getElementById("def-cases");
+  if(el)el.innerHTML=defCaseListHTML();
+}
+
 function defHistoryHTML(){
   if(!window.BW.supplierHistory||!window.BW.loadOutcomes)return"";
   var el=document.getElementById("def-supplier");
@@ -3947,6 +4091,8 @@ async function send(id,text){
   import { labelFor, assumptionsToVerify, LEGEND } from "./src/calc/provenance.mjs";
   import { prepareNegotiation, CREDIBILITY } from "./src/calc/negotiation.mjs";
   import { supplierHistory } from "./src/calc/supplier-history.mjs";
+  import { newCase, saveCase, loadCase, listCases, deleteCase, setStatus,
+           storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
   import { fxRate } from "./src/calc/fx.mjs";
   import { buildDecisionPack } from "./src/calc/decision-pack.mjs";
@@ -3962,6 +4108,8 @@ async function send(id,text){
                 labelFor, assumptionsToVerify, LEGEND,
                 prepareNegotiation, CREDIBILITY,
                 supplierHistory,
+                newCase, saveCase, loadCase, listCases, deleteCase, setStatus,
+                storeStatus, CASE_STATUS,
                 parseSpendCsv, analyseSpendExact, indicativeSavings,
                 buildDecisionPack, renderDecisionPackHTML,
                 recordOutcome, summariseOutcomes,

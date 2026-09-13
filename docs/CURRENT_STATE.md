@@ -50,6 +50,9 @@ Generator, Supplier Discovery, Buyr AI chat. The standalone Negotiation Simulato
 is now superseded for claim cases by the computed plan on the Defender, and
 still does not know a case exists.
 
+Cases are saved locally and can be resumed days later (`src/services/case-store.mjs`),
+so a claim no longer has to be finished in one sitting.
+
 ## Known weaknesses carried forward
 
 - The Price-Increase Defender asks the model to invent its own headline score
