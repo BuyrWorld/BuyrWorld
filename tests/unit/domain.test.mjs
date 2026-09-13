@@ -317,6 +317,21 @@ describe("merging, and undoing it", () => {
     assert.equal(resolveSupplier(m.suppliers, "Meridian Fabrication GmbH").id, a);
   });
 
+  test("a merged-away id still resolves, to the record that absorbed it", () => {
+    // Without this, every case and outcome stored against the old id dangles
+    // the moment someone confirms a merge — which would make merging
+    // destructive in exactly the way mergedFrom exists to prevent.
+    const { suppliers, a, b } = setup();
+    const m = mergeSuppliers(suppliers, b, a);
+    assert.equal(resolveSupplier(m.suppliers, b).id, a);
+  });
+
+  test("an id that was never known still resolves to nothing", () => {
+    const { suppliers, a, b } = setup();
+    const m = mergeSuppliers(suppliers, b, a);
+    assert.equal(resolveSupplier(m.suppliers, "sup_0000000000000"), null);
+  });
+
   test("references are repointed in the same operation", () => {
     // A merge that leaves parts pointing at a supplier nobody can resolve is
     // worse than no merge at all.

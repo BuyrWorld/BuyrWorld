@@ -25,6 +25,36 @@
 
 import { SCALE, money, moneyAdd, moneyScale, scaleDiv, ratioToPercentString } from "./exact.mjs";
 import { VERDICT } from "./outcome.mjs";
+import { supplierId, isId, KIND } from "../domain/ids.mjs";
+import { resolveSupplier } from "../domain/registry.mjs";
+
+/**
+ * The id a query or a record resolves to.
+ *
+ * Three routes, in order of authority: an id already on the record; the
+ * registry, which knows about aliases, renames and confirmed merges; and
+ * finally the name itself, which is deterministic. That last route is why
+ * records written before identity existed need no migration — the same name
+ * has always produced the same id.
+ */
+function identify(nameOrId, suppliers, existingId = null) {
+  const raw = String(nameOrId ?? "").trim();
+  const stored = existingId && isId(KIND.SUPPLIER, existingId) ? existingId : null;
+
+  /* The registry has the final say, and is consulted before the id already on
+     the record. A record written before a merge carries the absorbed id; if
+     that took precedence, confirming a merge would leave the older records
+     behind and the history would silently split. */
+  if (suppliers) {
+    const found = resolveSupplier(suppliers, stored) ?? resolveSupplier(suppliers, raw);
+    if (found) return found.id;
+  }
+
+  if (stored) return stored;
+  if (!raw) return null;
+  if (isId(KIND.SUPPLIER, raw)) return raw;
+  return supplierId(raw);
+}
 
 const pct = (r) => ratioToPercentString(r, 2);
 
@@ -52,15 +82,18 @@ function chronologically(records) {
  * @param {Array}  records   recordOutcome results
  * @param {string} supplier  the name to match, case-insensitively
  */
-export function supplierHistory(records, supplier) {
-  const want = String(supplier ?? "").trim().toLowerCase();
+export function supplierHistory(records, supplier, { suppliers = null } = {}) {
+  const want = identify(supplier, suppliers);
   if (!want) {
     return Object.freeze({ supplier: null, count: 0, note: "No supplier named, so no history can be read." });
   }
 
+  /* Matching is on identity, not on the string. A full stop, a change of case
+     or a rename after an acquisition used to detach a supplier from its entire
+     history while every figure on screen stayed plausible. */
   const mine = chronologically(
     (Array.isArray(records) ? records : []).filter(
-      (r) => String(r?.meta?.supplier ?? "").trim().toLowerCase() === want
+      (r) => identify(r?.meta?.supplier, suppliers, r?.meta?.supplierId) === want
     )
   );
 
@@ -200,6 +233,7 @@ export function supplierHistory(records, supplier) {
 
   return Object.freeze({
     supplier,
+    supplierId: want,
     count: claims.length,
     claims: Object.freeze(claims),
     totals: Object.freeze([...totals.values()].map(Object.freeze)),
@@ -225,16 +259,22 @@ export function supplierHistory(records, supplier) {
  * position, then by how many claims there are — not by money, which would just
  * rank the biggest line items.
  */
-export function historyBySupplier(records) {
-  const names = new Map();
+export function historyBySupplier(records, { suppliers = null } = {}) {
+  /* Grouped by identity, so two spellings of one supplier produce one row
+     rather than two half-histories that each look complete. The display name
+     is the first spelling seen, unless the registry knows a better one. */
+  const byIdentity = new Map();
   for (const r of Array.isArray(records) ? records : []) {
     const raw = String(r?.meta?.supplier ?? "").trim();
     if (!raw) continue;
-    if (!names.has(raw.toLowerCase())) names.set(raw.toLowerCase(), raw);
+    const id = identify(raw, suppliers, r?.meta?.supplierId);
+    if (!id || byIdentity.has(id)) continue;
+    const known = suppliers ? resolveSupplier(suppliers, id) : null;
+    byIdentity.set(id, known ? known.name : raw);
   }
   return Object.freeze(
-    [...names.values()]
-      .map((name) => supplierHistory(records, name))
+    [...byIdentity.values()]
+      .map((name) => supplierHistory(records, name, { suppliers }))
       .sort((a, b) =>
         (b.counts?.aboveEvidencedPosition ?? 0) - (a.counts?.aboveEvidencedPosition ?? 0) ||
         b.count - a.count)

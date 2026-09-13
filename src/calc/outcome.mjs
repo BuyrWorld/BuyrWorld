@@ -18,6 +18,7 @@ import { ONE, scaleDiv, moneyScale, moneyTimesQuantity, moneyToDecimalString } f
 import { formatPercent } from "./cost-bridge.mjs";
 import { periodsBetween } from "./index-series.mjs";
 import { EVIDENCE_KIND } from "./evidence.mjs";
+import { supplierId } from "../domain/ids.mjs";
 
 /**
  * Whether a driver carried evidence, decided the same way assessEvidence
@@ -116,7 +117,15 @@ export function recordOutcome(input) {
   return Object.freeze({
     meta: Object.freeze({
       caseRef: meta.caseRef ?? null,
+      /* The name as it was written, kept verbatim — it is what the document
+         said, and rewriting it would lose evidence. The id beside it is what
+         the system matches on, so a later rename or a full stop cannot detach
+         this outcome from the supplier's history. Derived from the name when
+         not supplied, which is why records written before this existed need no
+         migration: the same name has always produced the same id. */
       supplier: meta.supplier ?? null,
+      supplierId: meta.supplierId ?? (meta.supplier ? supplierId(meta.supplier) : null),
+      caseId: meta.caseId ?? null,
       category: meta.category ?? null,
       synthetic: meta.synthetic !== false,
       recordedAt: meta.recordedAt ?? null,

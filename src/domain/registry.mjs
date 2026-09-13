@@ -30,7 +30,15 @@ export function resolveSupplier(suppliers, nameOrId) {
   const raw = String(nameOrId ?? "").trim();
   if (!raw) return null;
 
-  if (isId(KIND.SUPPLIER, raw)) return list.find((s) => s.id === raw) ?? null;
+  if (isId(KIND.SUPPLIER, raw)) {
+    const direct = list.find((s) => s.id === raw);
+    if (direct) return direct;
+    /* An id that was merged away still resolves, to the record that absorbed
+       it. Without this, every case and outcome stored against the old id
+       dangles the moment someone confirms a merge — which would make merging
+       destructive in exactly the way `mergedFrom` exists to prevent. */
+    return list.find((s) => s.mergedFrom.some((m) => m.id === raw)) ?? null;
+  }
 
   const key = normaliseName(raw);
   if (!key) return null;

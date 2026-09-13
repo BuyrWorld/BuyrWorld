@@ -93,11 +93,40 @@ stable string ids and no cyclic references, so the same records serialise to a
 document store or relational tables unchanged. Nothing in `src/domain/` knows
 where it is kept.
 
+## Migration: derived, not rewritten
+
+The stores carry `supplierId` **alongside** the typed name, never replacing it.
+The name is what the document said; rewriting it would lose evidence.
+
+Records written before identity existed need **no migration pass**. Ids are
+deterministic from the name, so the id is derived on write for new records and
+on read for old ones. A migration that rewrote every record in a live browser
+could lose them; deriving cannot.
+
+The guarantee that makes this safe is a superset property: any two names that
+matched under the old `.trim().toLowerCase()` comparison still match. Some that
+did not now do — a full stop, an accent — and that is the defect being fixed.
+
+Resolution order, most authoritative first:
+
+1. **The registry**, which knows aliases, renames and confirmed merges.
+2. The id already on the record.
+3. The name, deterministically.
+
+The registry is consulted *before* the stored id on purpose. A record written
+before a merge carries the absorbed id; if that took precedence, confirming a
+merge would leave older records behind and the history would silently split.
+For the same reason a merged-away id still resolves — to the record that
+absorbed it — so nothing stored against it dangles.
+
+Without a registry, two spellings differing by more than punctuation stay
+separate. That is the safe default: merging them is a guess about company
+structure, and this system is not in a position to make it.
+
 ## What has not been done yet
 
-The spine exists; the stores do not use it. `case-store` still records
-`supplier` as free text, and `supplier-history` still matches by name.
+The spine is wired into the stores and into `supplier-history`. It is **not**
+yet wired into the page: nothing creates a `Part`, a `Contract` or a
+`LearningRecord`, and the merge suggestions have no interface.
 
-Migration is additive and is the next step: `supplierId` **alongside** the
-existing name, never replacing it, with legacy records resolving identically by
-name and by id. Until that lands, this model is correct and unused.
+Those are the next steps, and each needs a consumer before it earns one.

@@ -30,6 +30,7 @@
  */
 
 import { serialise, deserialise } from "./outcome-store.mjs";
+import { supplierId } from "../domain/ids.mjs";
 
 const KEY = "bw.cases.v1";
 
@@ -78,7 +79,13 @@ export function newCase(input = {}) {
     id: input.id ?? newId(),
     schema: SCHEMA_VERSION,
     ref: input.ref ?? null,
+    /* The name as typed, kept verbatim, with identity beside it. Derived from
+       the name when not given, which is why cases stored before this existed
+       need no migration pass: the same name has always produced the same id.
+       A migration that rewrote stored records could lose them; deriving on
+       write cannot. */
     supplier: input.supplier ?? null,
+    supplierId: input.supplierId ?? (input.supplier ? supplierId(input.supplier) : null),
     category: input.category ?? null,
     status: input.status ?? STATUS.DRAFT,
     createdAt: input.createdAt ?? now,
@@ -151,6 +158,8 @@ export function listCases(store) {
     id: c.id,
     ref: c.ref,
     supplier: c.supplier,
+    // Derived on read for a case stored before identity existed.
+    supplierId: c.supplierId ?? (c.supplier ? supplierId(c.supplier) : null),
     category: c.category,
     status: c.status,
     createdAt: c.createdAt,
