@@ -13,8 +13,10 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
 import { costBridge, formatPercent } from "../../src/calc/cost-bridge.mjs";
-import { assessEvidence } from "../../src/calc/evidence.mjs";
+import { assessEvidence, evidence, EVIDENCE_KIND } from "../../src/calc/evidence.mjs";
 import { prepareNegotiation, CREDIBILITY } from "../../src/calc/negotiation.mjs";
+import { supplierHistory } from "../../src/calc/supplier-history.mjs";
+import { recordOutcome } from "../../src/calc/outcome.mjs";
 import { ratioFromPercent as pc, moneyFromDecimal, moneyToDecimalString } from "../../src/calc/exact.mjs";
 
 const html = readFileSync("index.html", "utf8");
@@ -145,5 +147,105 @@ describe("the panel renders a real case", () => {
   test("no BigInt or object leaked into the markup", () => {
     assert.equal(/\[object Object\]|undefined|NaN|\d+n\b/.test(out), false,
       "a raw value reached the page");
+  });
+});
+
+describe("the supplier's record opens the plan", () => {
+  const money = (x) => moneyFromDecimal(x, "GBP");
+  const DRIVERS = [
+    { id: "steel", label: "Steel bar", weight: pc("40"), indexMovement: pc("10"),
+      evidence: { weight: evidence(EVIDENCE_KIND.DOCUMENT, { label: "breakdown", quote: "40%" }),
+                  movement: evidence(EVIDENCE_KIND.PUBLISHED, { label: "synthetic index" }) } },
+    { id: "freight", label: "Freight", weight: pc("12"), indexMovement: pc("10") },
+  ];
+
+  const past = (at, requested, agreed) => recordOutcome({
+    bridge: costBridge({
+      baseline: { unitPrice: money("100.00"), annualVolume: 50_000 },
+      requestedChange: pc(requested), drivers: DRIVERS,
+    }),
+    agreedChange: pc(agreed),
+    argumentsUsed: [{ id: "base-period", description: "Challenged the base period", worked: true }],
+    meta: { supplier: "Meridian Fabrication Ltd", recordedAt: at, caseRef: "C-" + at },
+  });
+
+  /** Run defHistoryHTML with a given supplier field and stored corpus. */
+  function render(supplierName, stored) {
+    const sandbox = {
+      window: { BW: { supplierHistory, loadOutcomes: () => stored, formatPercent, moneyToDecimalString } },
+      document: { getElementById: (id) => (id === "def-supplier" ? { value: supplierName } : null) },
+      ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
+      console,
+    };
+    const src = html.slice(html.indexOf("function defHistoryHTML()"), html.indexOf("\nfunction defNegotiationHTML(r,cur){"));
+    vm.createContext(sandbox);
+    new vm.Script(src + "\n;globalThis.__H__ = defHistoryHTML();").runInContext(sandbox);
+    return sandbox.__H__;
+  }
+
+  test("it is rendered at the top of the plan, before the anchors", () => {
+    assert.match(html, /Negotiation plan<\/div>'\s*\n?\s*\+defHistoryHTML\(\)/,
+      "the record must come before the anchors it changes the reading of");
+  });
+
+  test("two rounds produce a record with both of them in it", () => {
+    const out = render("Meridian Fabrication Ltd", [past("2024-03", "8", "6.5"), past("2025-04", "7", "5.2")]);
+    assert.match(out, /Their record/);
+    assert.match(out, /2 claims recorded/);
+    assert.match(out, /2024-03/);
+    assert.match(out, /2025-04/);
+  });
+
+  test("a driver claimed every round and never evidenced is called out", () => {
+    const out = render("Meridian Fabrication Ltd", [past("2024-03", "8", "6.5"), past("2025-04", "7", "5.2")]);
+    assert.match(out, /Claimed every round and never evidenced: <b>Freight<\/b>/);
+    assert.equal(/never evidenced: <b>[^<]*Steel/.test(out), false,
+      "steel carries evidence and must not be tarred with it");
+  });
+
+  test("what has worked against this supplier is shown with its record", () => {
+    const out = render("Meridian Fabrication Ltd", [past("2024-03", "8", "6.5"), past("2025-04", "7", "5.2")]);
+    assert.match(out, /Has worked against this supplier: Challenged the base period \(2 of 2\)/);
+  });
+
+  test("conceding above the evidence is priced, and a clean round is not", () => {
+    const out = render("Meridian Fabrication Ltd", [past("2024-03", "8", "6.5"), past("2025-04", "7", "5.2")]);
+    assert.match(out, /GBP 65000\.00/, "1.30% of £5m conceded above the evidence in 2024");
+    assert.match(out, /&mdash;/, "the round that landed on the evidence shows a dash, not a zero");
+  });
+
+  test("a different supplier gets nothing, not someone else's record", () => {
+    const out = render("Someone Else Ltd", [past("2024-03", "8", "6.5")]);
+    assert.equal(/Their record/.test(out), false);
+    assert.match(out, /No previous claims recorded for Someone Else Ltd/);
+    assert.match(out, /absence of records, not an absence of claims/);
+  });
+
+  test("an empty corpus renders nothing at all", () => {
+    assert.equal(render("Meridian Fabrication Ltd", []), "",
+      "a first-time case must not be cluttered by a feature it cannot use yet");
+  });
+
+  test("no supplier named renders nothing", () => {
+    assert.equal(render("", [past("2024-03", "8", "6.5")]), "");
+  });
+
+  test("a broken store is survived rather than taking the panel down", () => {
+    const sandbox = {
+      window: { BW: { supplierHistory, loadOutcomes: () => { throw new Error("storage blocked"); },
+                      formatPercent, moneyToDecimalString } },
+      document: { getElementById: () => ({ value: "Meridian Fabrication Ltd" }) },
+      ciEsc: (x) => String(x), console,
+    };
+    const src = html.slice(html.indexOf("function defHistoryHTML()"), html.indexOf("\nfunction defNegotiationHTML(r,cur){"));
+    vm.createContext(sandbox);
+    new vm.Script(src + "\n;globalThis.__H__ = defHistoryHTML();").runInContext(sandbox);
+    assert.equal(sandbox.__H__, "");
+  });
+
+  test("nothing raw reaches the page", () => {
+    const out = render("Meridian Fabrication Ltd", [past("2024-03", "8", "6.5"), past("2025-04", "7", "5.2")]);
+    assert.equal(/\[object Object\]|undefined|NaN|\d+n\b/.test(out), false);
   });
 });

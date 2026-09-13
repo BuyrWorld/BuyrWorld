@@ -17,6 +17,20 @@
 import { ONE, scaleDiv, moneyScale, moneyTimesQuantity, moneyToDecimalString } from "./exact.mjs";
 import { formatPercent } from "./cost-bridge.mjs";
 import { periodsBetween } from "./index-series.mjs";
+import { EVIDENCE_KIND } from "./evidence.mjs";
+
+/**
+ * Whether a driver carried evidence, decided the same way assessEvidence
+ * decides it: a movement is evidenced by an explicit item or by the lineage of
+ * a published series; a weight is evidenced only by an explicit item, because
+ * a share of unit cost is an assumption until the supplier opens its book.
+ */
+function driverEvidenced(c) {
+  const real = (e) => Boolean(e) && e.kind !== EVIDENCE_KIND.NONE;
+  const movement = c.evidence?.movement ? real(c.evidence.movement) : Boolean(c.lineage);
+  const weight = real(c.evidence?.weight);
+  return { weight, movement, both: weight && movement };
+}
 
 /** How the agreed position compares with what the evidence supported. */
 export const VERDICT = Object.freeze({
@@ -114,6 +128,25 @@ export function recordOutcome(input) {
       agreed: agreedChange,
       currency: cur,
       annualLineValue: line,
+    }),
+
+    /* What they claimed, kept so a later case can see the pattern. Without
+       this, a supplier that claims freight every year and has evidenced it
+       once looks identical to one claiming it for the first time. */
+    claim: Object.freeze({
+      drivers: Object.freeze(bridge.contributions.map((c) => {
+        const ev = driverEvidenced(c);
+        return Object.freeze({
+          id: c.id,
+          label: c.label,
+          weight: c.weight,
+          contribution: c.contribution,
+          evidenced: ev.both,
+          weightEvidenced: ev.weight,
+          movementEvidenced: ev.movement,
+        });
+      })),
+      unexplainedWeight: bridge.unexplainedWeight,
     }),
 
     computed: Object.freeze({

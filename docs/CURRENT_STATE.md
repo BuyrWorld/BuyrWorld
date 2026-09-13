@@ -41,7 +41,7 @@ Genuinely working, worth preserving:
 | Spend Analyser | Real deterministic logic — Pareto, concentration, tail, category aggregation, XLSX export. Now extracted into `src/calc/spend.mjs` with exact arithmetic and 35 tests. |
 | Quote Comparator | Multi-file ingestion, normalisation, structured report output. |
 | Contract Intelligence | Clause-level review and redline generation; three sub-tools through one render path. |
-| Price-Increase Defender | The flagship workflow. Decomposes a supplier claim against exact arithmetic, assesses the evidence, and now carries the case through to a negotiating position via `src/calc/negotiation.mjs`. |
+| Price-Increase Defender | The flagship workflow. Decomposes a supplier claim against exact arithmetic, assesses the evidence, carries the case through to a negotiating position (`src/calc/negotiation.mjs`), and opens that position with what the supplier did last time (`src/calc/supplier-history.mjs`). |
 | Market Intelligence | Four web-grounded panels, now returning real citations. |
 | Report/export shells | jsPDF and XLSX export shared by several tools. |
 

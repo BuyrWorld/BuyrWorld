@@ -1781,6 +1781,66 @@ function defPosition(){
   if(sw!==""){ try{ pos.switchingCost=window.BW.moneyFromDecimal(Number(sw).toFixed(2),String(g("def-currency")||"GBP").toUpperCase()); }catch(e){} }
   return pos;
 }
+// What this supplier has done before. Read from the outcomes already stored by
+// the outcome capture — no new data collection, and no figure computed here.
+function defHistoryHTML(){
+  if(!window.BW.supplierHistory||!window.BW.loadOutcomes)return"";
+  var el=document.getElementById("def-supplier");
+  var name=el?String(el.value).trim():"";
+  var all=[]; try{ all=window.BW.loadOutcomes()||[]; }catch(e){ return ""; }
+  if(!name)return"";
+  var H; try{ H=window.BW.supplierHistory(all,name); }catch(e){ return ""; }
+
+  if(!H.count){
+    // Silent on a fresh corpus; a note only once outcomes are actually being kept,
+    // so a first-time case is not cluttered by a feature it cannot use yet.
+    if(!all.length)return"";
+    return '<p style="font-size:12.5px;color:var(--muted);margin:0 0 12px">No previous claims recorded for '
+      +ciEsc(name)+'. That is an absence of records, not an absence of claims.</p>';
+  }
+
+  var P=window.BW.formatPercent,M=window.BW.moneyToDecimalString;
+  var rows=H.claims.map(function(c){
+    var above=c.concededAboveWarranted>0n;
+    return '<tr><td style="padding:5px 10px 5px 0">'+ciEsc(c.at||("round "+c.round))+'</td>'
+      +'<td style="text-align:right;padding:5px 10px;font-variant-numeric:tabular-nums">'+P(c.requested)+'</td>'
+      +'<td style="text-align:right;padding:5px 10px;font-variant-numeric:tabular-nums;color:var(--lime)">'+P(c.warranted)+'</td>'
+      +'<td style="text-align:right;padding:5px 10px;font-variant-numeric:tabular-nums">'+P(c.agreed)+'</td>'
+      +'<td style="text-align:right;padding:5px 0 5px 10px;font-variant-numeric:tabular-nums;color:'+(above?"#FF5C5C":"var(--lime)")+'">'
+      +(above?c.currency+" "+M(c.concededAboveWarrantedAnnual):"&mdash;")+'</td></tr>';
+  }).join("");
+
+  var repeats=H.drivers.filter(function(d){return d.claimedEveryRound&&!d.everEvidenced;});
+  var repeatHTML=repeats.length
+    ? '<p style="font-size:12.5px;color:#FF5C5C;margin:8px 0 0">Claimed every round and never evidenced: <b>'
+      +repeats.map(function(d){return ciEsc(d.label);}).join(", ")+'</b>. Ask for the breakdown before anything else.</p>'
+    : "";
+
+  var worked=H.argumentsThatWorked.filter(function(a){return a.worked>0;});
+  var workedHTML=worked.length
+    ? '<p style="font-size:12.5px;color:var(--muted);margin:8px 0 0">Has worked against this supplier: '
+      +worked.map(function(a){return ciEsc(a.description)+' ('+a.worked+' of '+a.used+')';}).join(" &middot; ")+'.</p>'
+    : "";
+
+  var totals=H.totals.map(function(t){
+    return t.currency+" "+M(t.concededAboveWarranted)+" conceded above the evidence, "+t.currency+" "+M(t.avoided)+" avoided";
+  }).join(" &middot; ");
+
+  return '<div style="border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px">'
+    +'<div class="eyebrow" style="margin-bottom:6px">Their record'+(H.synthetic?' <span style="color:var(--muted);text-transform:none;letter-spacing:0">(synthetic)</span>':'')+'</div>'
+    +'<p style="font-size:13px;color:#CFCFCF;margin:0 0 10px;line-height:1.6">'+ciEsc(H.headline)+'</p>'
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;color:#CFCFCF">'
+    +'<thead><tr style="color:var(--muted);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase">'
+    +'<th style="text-align:left;padding-bottom:5px">When</th><th style="text-align:right;padding-bottom:5px">Asked</th>'
+    +'<th style="text-align:right;padding-bottom:5px">Evidenced</th><th style="text-align:right;padding-bottom:5px">Agreed</th>'
+    +'<th style="text-align:right;padding-bottom:5px">Above the evidence</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<p style="font-size:12px;color:var(--muted);margin:8px 0 0">'+totals+'.</p>'
+    +repeatHTML+workedHTML
+    +(H.mixedCurrency?'<p style="font-size:11.5px;color:#FFB800;margin:8px 0 0">Claims span more than one currency, so totals are kept separate rather than added.</p>':"")
+    +'<p style="font-size:11.5px;color:var(--muted);margin:8px 0 0;line-height:1.5">'+ciEsc(H.method)+'</p>'
+    +'</div>';
+}
+
 function defNegotiationHTML(r,cur){
   if(!window.BW.prepareNegotiation)return"";
   var N;
@@ -1846,6 +1906,7 @@ function defNegotiationHTML(r,cur){
 
   return '<div style="border:1px solid var(--lime);border-radius:12px;padding:14px 16px;margin-top:14px">'
     +'<div class="eyebrow" style="margin-bottom:8px;color:var(--lime)">Negotiation plan</div>'
+    +defHistoryHTML()
     +'<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px">'
     +anchor("Open at",P(N.openingPosition.openAt),N.hardLine.unitPrice,N.hardLine.annualCost,"var(--lime)")
     +anchor("Target",P(N.openingPosition.target),r.unitPrice.warranted,N.anchors.warranted.annualCost,"var(--text)")
@@ -3885,6 +3946,7 @@ async function send(id,text){
   import { assessEvidence, formatWeight } from "./src/calc/evidence.mjs";
   import { labelFor, assumptionsToVerify, LEGEND } from "./src/calc/provenance.mjs";
   import { prepareNegotiation, CREDIBILITY } from "./src/calc/negotiation.mjs";
+  import { supplierHistory } from "./src/calc/supplier-history.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
   import { fxRate } from "./src/calc/fx.mjs";
   import { buildDecisionPack } from "./src/calc/decision-pack.mjs";
@@ -3899,6 +3961,7 @@ async function send(id,text){
                 createSeries, movementBetween, assessEvidence, formatWeight, fxRate,
                 labelFor, assumptionsToVerify, LEGEND,
                 prepareNegotiation, CREDIBILITY,
+                supplierHistory,
                 parseSpendCsv, analyseSpendExact, indicativeSavings,
                 buildDecisionPack, renderDecisionPackHTML,
                 recordOutcome, summariseOutcomes,
