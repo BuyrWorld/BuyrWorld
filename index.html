@@ -3529,40 +3529,58 @@ async function miLoadFile(inp){
   try{const t=await extractFile(f);document.getElementById("mi-paste").value=t.slice(0,200000);if(t.length>200000)alert("That file is "+Math.round(t.length/1000)+"k characters. Only the first 200k were loaded — the rest is not included in the analysis.");}catch(e){alert("Couldn't read that file — paste the data instead.");}
   inp.value="";
 }
+// Reads spend through the same exact parser the Spend Analyser uses. This was
+// a hand-rolled duplicate with parseFloat in it, which reads "12abc" as 12.
 function miParse(raw){
-  const lines=raw.split(/\r?\n/).filter(l=>l.trim());
-  let si=0,ci=1,ai=2,start=0;
-  const head=lines[0].toLowerCase();
-  if(/supplier|vendor|name|category|amount|value|spend|total|cost/.test(head)){
-    const cols=head.split(",").map(s=>s.trim());
-    const find=(w,d)=>{const i=cols.findIndex(c=>w.some(x=>c.includes(x)));return i>=0?i:d;};
-    si=find(["supplier","vendor","payee","name"],0);ci=find(["category","commodity","group","type"],1);ai=find(["amount","value","spend","total","cost","net"],2);start=1;}
-  const cat={};let total=0;
-  for(let i=start;i<lines.length;i++){const p=lines[i].split(",");const amt=parseFloat((p[ai]||"").replace(/[£$€,\s]/g,""));const c=(p[ci]||"").trim()||"Uncategorised";if(!isFinite(amt))continue;cat[c]=(cat[c]||0)+amt;total+=amt;}
-  return {cat,total};
+  var parsed=window.BW.parseSpendCsv(raw);
+  var cat={},total=0n;
+  for(var i=0;i<parsed.rows.length;i++){
+    var r=parsed.rows[i];
+    cat[r.category]=(cat[r.category]||0n)+r.minor;
+    total+=r.minor;
+  }
+  return {cat:cat,total:total,skipped:parsed.skipped,currency:parsed.currency};
 }
+
 async function runExposure(){
   const raw=document.getElementById("mi-paste").value.trim();
   const out=document.getElementById("mi-exp-out");
   if(!raw){out.innerHTML='<p style="color:var(--muted);font-size:14px">Paste spend data or load the sample first.</p>';return;}
-  const {cat,total}=miParse(raw);
-  const cats=Object.entries(cat).sort((a,b)=>b[1]-a[1]).slice(0,25);
+  const {cat,total,currency}=miParse(raw);
+  const cur=currency||"GBP";
+  const M=function(m){return window.BW.moneyToDecimalString(m);};
+  const asMoney=function(minor){return window.BW.money(minor,cur,null);};
+  const cats=Object.entries(cat).sort(function(a,b){return b[1]>a[1]?1:b[1]<a[1]?-1:0;}).slice(0,25);
   if(!cats.length){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t read any amounts — check the format.</p>';return;}
   startLoader("mi-exp-out",["Reading your spend…", "Mapping categories to commodities…", "Calculating your exposure…", "Building the breakdown…"],18);
   try{
     const text=await callAI(`You are a procurement cost-modelling expert. For each spend category below, estimate the typical cost composition by underlying commodity/input for a UK manufacturer. Use ONLY these exposure buckets: Aluminium, Copper, Nickel, Steel, Stainless Steel, Other metals, Polymers, Packaging materials, Energy, Freight, Labour, Other.\nCategories: ${cats.map(([k])=>k).join("; ")}\nReturn ONLY a JSON array, no other text, like: [{"category":"Castings","mix":{"Aluminium":0.45,"Energy":0.15,"Labour":0.25,"Other":0.15}}] — shares must sum to 1 per category. Be realistic; use "Other" when unsure.`);
     let map;try{map=JSON.parse(text.replace(/```json|```/g,"").trim());}catch(e){throw new Error("parse");}
-    const exp={};
-    cats.forEach(([k,v])=>{const m=(map.find(x=>x.category&&x.category.toLowerCase()===k.toLowerCase())||{}).mix||{Other:1};
-      Object.entries(m).forEach(([cm,sh])=>{exp[cm]=(exp[cm]||0)+v*sh;});});
-    const expArr=Object.entries(exp).sort((a,b)=>b[1]-a[1]);
-    MI.exp={total,cats,expArr,at:miStamp()};
-    const bars=expArr.map(([k,v])=>`<div style="margin:9px 0;font-size:13px"><div style="display:flex;justify-content:space-between;gap:8px"><span>${ciEsc(k)}</span><span style="color:var(--muted)">${gbp(v)} · ${(v/total*100).toFixed(1)}%</span></div><div style="height:8px;background:var(--line);border-radius:4px;margin-top:4px"><div style="height:8px;width:${Math.max(2,Math.round(v/total*100))}%;background:${["Energy","Freight"].includes(k)?"#FFB800":"var(--lime)"};border-radius:4px"></div></div></div>`).join("");
+    // Exact arithmetic on a proposed composition. The shares come from a model
+    // and are treated as assumptions throughout; the multiplication is not.
+    var mix={};
+    cats.forEach(function(c){
+      var hit=map.find(function(x){return x.category&&x.category.toLowerCase()===String(c[0]).toLowerCase();});
+      mix[c[0]]=(hit&&hit.mix)||{Other:1};
+    });
+    var mapped=window.BW.mapExposure(cats.map(function(c){return {name:c[0],value:asMoney(c[1])};}),mix);
+    const expArr=mapped.exposure.map(function(e){return [e.name,e.value];});
+    MI.exp={total:asMoney(total),cats:cats,expArr:expArr,mapped:mapped,currency:cur,at:miStamp()};
+    const bars=mapped.exposure.map(function(e){
+      var w=Math.max(2,Math.min(100,Math.round(Number(e.share)/1e7)));
+      return '<div style="margin:9px 0;font-size:13px">'
+        +'<div style="display:flex;justify-content:space-between;gap:8px">'
+        +'<span>'+ciEsc(e.name)+'</span>'
+        +'<span style="color:var(--muted)">'+ciEsc(cur)+' '+M(e.value)+' &middot; '+window.BW.formatPercent(e.share)+'</span></div>'
+        +'<div style="height:8px;background:var(--line);border-radius:4px;margin-top:4px">'
+        +'<div style="height:8px;width:'+w+'%;background:var(--lime);border-radius:4px"></div></div></div>';
+    }).join("");
     out.innerHTML=`<div class="grid2" style="align-items:start">
       <div class="card"><div class="eyebrow" style="margin-bottom:8px">Exposure by commodity / input</div>${bars}
-      <p style="color:var(--muted);font-size:11.5px;margin-top:8px">AI-estimated cost composition by category — directional, refine with supplier cost breakdowns.</p></div>
+      <p style="color:var(--muted);font-size:11.5px;margin-top:8px"><b style="color:#FFB800">Assumed.</b> Cost composition is estimated by a model, not measured: each figure is your spend multiplied by a proposed share. The arithmetic is exact; the shares are not evidence. Replace them with a supplier cost breakdown before relying on any of this.</p>
+      ${mapped.coherent?"":'<p style="color:#FF5C5C;font-size:11.5px;margin-top:6px">'+mapped.warnings.map(ciEsc).join(" ")+'</p>'}</div>
       <div class="card"><div class="eyebrow" style="margin-bottom:8px">What this means</div>
-      <p style="font-size:13.5px;line-height:1.65;color:#CFCFCF">Total analysed spend <b style="color:var(--text)">${gbp(total)}</b> across ${cats.length} categories. Your three largest exposures are <b style="color:var(--lime)">${expArr.slice(0,3).map(([k])=>k).join(", ")}</b> — these are the markets to track in Commodity Intelligence above and the indexation clauses to check in your contracts.</p>
+      <p style="font-size:13.5px;line-height:1.65;color:#CFCFCF">Total analysed spend <b style="color:var(--text)">${cur} ${M(asMoney(total))}</b> across ${cats.length} categories. Your three largest exposures are <b style="color:var(--lime)">${expArr.slice(0,3).map(([k])=>k).join(", ")}</b> — these are the markets to track in Commodity Intelligence above and the indexation clauses to check in your contracts.</p>
       <p style="font-size:13.5px;line-height:1.65;color:#CFCFCF;margin-top:10px">Now stress-test it: the simulator below is loaded with your numbers.</p></div></div>`;
     buildSim(); miShowExports();
   }catch(e){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t map the exposure just now — try again in a moment.</p>';}
@@ -3573,8 +3591,8 @@ function buildSim(){
   const base=MI.exp?MI.exp.expArr:[["Aluminium",0],["Steel",0],["Polymers",0],["Energy",0],["Freight",0],["Labour",0]];
   const rows=base.filter(([k])=>k!=="Other").slice(0,8).map(([k,v],i)=>`
     <div style="display:flex;align-items:center;gap:12px;margin:8px 0;font-size:13px">
-      <span style="width:140px">${ciEsc(k)}${MI.exp?` <span style="color:var(--muted)">(${gbp(v)})</span>`:""}</span>
-      <input type="range" id="sim-r${i}" aria-label="${ciEsc(k)} adjustment, percent" min="-20" max="40" value="0" style="flex:1;accent-color:var(--lime)" oninput="document.getElementById('sim-v${i}').textContent=this.value+'%'" data-name="${ciEsc(k)}" data-val="${v}">
+      <span style="width:140px">${ciEsc(k)}${MI.exp?` <span style="color:var(--muted)">(${window.BW.moneyToDecimalString(v)})</span>`:""}</span>
+      <input type="range" id="sim-r${i}" aria-label="${ciEsc(k)} adjustment, percent" min="-20" max="40" value="0" style="flex:1;accent-color:var(--lime)" oninput="document.getElementById('sim-v${i}').textContent=this.value+'%'" data-name="${ciEsc(k)}" data-val="${MI.exp?v.minor:0}">
       <span id="sim-v${i}" style="width:46px;text-align:right;font-family:'Space Grotesk';font-weight:600">0%</span>
     </div>`).join("");
   box.innerHTML=`${MI.exp?"":`<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;font-size:13px"><span>Annual spend £</span><input class="bwin" id="sim-total" style="max-width:160px" placeholder="e.g. 500000" aria-label="E.g. 500000"><span style="color:var(--muted)">then estimate shares with the sliders</span></div>`}
@@ -3587,25 +3605,54 @@ function buildSim(){
 function runSim(){
   const out=document.getElementById("mi-sim-out");
   const sliders=[...document.querySelectorAll('#mi-sim-controls input[type=range]')];
-  let rowsHtml="",totalImpact=0,baseTotal=MI.exp?MI.exp.total:parseFloat((document.getElementById("sim-total")||{value:""}).value.replace(/[£,\s]/g,""));
-  if(!MI.exp&&!isFinite(baseTotal)){out.innerHTML='<p style="color:var(--muted);font-size:14px">Enter your annual spend first (or run My Commodity Exposure above).</p>';return;}
-  sliders.forEach(s=>{
-    const pct=parseFloat(s.value); if(!pct)return;
-    const exposure=MI.exp?parseFloat(s.dataset.val):baseTotal/sliders.length;
-    const impact=exposure*pct/100; totalImpact+=impact;
-    rowsHtml+=`<tr><td style="padding:7px 10px;border-bottom:1px solid var(--line)">${s.dataset.name}</td><td style="padding:7px 10px;border-bottom:1px solid var(--line);text-align:right">${pct>0?"+":""}${pct}%</td><td style="padding:7px 10px;border-bottom:1px solid var(--line);text-align:right">${gbp(exposure)}</td><td style="padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;color:${impact>0?"#FF5C5C":"var(--lime)"};font-weight:600">${impact>0?"+":""}${gbp(impact)}</td></tr>`;
+  const cur=(MI.exp&&MI.exp.currency)||"GBP";
+  const M=function(m){return cur+" "+window.BW.moneyToDecimalString(m);};
+
+  // The manual entry is read exactly: parseFloat would take "50k" as 50.
+  var baseTotal=null;
+  if(MI.exp){ baseTotal=MI.exp.total; }
+  else{
+    var typed=window.BW.parseAmount((document.getElementById("sim-total")||{value:""}).value);
+    if(typed!==null)baseTotal=window.BW.money(typed,cur,null);
+  }
+  if(!baseTotal){out.innerHTML='<p style="color:var(--muted);font-size:14px">Enter your annual spend first (or run My Commodity Exposure above), as a plain amount.</p>';return;}
+
+  var lines=sliders.map(function(sl,i){
+    var shock=window.BW.shareFrom(String(sl.value)+"%");
+    var exposure=MI.exp
+      ? window.BW.money(BigInt(sl.dataset.val||"0"),cur,null)
+      : window.BW.money(window.BW.scaleDiv(baseTotal.minor,BigInt(sliders.length||1)),cur,null);
+    return {name:sl.dataset.name,exposure:exposure,shock:shock===null?0n:shock};
   });
-  if(!rowsHtml){out.innerHTML='<p style="color:var(--muted);font-size:14px">Move at least one slider to model a shock.</p>';return;}
-  MI.sim={rows:rowsHtml,totalImpact,baseTotal,at:miStamp()};
-  out.innerHTML=`
-    <div class="card" style="border-color:${totalImpact>0?"#FF5C5C":"var(--lime)"};display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-      <div style="font-family:'Space Grotesk';font-weight:700;font-size:34px;color:${totalImpact>0?"#FF5C5C":"var(--lime)"}">${totalImpact>0?"+":""}${gbp(totalImpact)}</div>
-      <div style="color:var(--muted);font-size:13px">expected annual cost impact (${(totalImpact/baseTotal*100).toFixed(1)}% of ${gbp(baseTotal)} analysed spend)<br>${totalImpact>0?"Mitigations: forward cover on the biggest lines, two-way indexation, spec/demand challenge.":"Falling input costs — open renegotiations and capture the decrease before suppliers bank it."}</div>
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <tr style="color:var(--muted)"><th style="text-align:left;padding:7px 10px">Input</th><th style="text-align:right;padding:7px 10px">Shock</th><th style="text-align:right;padding:7px 10px">Exposure</th><th style="text-align:right;padding:7px 10px">Annual impact</th></tr>${rowsHtml}</table>`;
+
+  var R;
+  try{ R=window.BW.costShock(lines,{baseTotal:baseTotal}); }
+  catch(e){ out.innerHTML='<p style="color:#FF5C5C;font-size:14px">'+ciEsc(String(e.message||e))+'</p>'; return; }
+  if(!R.ok){out.innerHTML='<p style="color:var(--muted);font-size:14px">Move at least one slider to model a shock.</p>';return;}
+
+  var up=R.direction==="increase";
+  var rowsHtml=R.rows.map(function(r){
+    var pos=r.impact.minor>0n;
+    return '<tr><td style="padding:7px 10px;border-bottom:1px solid var(--line)">'+ciEsc(r.name)+'</td>'
+      +'<td style="padding:7px 10px;border-bottom:1px solid var(--line);text-align:right">'+window.BW.formatPercent(r.shock)+'</td>'
+      +'<td style="padding:7px 10px;border-bottom:1px solid var(--line);text-align:right">'+M(r.exposure)+'</td>'
+      +'<td style="padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;color:'+(pos?"#FF5C5C":"var(--lime)")+';font-weight:600">'+(pos?"+":"")+M(r.impact)+'</td></tr>';
+  }).join("");
+
+  MI.sim={rows:rowsHtml,totalImpact:R.totalImpact,baseTotal:baseTotal,shareOfBase:R.shareOfBase,at:miStamp()};
+  out.innerHTML='<div class="card" style="border-color:'+(up?"#FF5C5C":"var(--lime)")+';display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'
+    +'<div style="font-family:\'Space Grotesk\';font-weight:700;font-size:34px;color:'+(up?"#FF5C5C":"var(--lime)")+'">'+(up?"+":"")+M(R.totalImpact)+'</div>'
+    +'<div style="color:var(--muted);font-size:13px">annual cost impact'
+    +(R.shareOfBase!==null?' ('+window.BW.formatPercent(R.shareOfBase)+' of '+M(baseTotal)+' analysed spend)':'')
+    +'<br>'+(up?"Mitigations: forward cover on the biggest lines, two-way indexation, spec and demand challenge."
+              :"Falling input costs — open renegotiations and capture the decrease before suppliers bank it.")
+    +'<br><span style="color:#FFB800">Assumed.</span> '+ciEsc(R.method)+'</div></div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:13px">'
+    +'<tr style="color:var(--muted)"><th style="text-align:left;padding:7px 10px">Input</th><th style="text-align:right;padding:7px 10px">Shock</th><th style="text-align:right;padding:7px 10px">Exposure</th><th style="text-align:right;padding:7px 10px">Annual impact</th></tr>'
+    +rowsHtml+'</table>';
   miShowExports();
 }
+
 // ---- Exports ----
 function miGlossTable(raw){
   var pts=raw.split(/\b([A-Z][A-Z0-9&\-]{1,14})\s*:\s*/),items=[];
@@ -4221,13 +4268,14 @@ async function send(id,text){
 <script type="module">
   // The same module the unit tests run against - one source of truth.
   import { costBridge, partialAcceptance, delayEffect, formatPercent } from "./src/calc/cost-bridge.mjs";
-  import { ratioFromPercent, moneyFromDecimal, moneyToDecimalString } from "./src/calc/exact.mjs";
+  import { ratioFromPercent, moneyFromDecimal, moneyToDecimalString, money, scaleDiv } from "./src/calc/exact.mjs";
   import { createSeries, movementBetween } from "./src/calc/index-series.mjs";
   import { assessEvidence, formatWeight } from "./src/calc/evidence.mjs";
   import { labelFor, assumptionsToVerify, LEGEND } from "./src/calc/provenance.mjs";
   import { prepareNegotiation, CREDIBILITY } from "./src/calc/negotiation.mjs";
   import { supplierHistory } from "./src/calc/supplier-history.mjs";
   import { portfolio } from "./src/calc/portfolio.mjs";
+  import { mapExposure, costShock, shareFrom, parseAmount } from "./src/calc/shock.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
@@ -4246,6 +4294,8 @@ async function send(id,text){
                 prepareNegotiation, CREDIBILITY,
                 supplierHistory,
                 portfolio,
+                mapExposure, costShock, shareFrom, parseAmount,
+                money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,
                 parseSpendCsv, analyseSpendExact, indicativeSavings,
