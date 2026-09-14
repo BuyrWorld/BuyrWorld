@@ -2708,7 +2708,7 @@ function inboxBind(){
     else if(act==="clear")inboxClear();
     else if(act==="example")inboxExample();
     else if(act==="tools")go("tools");
-    else if(act==="go")inboxGo(t.dataset.route,Boolean(t.dataset.extract));
+    else if(act==="go")inboxGo(t.dataset.route,Boolean(t.dataset.extract),t.dataset.mode);
   });
   page.addEventListener("change",function(e){
     if(e.target&&e.target.dataset&&e.target.dataset.act==="file")inboxLoadFile(e.target);
@@ -2776,7 +2776,8 @@ function inboxRun(filename){
 
   var actions=window.BW.nextActions(R).map(function(a){
     return '<button class="btn '+(a.primary?"btn-lime":"btn-ghost")+'" style="'+(a.primary?"":"padding:9px 15px;font-size:13px")+'" '
-      +'data-act="go" data-route="'+attrEsc(a.route)+'" data-extract="'+(a.extract?"1":"")+'">'+ciEsc(a.label)+'</button>';
+      +'data-act="go" data-route="'+attrEsc(a.route)+'" data-extract="'+(a.extract?"1":"")+'"'
+      +(a.mode?' data-mode="'+attrEsc(a.mode)+'"':'')+'>'+ciEsc(a.label)+'</button>';
   }).join(" ");
 
   out.innerHTML='<div class="card" style="margin:0;border-color:'+bandColour()+'">'
@@ -2795,9 +2796,12 @@ function inboxRun(filename){
 /* Hand the document to the workflow rather than making the person paste it
    twice. Only the claim reviewer can read a letter today; the rest are opened
    with the text carried across where they have somewhere to put it. */
-function inboxGo(route,extract){
+function inboxGo(route,extract,mode){
   var text=(document.getElementById("inbox-text")||{value:""}).value;
   go(route);
+  /* Should Cost Expert is three tools on one page. Landing somebody holding a
+     certificate on the material planner is the same as not routing them. */
+  if(route==="shouldcost"&&mode&&typeof ctSwitch==="function")ctSwitch(mode);
   if(route==="tool-defender"){
     var letter=document.getElementById("def-letter");
     if(letter)letter.value=text;

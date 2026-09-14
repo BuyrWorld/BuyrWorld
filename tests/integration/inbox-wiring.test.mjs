@@ -201,3 +201,23 @@ describe("it stays safe", () => {
     assert.equal(/\[object Object\]|undefined|NaN/.test(out), false);
   });
 });
+
+describe("certificates and drawings reach the right half of the page", () => {
+  test("the mode travels onto the action button", () => {
+    // Should Cost Expert is three tools on one page. Landing somebody holding
+    // a certificate on the material planner is the same as not routing them.
+    assert.match(html, /\(a\.mode\?' data-mode="'\+attrEsc\(a\.mode\)\+'"':''\)/);
+  });
+
+  test("the handler reads it and switches", () => {
+    assert.match(html, /inboxGo\(t\.dataset\.route,Boolean\(t\.dataset\.extract\),t\.dataset\.mode\)/);
+    const fn = html.slice(html.indexOf("function inboxGo("), html.indexOf("function inboxGo(") + 700);
+    assert.match(fn, /route==="shouldcost"&&mode&&typeof ctSwitch==="function"/);
+  });
+
+  test("a route with no mode is unaffected", () => {
+    // Every existing destination passes undefined and must behave as before.
+    const fn = html.slice(html.indexOf("function inboxGo("), html.indexOf("function inboxGo(") + 700);
+    assert.match(fn, /&&mode&&/, "a missing mode must not call ctSwitch");
+  });
+});

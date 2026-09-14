@@ -36,6 +36,8 @@ export const DOC_KIND = Object.freeze({
   SPEND_DATA: "spend-data",
   RFQ_RESPONSE: "rfq-response",
   MEETING_NOTES: "meeting-notes",
+  CERTIFICATE: "material-certificate",
+  DRAWING: "drawing",
   UNKNOWN: "unknown",
 });
 
@@ -47,6 +49,8 @@ export const WORKFLOW = Object.freeze({
   [DOC_KIND.SPEND_DATA]: { id: "spend-analysis", label: "Spend analyser", route: "spend" },
   [DOC_KIND.RFQ_RESPONSE]: { id: "rfq-review", label: "RFQ builder", route: "tool-rfq" },
   [DOC_KIND.MEETING_NOTES]: { id: "minutes", label: "Meeting summariser", route: "tool-minutes" },
+  [DOC_KIND.CERTIFICATE]: { id: "certificate-check", label: "Certificate check", route: "shouldcost" },
+  [DOC_KIND.DRAWING]: { id: "should-cost", label: "Should Cost Expert", route: "shouldcost" },
   [DOC_KIND.UNKNOWN]: { id: "unknown", label: "Not recognised", route: null },
 });
 
@@ -92,6 +96,29 @@ const SIGNALS = Object.freeze({
     { id: "attendees", weight: 2, re: /\b(attendees|present|apologies|minutes of|meeting notes)\b/i },
     { id: "agreed", weight: 2, re: /\b(agreed (?:that|to)|it was agreed|decision\s*[:\-])/i },
     { id: "next-meeting", weight: 1, re: /\b(next meeting|follow[- ]up (?:call|meeting))\b/i },
+  ],
+  /* A certificate is the easiest document in procurement to recognise and the
+     hardest to fake a signal for: a heat number is a heat number. The strong
+     ones are the identifiers, because prose about material rarely carries
+     them and a certificate always does. */
+  [DOC_KIND.CERTIFICATE]: [
+    { id: "certificate-title", weight: 3, re: /\b(?:material|mill|inspection|test)\s+(?:test\s+)?certificate\b|\bcertificate of (?:conformity|analysis|compliance)\b|\bEN\s?10204\b/i },
+    { id: "heat-number", weight: 3, re: /\b(?:heat|cast|melt|charge)\s*(?:no\.?|number|#)?\s*[:\-]\s*[A-Z0-9]/i },
+    { id: "chemistry", weight: 2, re: /\b(?:chemical (?:composition|analysis)|ladle analysis)\b/i },
+    { id: "mechanical", weight: 2, re: /\b(?:R\s?m\b|tensile strength|yield strength|\bR\s?p\s?0[.,]2\b|elongation)\b/i },
+    { id: "element-row", weight: 1, re: /\b(?:Mn|Si|Cr|Ni|Mo)\b\s*[:=]?\s*\d+\.\d/ },
+    { id: "declaration", weight: 1, re: /\b(?:we (?:hereby )?certify|conforms? to the requirements|inspection certificate 3\.[12])\b/i },
+  ],
+  /* A drawing that has reached this application is almost always a PDF whose
+     text layer is title-block fields. Those fields are the signal; the
+     geometry never arrives as text and is not looked for. */
+  [DOC_KIND.DRAWING]: [
+    { id: "drawing-number", weight: 3, re: /\b(?:drawing|dwg)\s*(?:no\.?|number|#)\s*[:\-]?\s*[A-Z0-9]/i },
+    { id: "sheet-of", weight: 2, re: /\bsheet\s+\d{1,3}\s+of\s+\d{1,3}\b/i },
+    { id: "material-callout", weight: 2, re: /\b(?:material|matl\.?)\s*[:\-]\s*\S/i },
+    { id: "tolerance", weight: 2, re: /\b(?:general tolerances?|unless otherwise (?:stated|specified)|±\s*0?\.\d|tolerance class)\b/i },
+    { id: "projection", weight: 2, re: /\b(?:third angle|first angle)\s+projection\b|\bdo not scale\b/i },
+    { id: "finish", weight: 1, re: /\b(?:surface finish|deburr|break sharp edges|\bRa\s?\d)\b/i },
   ],
 });
 
@@ -160,6 +187,22 @@ const REQUIREMENTS = Object.freeze({
     { id: "term", label: "the term or expiry", re: /\b(term of|expires|expiry|until \d{4}|for a period of)\b/i },
     { id: "notice", label: "the notice period", re: /\bnotice (?:period )?of\b|\b\d+\s*(?:months|weeks)['’]? notice\b/i },
     { id: "price-mechanism", label: "the price adjustment mechanism", re: /\b(index|indexation|price review|escalat)\b/i },
+  ],
+  /* What a certificate needs before it can be compared against anything.
+     Absent ones are reported as missing rather than guessed — the same rule
+     the check itself applies to every value on it. */
+  [DOC_KIND.CERTIFICATE]: [
+    { id: "heat", label: "the heat or cast number", re: /\b(?:heat|cast|melt)\s*(?:no\.?|number|#)?\s*[:\-]\s*[A-Z0-9]/i },
+    { id: "producer", label: "who made the material", re: /\b(?:manufacturer|producer|mill|works|steelworks)\s*[:\-]\s*\S/i },
+    { id: "specification", label: "the specification and its revision", re: /\b(?:EN|ASTM|ISO|AMS|BS|DIN)\s?[A-Z]?\s?\d{3,5}\b|\bspecification\s*[:\-]/i },
+    { id: "results", label: "test results to compare", re: /\b(?:R\s?m\b|tensile|yield|elongation|chemical (?:composition|analysis))\b/i },
+    { id: "pages", label: "how many pages it should have", re: /\bpage\s+\d{1,3}\s+of\s+\d{1,3}\b/i },
+  ],
+  [DOC_KIND.DRAWING]: [
+    { id: "material", label: "the material", re: /\b(?:material|matl\.?)\s*[:\-]\s*\S/i },
+    { id: "thickness", label: "a thickness with its unit", re: /\b(?:thickness|thk)\s*[:=]?\s*\d+(?:\.\d+)?\s*(?:mm|cm|m|in)\b/i },
+    { id: "revision", label: "the drawing revision", re: /\b(?:rev(?:ision)?|issue)\s*[:\-]?\s*[A-Z0-9]\b/i },
+    { id: "sheets", label: "how many sheets there are", re: /\bsheet\s+\d{1,3}\s+of\s+\d{1,3}\b/i },
   ],
 });
 
@@ -294,6 +337,19 @@ export function nextActions(result) {
 
   if (result.kind === DOC_KIND.PRICE_CLAIM) {
     actions.push(Object.freeze({ id: "extract", label: "Read the letter into the case", route: w.route, extract: true }));
+  }
+  /* Both certificates and drawings land on the same page, in different modes.
+     The action says which, because "open Should Cost Expert" tells somebody
+     holding a certificate nothing about what to do next. */
+  if (result.kind === DOC_KIND.CERTIFICATE) {
+    actions.push(Object.freeze({
+      id: "check", label: "Check it against a specification", route: w.route, mode: "cert",
+    }));
+  }
+  if (result.kind === DOC_KIND.DRAWING) {
+    actions.push(Object.freeze({
+      id: "estimate", label: "Work out what the part should cost", route: w.route, mode: "material",
+    }));
   }
   for (const alt of result.alternatives) {
     if (!alt.workflow.route) continue;
