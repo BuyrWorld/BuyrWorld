@@ -278,11 +278,21 @@ describe("the page is honest about what this release is", () => {
     assert.match(page, /no dimension or certificate value here was recovered from one/);
   });
 
-  test("the release that is still unbuilt is named as unbuilt", () => {
-    assert.match(page, /is the next release and is not built/);
-    assert.match(page, /not to suggest it exists/);
-    // And the one that just shipped is no longer described that way.
-    assert.equal(/Check a material certificate<\/b> and <b>view mill performance<\/b> are the next/.test(page), false);
+  test("all three releases are built, so nothing is described as coming", () => {
+    // The page used to name the unbuilt releases so the shape of the module
+    // was visible. All three exist now, and a page that still says one is
+    // coming is a page that has stopped tracking what it does.
+    for (const stale of ["is the next release and is not built", "are the next two releases"]) {
+      assert.equal(page.includes(stale), false, `the page still claims something is unbuilt: "${stale}"`);
+    }
+    for (const mode of ["material", "cert", "mill"]) {
+      assert.match(html, new RegExp(`data-sc-mode="${mode}"`), `the ${mode} mode has no tab`);
+    }
+  });
+
+  test("what is still absent is named, since that has not changed", () => {
+    assert.match(page, /There is no document extraction in this build/);
+    assert.match(page, /Everything you record stays in this browser/);
   });
 
   test("nothing on the page claims a real supplier, price or certificate", () => {

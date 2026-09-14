@@ -1103,12 +1103,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <div class="bw-panel" style="border-color:var(--bw-border-strong);margin-bottom:var(--bw-4)">
       <div class="bw-panel-head"><div class="bw-panel-title">What this release does, and what it does not</div></div>
       <p style="color:var(--bw-body);font-size:var(--bw-t-body);margin:0;line-height:1.6">Everything is entered by hand. <b style="color:var(--bw-text)">There is no document extraction in this build</b> &mdash; nothing on this page reads a PDF, a photograph or a CAD file. A 2D drawing does not contain recoverable 3D geometry, and no dimension or certificate value here was recovered from one.</p>
-      <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6"><b>View mill performance</b> is the next release and is not built. It is named here so the shape of the module is visible, not to suggest it exists.</p>
+      <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6">Everything you record stays in this browser. Nothing is uploaded, pooled with anybody else's records, or published.</p>
     </div>
 
     <div role="tablist" aria-label="What you are doing" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--bw-5)">
       <button class="bw-act bw-act-primary" id="sc-tab-material" role="tab" aria-selected="true" aria-controls="sc-mode-material" data-sc-mode="material">Estimate material and cost</button>
       <button class="bw-act bw-act-secondary" id="sc-tab-cert" role="tab" aria-selected="false" aria-controls="sc-mode-cert" data-sc-mode="cert">Check a material certificate</button>
+      <button class="bw-act bw-act-secondary" id="sc-tab-mill" role="tab" aria-selected="false" aria-controls="sc-mode-mill" data-sc-mode="mill">View mill performance</button>
     </div>
 
     <div id="sc-mode-material" role="tabpanel" aria-labelledby="sc-tab-material">
@@ -1273,6 +1274,39 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       </div>
 
       <div id="ct-out" style="margin-top:var(--bw-6)"></div>
+    </div>
+
+    <div id="sc-mode-mill" role="tabpanel" aria-labelledby="sc-tab-mill" hidden>
+      <div class="bw-panel" style="border-color:var(--bw-border-strong);margin-bottom:var(--bw-4)">
+        <div class="bw-panel-head"><div class="bw-panel-title">What this is, and what it is not</div></div>
+        <p style="color:var(--bw-body);font-size:var(--bw-t-body);margin:0;line-height:1.6">A record of how reviewed lots turned out. <b style="color:var(--bw-text)">It is not a probability that the next delivery conforms</b>, it is not a supplier rating, and there is no single score per mill &mdash; one number would hide the sample size, pool different specifications as though they were the same requirement, and put a mill with two good lots above one with two hundred.</p>
+        <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6">Two out of two and two hundred out of two hundred are both 100%. Below the evidence threshold <b style="color:var(--bw-text)">no percentage is shown at all</b> &mdash; not one with a caveat beside it, because the figure is what gets carried away. The threshold is a product rule, not a statistical guarantee.</p>
+      </div>
+
+      <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+        <div class="bw-panel-head"><div class="bw-panel-title">Narrow it</div>
+          <label class="bw-field" style="display:flex;align-items:center;gap:6px;margin:0">Evidence threshold
+            <input class="bwin" id="ml-min" style="max-width:70px" inputmode="numeric" value="5" aria-label="Minimum reviewed lots before a percentage is shown"></label>
+        </div>
+        <div class="bw-fields">
+          <label class="bw-field">Grade<input class="bwin" id="ml-grade" placeholder="any"></label>
+          <label class="bw-field">Product form<input class="bwin" id="ml-form" placeholder="any"></label>
+          <label class="bw-field">Specification<input class="bwin" id="ml-spec" placeholder="any"></label>
+          <label class="bw-field">Site<input class="bwin" id="ml-site" placeholder="any"></label>
+          <label class="bw-field">Reviewed from<input class="bwin" id="ml-from" placeholder="2026-01-01"></label>
+          <label class="bw-field">Reviewed to<input class="bwin" id="ml-to" placeholder="2026-12-31"></label>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--bw-4)">
+          <button class="bw-act bw-act-primary" data-ml-act="run">Show the record &rarr;</button>
+          <button class="bw-act bw-act-secondary" data-ml-act="rank">Rank them</button>
+          <button class="bw-act bw-act-secondary" data-ml-act="example">Load synthetic records</button>
+          <button class="bw-act bw-act-text" data-ml-act="export">Export</button>
+          <button class="bw-act bw-act-text" data-ml-act="clear">Clear every record</button>
+        </div>
+        <div id="ml-msg" style="margin-top:var(--bw-3)"></div>
+      </div>
+
+      <div id="ml-out"></div>
     </div>
   </div></section>
 </div>
@@ -3851,10 +3885,13 @@ function scBind(){
   page.addEventListener("click",function(e){
     var m=e.target&&e.target.closest?e.target.closest("[data-sc-mode]"):null;
     if(m){ctSwitch(m.dataset.scMode);return;}
+    var ml=e.target&&e.target.closest?e.target.closest("[data-ml-act]"):null;
+    if(ml){mlBindActions(ml.dataset.mlAct);return;}
     var ct=e.target&&e.target.closest?e.target.closest("[data-ct-act]"):null;
     if(ct){
       var a=ct.dataset.ctAct;
       if(a==="run")ctRun();
+      else if(a==="decide")ctDecide();
       else if(a==="example")ctExample();
       else if(a==="clear")ctClear();
       else if(a==="add-obs"){_ctObs.push(["","","%","1","",false]);ctRenderRows();}
@@ -4069,6 +4106,223 @@ function ctAppliesTo(a){
   return out;
 }
 
+/* ------------------------------------------------------------------ mill ---
+   Release 3. A decision on a certificate check becomes one lot in a
+   producer's record; nothing else creates one. Every figure below comes out
+   of mill.mjs. */
+
+var _ctCheck=null;   // the check the decision will be recorded against
+
+function ctDecisionHTML(c){
+  if(!c)return"";
+  if(!c.lotKey){
+    return '<div class="bw-panel" style="margin-top:var(--bw-4)">'
+      +'<div class="bw-panel-head"><div class="bw-panel-title">Record the decision</div></div>'
+      +'<p style="font-size:var(--bw-t-body);color:var(--bw-muted);margin:0;line-height:1.6">This certificate does not identify a lot &mdash; no heat or cast number &mdash; so a decision about it cannot join a producer&#39;s record. A record that cannot be counted once will be counted twice.</p>'
+      +'</div>';
+  }
+  return '<div class="bw-panel" style="margin-top:var(--bw-4)">'
+    +'<div class="bw-panel-head"><div class="bw-panel-title">Record the decision</div>'
+    +'<span class="bw-status bw-status--review">a person decides</span></div>'
+    +'<p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">The comparison above is a machine finding. What you record here is yours, it is kept beside the finding rather than replacing it, and it is what mill performance is built from. <b style="color:var(--bw-text)">Accepting under concession records a nonconforming lot</b> &mdash; the material did not meet the requirement, and somebody accepted it anyway.</p>'
+    +'<div class="bw-fields">'
+    +'<label class="bw-field">Decision<select class="bwin" id="ct-disposition">'
+    +'<option value="pending">pending</option>'
+    +'<option value="accepted">accept</option>'
+    +'<option value="rejected">reject</option>'
+    +'<option value="accepted under concession">accept under concession</option>'
+    +'</select></label>'
+    +'<label class="bw-field">Reviewer<input class="bwin" id="ct-reviewer" placeholder="who is deciding"></label>'
+    +'<label class="bw-field">Date<input class="bwin" id="ct-at" placeholder="2026-06-01"></label>'
+    +'<label class="bw-field">Responsibility<select class="bwin" id="ct-responsibility" aria-label="Who a confirmed issue is attributed to">'
+    +'<option value="not established">not established</option>'
+    +'<option value="producer">the producer</option>'
+    +'<option value="distributor">the distributor</option>'
+    +'</select></label>'
+    +'</div>'
+    +'<label class="bw-field" style="display:block;margin-top:var(--bw-3)">Reasoning'
+    +'<input class="bwin" id="ct-reasoning" placeholder="why, in enough detail to be audited later"></label>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--bw-4)">'
+    +'<button class="bw-act bw-act-primary" data-ct-act="decide">Record it</button>'
+    +'</div>'
+    +'<div id="ct-decision-msg" style="margin-top:var(--bw-3)"></div>'
+    +'</div>';
+}
+
+function ctDecide(){
+  var msg=document.getElementById("ct-decision-msg");
+  if(!msg||!_ctCheck||!window.BW)return;
+  var B=window.BW;
+  var review,record,saved;
+  try{
+    review=B.recordReview(_ctCheck,{
+      reviewer:ctv("ct-reviewer"),
+      disposition:ctv("ct-disposition"),
+      reasoning:ctv("ct-reasoning"),
+      at:ctv("ct-at")
+    });
+    record=B.lotFromReview(_ctCheck,review,{responsibility:ctv("ct-responsibility")});
+    saved=B.saveLot(record);
+  }catch(e){
+    msg.innerHTML='<p style="color:var(--bw-danger);font-size:13px;margin:0">'+ciEsc(String(e.message||e))+'</p>';
+    return;
+  }
+  if(!saved.ok){
+    msg.innerHTML='<p style="color:var(--bw-danger);font-size:13px;margin:0">'+ciEsc(saved.error)+'</p>';
+    return;
+  }
+  msg.innerHTML='<p style="color:var(--bw-success);font-size:13px;margin:0;line-height:1.6">Recorded as <b>'+ciEsc(record.decision)+'</b>'
+    +(record.producer?' against '+ciEsc(record.producer):' &mdash; attributed to nobody, because the certificate names no producer')+'. '
+    +(saved.note?ciEsc(saved.note):'')
+    +(review.departsFromFindings?' <span style="color:var(--bw-warning)">'+ciEsc(review.note)+'</span>':'')
+    +'</p>';
+}
+
+/* --------------------------------------------------------------- the view */
+
+function mlv(id){var e=document.getElementById(id);return e?String(e.value).trim():"";}
+
+function mlFilters(){
+  var f={};
+  if(mlv("ml-grade"))f.grade=mlv("ml-grade");
+  if(mlv("ml-form"))f.form=mlv("ml-form");
+  if(mlv("ml-spec"))f.specification=mlv("ml-spec");
+  if(mlv("ml-site"))f.site=mlv("ml-site");
+  if(mlv("ml-from"))f.from=mlv("ml-from");
+  if(mlv("ml-to"))f.to=mlv("ml-to");
+  return f;
+}
+
+function mlPerformance(){
+  var B=window.BW;
+  var min=parseInt(mlv("ml-min").replace(/[^0-9]/g,"")||"",10);
+  return B.millPerformance(B.loadLots(),{
+    minimumLots:isNaN(min)?B.DEFAULT_MINIMUM_LOTS:min,
+    filters:mlFilters()
+  });
+}
+
+/* A rate, always with the evidence under it. There is no way to render one
+   of these without its numerator and denominator. */
+function mlRate(r){
+  return '<div>'
+    +(r.percent
+      ? '<div style="font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:20px;font-variant-numeric:tabular-nums">'+ciEsc(r.percent)+'</div>'
+      : '<div style="color:var(--bw-muted);font-size:13px">not shown</div>')
+    +'<div style="font-size:11.5px;color:var(--bw-muted);line-height:1.45;margin-top:2px">'+ciEsc(r.statement)+'</div>'
+    +'</div>';
+}
+
+function mlRun(ranked){
+  var out=document.getElementById("ml-out");
+  if(!out||!window.BW||!window.BW.millPerformance)return;
+  var B=window.BW,P;
+  try{ P=mlPerformance(); }
+  catch(e){ out.innerHTML='<div class="bw-panel" style="border-color:var(--bw-danger)"><p style="color:var(--bw-danger);font-size:13px;margin:0">'+ciEsc(String(e.message||e))+'</p></div>'; return; }
+
+  if(P.rows.length===0&&P.unattributed===0){
+    out.innerHTML='<div class="bw-panel"><p style="font-size:var(--bw-t-body);color:var(--bw-muted);margin:0;line-height:1.6">No lots have been recorded yet. A record is created by deciding on a certificate check &mdash; nothing else creates one, so nothing here exists that somebody did not decide.</p></div>';
+    return;
+  }
+
+  var R=ranked?B.millRank(P):null;
+  var rows=(R&&R.safe?R.ranked:P.rows).map(function(r,i){
+    return '<tr>'
+      +'<td>'+(R&&R.safe?'<b style="color:var(--bw-text)">'+(i+1)+'.</b> ':'')+ciEsc(r.producer)
+      +(r.sites.length?'<div style="font-size:11.5px;color:var(--bw-muted)">'+ciEsc(r.sites.join(", "))+'</div>':'')+'</td>'
+      +'<td class="n">'+r.lots+'</td>'
+      +'<td>'+mlRate(r.conformity)+'</td>'
+      +'<td>'+mlRate(r.firstPassCompleteness)+'</td>'
+      +'<td class="n">'+r.pending+'</td>'
+      +'<td style="font-size:12px;color:var(--bw-muted)">'+(r.from?ciEsc(r.from)+' to '+ciEsc(r.to):'&mdash;')+'</td></tr>';
+  }).join("");
+
+  var caveats=[];
+  if(P.cohortNote)caveats.push(P.cohortNote);
+  if(P.submissionNote)caveats.push(P.submissionNote);
+  if(P.unattributedNote)caveats.push(P.unattributedNote);
+  P.rows.forEach(function(r){
+    if(r.scopeNote)caveats.push(ciEsc(r.producer)+": "+r.scopeNote);
+    if(r.attributionNote)caveats.push(ciEsc(r.producer)+": "+r.attributionNote);
+    if(r.pendingNote)caveats.push(ciEsc(r.producer)+": "+r.pendingNote);
+    if(r.undated)caveats.push(ciEsc(r.producer)+": "+r.undated+" lot(s) carry no review date and are outside any date range.");
+  });
+
+  var categories=P.rows.flatMap(function(r){
+    return r.nonconformityCategories.map(function(c){
+      return '<tr><td>'+ciEsc(r.producer)+'</td><td>'+ciEsc(c.category)+'</td>'
+        +'<td><span class="bw-status bw-status--'+(c.responsibility==="producer"?"high":c.responsibility==="distributor"?"medium":"derived")+'">'+ciEsc(c.responsibility)+'</span></td>'
+        +'<td class="n">'+c.count+'</td></tr>';
+    });
+  }).join("");
+
+  out.innerHTML='<div class="bw-panel">'
+    +'<div class="bw-panel-head"><div class="bw-panel-title">'+(R&&R.safe?"Ranked by reviewed-lot conformity":"The record")+'</div>'
+    +'<span class="bw-status bw-status--derived">'+P.lots+' lot(s), '+P.producers+' producer(s)'+(P.unattributed?', '+P.unattributed+' unattributed':'')+'</span></div>'
+    +(R&&!R.safe?'<p style="font-size:12.5px;color:var(--bw-warning);margin:0 0 var(--bw-3);line-height:1.6">'+ciEsc(R.why)+' Showing the evidence table instead.</p>':'')
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Producer</th><th class="n">Lots</th><th>Reviewed-lot conformity</th><th>First-pass document completeness</th><th class="n">Pending</th><th>Period</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +(R?'<p style="font-size:12.5px;color:var(--bw-body);margin:var(--bw-4) 0 0;line-height:1.6">'+ciEsc(R.note)+'</p>':'')
+    +(categories?'<div class="eyebrow" style="margin:var(--bw-5) 0 6px">Confirmed issues, and who they were attributed to</div>'
+      +'<div class="bw-table-wrap"><table class="bw-table">'
+      +'<thead><tr><th>Producer</th><th>Category</th><th>Attributed to</th><th class="n">Count</th></tr></thead>'
+      +'<tbody>'+categories+'</tbody></table></div>':'')
+    +(caveats.length?'<div class="eyebrow" style="margin:var(--bw-5) 0 6px">Read this with the table</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+      +caveats.map(function(c){return '<li>'+ciEsc(c)+'</li>';}).join("")+'</ul>':'')
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-5) 0 0;line-height:1.55">'+ciEsc(P.method)+'</p>'
+    +'<p style="font-size:12px;color:var(--bw-body);margin:var(--bw-3) 0 0;line-height:1.55;border-top:1px solid var(--bw-border);padding-top:var(--bw-3)"><b style="color:var(--bw-text)">'+ciEsc(P.disclaimer)+'</b></p>'
+    +'</div>';
+}
+
+/* Synthetic records, so the shape of the thing is visible without anybody
+   having to review twenty certificates first. */
+function mlExample(){
+  var B=window.BW,made=0;
+  var mk=function(producer,heat,decision,over){
+    var base={lotKey:producer.toLowerCase().replace(/[^a-z]/g,"")+"|"+heat+"|l-1",
+      producer:producer,site:"Works 1",grade:"FG-300",form:"plate",
+      specification:"SYN-SPEC-100",specificationRevision:"C",
+      decision:decision,scope:B.MILL_SCOPE.FULL,firstSubmissionComplete:true,
+      reviewedAt:"2026-0"+(1+(made%9))+"-15",certificate:"SYN-CERT-"+(1000+made)};
+    made++;
+    for(var k in over)base[k]=over[k];
+    B.saveLot(B.lotRecord(base));
+  };
+  for(var i=1;i<=9;i++)mk("Northgate Steelworks (synthetic)","h-"+i,B.MILL_DECISION.CONFORMING);
+  mk("Northgate Steelworks (synthetic)","h-10",B.MILL_DECISION.NONCONFORMING,
+    {nonconformities:[{category:"chemistry out of limit",responsibility:B.RESPONSIBILITY.PRODUCER}]});
+  mk("Northgate Steelworks (synthetic)","h-11",B.MILL_DECISION.NONCONFORMING,
+    {nonconformities:[{category:"wrong certificate supplied",responsibility:B.RESPONSIBILITY.DISTRIBUTOR}],
+     distributor:"Meridian Stockholding (synthetic)"});
+  mk("Northgate Steelworks (synthetic)","h-12",B.MILL_DECISION.PENDING);
+  for(var j=1;j<=3;j++)mk("Calder Rolling (synthetic)","c-"+j,B.MILL_DECISION.CONFORMING);
+  mk("Calder Rolling (synthetic)","c-4",B.MILL_DECISION.CONFORMING,{firstSubmissionComplete:false});
+  B.saveLot(B.lotRecord({lotKey:"unattributed|u-1|l-1",producer:"",
+    issuer:"Meridian Stockholding (synthetic)",distributor:"Meridian Stockholding (synthetic)",
+    grade:"FG-300",form:"plate",specification:"SYN-SPEC-100",specificationRevision:"C",
+    decision:B.MILL_DECISION.CONFORMING,scope:B.MILL_SCOPE.FULL,firstSubmissionComplete:true,
+    reviewedAt:"2026-05-02",certificate:"SYN-CERT-2001"}));
+  mlRun(false);
+}
+
+function mlBindActions(act){
+  var B=window.BW,msg=document.getElementById("ml-msg");
+  if(act==="run")mlRun(false);
+  else if(act==="rank")mlRun(true);
+  else if(act==="example"){mlExample();if(msg)msg.innerHTML='<p style="font-size:12.5px;color:var(--bw-muted);margin:0">Synthetic records loaded. Nothing here is a real mill, certificate or lot.</p>';}
+  else if(act==="clear"){B.clearLots();mlRun(false);if(msg)msg.innerHTML='<p style="font-size:12.5px;color:var(--bw-muted);margin:0">Every record cleared from this browser.</p>';}
+  else if(act==="export"){
+    var status=B.lotStoreStatus();
+    if(msg)msg.innerHTML='<p style="font-size:12.5px;color:var(--bw-muted);margin:0;line-height:1.6">'
+      +status.readable+' record(s) ready to export'
+      +(status.unreadable?', and '+status.unreadable+' this build cannot read, which are kept rather than dropped':'')
+      +'. Copy from the box below.</p>'
+      +'<textarea class="bwin" style="margin-top:8px;min-height:120px;font-family:monospace;font-size:11px" readonly aria-label="Exported lot records">'+ciEsc(B.exportLots())+'</textarea>';
+  }
+}
+
 function ctRenderRows(){
   var pairs=[["ct-obs",_ctObs,ctObsRow,"obs","No reported values yet. A comparison needs something to compare."],
              ["ct-reqs",_ctReqs,ctReqRow,"req","No requirements yet. Nothing here supplies a limit for you."]];
@@ -4195,7 +4449,8 @@ function ctRun(){
     out.innerHTML='<div class="bw-panel" style="border-color:var(--bw-danger)"><p style="color:var(--bw-danger);font-size:var(--bw-t-body);margin:0;line-height:1.6">'+ciEsc(String(e.message||e))+'</p></div>';
     return;
   }
-  out.innerHTML=ctResultHTML(check);
+  _ctCheck=check;
+  out.innerHTML=ctResultHTML(check)+ctDecisionHTML(check);
 }
 
 /* The result. Five columns, exactly as the comparison produces them. */
@@ -4271,14 +4526,17 @@ function ctResultHTML(c){
 }
 
 function ctSwitch(mode){
-  var mat=document.getElementById("sc-mode-material"),cert=document.getElementById("sc-mode-cert");
-  var tm=document.getElementById("sc-tab-material"),tc=document.getElementById("sc-tab-cert");
-  if(!mat||!cert)return;
-  var onCert=mode==="cert";
-  mat.hidden=onCert; cert.hidden=!onCert;
-  if(tm){tm.setAttribute("aria-selected",String(!onCert));tm.className="bw-act "+(onCert?"bw-act-secondary":"bw-act-primary");}
-  if(tc){tc.setAttribute("aria-selected",String(onCert));tc.className="bw-act "+(onCert?"bw-act-primary":"bw-act-secondary");}
-  if(onCert)ctRenderRows();
+  var panels={material:"sc-mode-material",cert:"sc-mode-cert",mill:"sc-mode-mill"};
+  var tabs={material:"sc-tab-material",cert:"sc-tab-cert",mill:"sc-tab-mill"};
+  if(!panels[mode])mode="material";
+  for(var k in panels){
+    var panel=document.getElementById(panels[k]),tab=document.getElementById(tabs[k]);
+    var on=k===mode;
+    if(panel)panel.hidden=!on;
+    if(tab){tab.setAttribute("aria-selected",String(on));tab.className="bw-act "+(on?"bw-act-primary":"bw-act-secondary");}
+  }
+  if(mode==="cert")ctRenderRows();
+  if(mode==="mill")mlRun(false);
 }
 
 function defHistoryHTML(){
@@ -6554,6 +6812,11 @@ async function send(id,text){
   import { quote as makeQuote, compareQuotes, questionsFor, SCOPE } from "./src/calc/sourcing.mjs";
   import { length as scLength, density as scDensity, boxVolume, formatLength, formatMass, formatArea,
            LENGTH_UNITS, DENSITY_UNITS } from "./src/calc/units.mjs";
+  import { lotRecord, lotFromReview, millPerformance, rank as millRank, uniqueLots,
+           DECISION as MILL_DECISION, RESPONSIBILITY, SCOPE as MILL_SCOPE,
+           DEFAULT_MINIMUM_LOTS, FILTERS as MILL_FILTERS } from "./src/calc/mill.mjs";
+  import { saveLot, loadLots, deleteLot, clearLots, exportLots,
+           storeStatus as lotStoreStatus } from "./src/services/lot-store.mjs";
   import { quantity as ctQuantity, requirement as ctRequirement, observation as ctObservation,
            certificate as ctCertificate, checkCertificate, recordReview, lotKey,
            RESULT as CT_RESULT, OVERALL as CT_OVERALL, KIND as CT_KIND, DISPOSITION as CT_DISPOSITION,
@@ -6591,6 +6854,9 @@ async function send(id,text){
                 scLength, scDensity, boxVolume, formatLength, formatMass, formatArea, LENGTH_UNITS, DENSITY_UNITS,
                 ctQuantity, ctRequirement, ctObservation, ctCertificate, checkCertificate, recordReview, lotKey,
                 CT_RESULT, CT_OVERALL, CT_KIND, CT_DISPOSITION, CT_RULES,
+                lotRecord, lotFromReview, millPerformance, millRank, uniqueLots,
+                MILL_DECISION, RESPONSIBILITY, MILL_SCOPE, DEFAULT_MINIMUM_LOTS, MILL_FILTERS,
+                saveLot, loadLots, deleteLot, clearLots, exportLots, lotStoreStatus,
                 scStage, routeInput, sheetLayout, barLayout, planMaterial, costPlan, scAssumptions,
                 BASIS, CONFIDENCE, CONSUMES, COST_ELEMENTS,
                 makePart, savePart, loadParts, deletePart, partStoreStatus, forComparison,

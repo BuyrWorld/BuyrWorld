@@ -80,8 +80,9 @@ function run({ obs = EXAMPLE_OBS, reqs = EXAMPLE_REQS, header = {} } = {}) {
     console,
     _ctObs: obs.map((r) => [...r]),
     _ctReqs: reqs.map((r) => [...r]),
+    _ctCheck: null,
   };
-  const src = ["ctv", "ctAppliesTo", "ctRun", "ctResultHTML"].map(fnSource).join("\n");
+  const src = ["ctv", "ctAppliesTo", "ctRun", "ctResultHTML", "ctDecisionHTML"].map(fnSource).join("\n");
   vm.createContext(sandbox);
   new vm.Script(src + "\n;ctRun();").runInContext(sandbox);
   return out.innerHTML;
@@ -117,16 +118,22 @@ describe("it is wired in", () => {
     }
   });
 
-  test("the two modes are tabs, and the material mode is the default", () => {
-    assert.match(html, /id="sc-mode-material" role="tabpanel"/);
+  test("the three modes are tabs, and the material mode is the default", () => {
+    for (const mode of ["material", "cert", "mill"]) {
+      assert.match(html, new RegExp(`id="sc-mode-${mode}" role="tabpanel"`));
+    }
     assert.match(html, /id="sc-mode-cert" role="tabpanel"[^>]*hidden/);
+    assert.match(html, /id="sc-mode-mill" role="tabpanel"[^>]*hidden/);
     assert.match(html, /id="sc-tab-material"[^>]*aria-selected="true"/);
   });
 
   test("switching modes moves the selected state, not only the colour", () => {
     const fn = fnSource("ctSwitch");
     assert.match(fn, /setAttribute\("aria-selected"/);
-    assert.match(fn, /mat\.hidden=onCert/);
+    assert.match(fn, /panel\.hidden=!on/);
+    // Exactly one panel is shown, which a per-panel toggle cannot get wrong
+    // the way a pair of booleans could once a third mode arrived.
+    assert.match(fn, /var panels=\{material:"sc-mode-material",cert:"sc-mode-cert",mill:"sc-mode-mill"\}/);
   });
 
   test("no inline handlers were added", () => {
