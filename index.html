@@ -4800,6 +4800,39 @@ function ctSwitch(mode){
 var _bcMap={};      // driverId -> cost element id, chosen by hand
 var _bcPicked="";   // which saved build-up the defender is comparing against
 
+/* What the decision pack needs from the two screens that until now only ever
+   showed their work. Both return null where there is nothing, so a pack built
+   without them is the same pack as before. */
+
+function bcPackInput(){
+  var B=window.BW;
+  if(!B||!B.loadEstimate||!_bcPicked)return null;
+  var rec=null; try{ rec=B.loadEstimate(_bcPicked); }catch(e){ rec=null; }
+  if(!rec)return null;
+  /* The mapping travels with it. Without one there is nothing to compare, and
+     the pack says so rather than showing an empty table. */
+  return {cost:B.asCostPlan(rec),map:_bcMap,name:rec.name};
+}
+
+function bcQualityInput(){
+  var B=window.BW;
+  if(!B||!B.loadLots||!B.millPerformance)return null;
+  var supplier=String((document.getElementById("def-supplier")||{}).value||"").trim();
+  if(!supplier)return null;
+  var lots=[]; try{ lots=B.loadLots(); }catch(e){ return null; }
+  if(!lots.length)return null;
+  /* Matched by name, the same way the radar does it, and it misses the same
+     way: where the mill on a certificate is written differently from the
+     supplier on a letter, the pack simply carries no quality section. */
+  var perf=B.millPerformance(lots);
+  var want=supplier.toLowerCase().replace(/s+/g," ").trim();
+  for(var i=0;i<perf.rows.length;i++){
+    var row=perf.rows[i];
+    if(String(row.producer||"").toLowerCase().replace(/s+/g," ").trim()===want)return row;
+  }
+  return null;
+}
+
 function bcSaveHTML(cost){
   if(!cost||!cost.ok)return"";
   return '<div style="border-top:1px solid var(--bw-border);margin-top:var(--bw-5);padding-top:var(--bw-4)">'
@@ -5420,6 +5453,11 @@ function defDecisionPack(){
       // cannot act on.
       position:defPosition(),
       history:defSupplierRecord(),
+      // The build-up this claim is being tested against, and how the supplier
+      // has actually reviewed out. Both were screen-only: a finding that
+      // cannot leave the tool is not evidence in the decision.
+      buildUp:bcPackInput(),
+      supplyQuality:bcQualityInput(),
       generatedAt:new Date().toISOString().slice(0,16).replace("T"," ")
     });
     html=window.BW.renderDecisionPackHTML(pack);

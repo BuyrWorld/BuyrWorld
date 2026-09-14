@@ -27,6 +27,89 @@ const P = formatPercent;
  * consistent over-ask changes how every figure below it should be read, and a
  * reader who meets that fact on page two has already formed a view.
  */
+/**
+ * Their cost structure against an independent build-up.
+ *
+ * Placed with the decomposition rather than with the position, because it is
+ * about the weights every figure in the decomposition rests on. A reader who
+ * meets it after the recommendation has already accepted the weights.
+ *
+ * The framing is carried verbatim from build-up.mjs and is not summarised: a
+ * build-up made from your own rates is what you think the part costs, and a
+ * reader who takes this into a meeting needs the same caveat the analyst had.
+ */
+function structureSection(pack) {
+  const st = pack.structure;
+  if (!st) return "";
+  if (!st.available) {
+    return `<h2>Their cost structure</h2>
+<p class="sub">No comparison was made${st.name ? ` against ${esc(st.name)}` : ""}. ${esc(st.why)}</p>
+`;
+  }
+
+  const c = st.comparison;
+  const rows = c.rows.map((row) => `
+  <tr${row.material ? ' class="gap-material"' : ""}>
+    <td>${esc(row.driver)}</td>
+    <td class="n">${P(row.claimedWeight)}</td>
+    <td class="n">${P(row.buildUpShare)}<div class="sub">${esc(row.element)}</div></td>
+    <td class="n">${row.difference === 0n ? "&mdash;" : P(row.difference)}</td>
+    <td class="n">${row.material && row.atClaimedMovement > 0n ? P(row.atClaimedMovement) : "&mdash;"}</td>
+    <td class="sub">${esc(row.buildUpQuality || "")}</td>
+  </tr>`).join("");
+
+  const questions = st.questions.slice(0, 6);
+
+  return `<h2>Their cost structure</h2>
+<p>${esc(c.statement)}</p>
+${rows ? `<div class="tw"><table>
+  <tr><th>Driver</th><th class="n">They claim</th><th class="n">Our build-up</th><th class="n">Difference</th><th class="n">Worth</th><th>Basis</th></tr>${rows}
+</table></div>` : ""}
+${questions.length ? `<h3>Ask them</h3>
+<ul>${questions.map((q) => `<li>${esc(q.question)}</li>`).join("")}</ul>` : ""}
+${c.unmappedDrivers.length ? `<p class="sub"><b>Our build-up does not model:</b> ${
+  c.unmappedDrivers.map((d) => esc(d.label)).join(", ")}. That is a limit of the build-up, not evidence about the claim.</p>` : ""}
+<p class="sub">${esc(c.method)}</p>
+`;
+}
+
+/**
+ * How material from this supplier has actually reviewed out.
+ *
+ * It changes nothing about what is warranted and the section says so. It is
+ * here because an approver deciding whether to concede is entitled to know
+ * that a fifth of the lots did not conform, and because that fact has lived
+ * on a different screen from this decision until now.
+ */
+function supplyQualitySection(pack) {
+  const q = pack.supplyQuality;
+  if (!q || !q.lots) return "";
+
+  const rate = q.conformity;
+  const paper = q.firstPassCompleteness;
+  const cats = q.nonconformityCategories.slice(0, 6);
+
+  return `<h2>Their quality record</h2>
+<div class="tw"><table>
+  <tr><th>Measure</th><th class="n">Figure</th><th>Evidence</th></tr>
+  <tr><td>Reviewed-lot conformity</td>
+      <td class="n">${rate.percent ? esc(rate.percent) : "not shown"}</td>
+      <td class="sub">${esc(rate.statement)}</td></tr>
+  <tr><td>First-pass document completeness</td>
+      <td class="n">${paper.percent ? esc(paper.percent) : "not shown"}</td>
+      <td class="sub">${esc(paper.statement)}</td></tr>
+</table></div>
+${cats.length ? `<p><b>Confirmed issues:</b> ${cats.map((x) =>
+  `${esc(x.category)} (${x.count}, ${esc(x.responsibility)})`).join(" &middot; ")}.</p>` : ""}
+${q.attributionNote ? `<p class="sub">${esc(q.attributionNote)}</p>` : ""}
+${q.pendingNote ? `<p class="sub">${esc(q.pendingNote)}</p>` : ""}
+${q.scopeNote ? `<p class="sub">${esc(q.scopeNote)}</p>` : ""}
+<p class="sub">This is a record of lots that were reviewed. It is not a forecast of the next delivery, and
+it does not change what the evidence above warrants &mdash; a supplier with a poor record may still be
+entitled to a justified increase. It is here because the decision is easier to take knowing it.</p>
+`;
+}
+
 function historySection(pack) {
   const h = pack.history;
   if (!h || !h.count) return "";
@@ -262,6 +345,8 @@ ${pack.retrospective ? `<p>Retrospective application over ${esc(String(pack.retr
 approximately ${esc(String(pack.retrospective.units))} units already delivered, an unsupported
 ${cur} ${M(pack.retrospective.unsupported)}.</p>` : ""}
 
+${structureSection(pack)}
+
 ${pack.currency ? `<h2>Currency</h2>
 <p>The supplier prices in ${esc(pack.currency.supplierCurrency)}; this analysis reports in ${esc(pack.currency.currency)}.
 A rate move is not a cost move, so the two are separated.</p>
@@ -306,6 +391,7 @@ ${pack.options.map((o) => `
 </div>`).join("")}
 
 ${negotiationSection(pack)}
+${supplyQualitySection(pack)}
 ${pack.assumptionsToVerify?.length ? `<h2>Assumptions to verify</h2>
 <div class="verify">
   <h3>${pack.assumptionsToVerify.filter((a) => a.material).length} material, ${pack.assumptionsToVerify.filter((a) => !a.material).length} minor</h3>

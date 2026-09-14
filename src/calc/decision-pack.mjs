@@ -23,6 +23,7 @@ import { partialAcceptance, delayEffect, formatPercent } from "./cost-bridge.mjs
 import { assessEvidence } from "./evidence.mjs";
 import { labelFor, assumptionsToVerify, LABEL, LEGEND } from "./provenance.mjs";
 import { prepareNegotiation } from "./negotiation.mjs";
+import { compareToBuildUp, questionsFrom } from "./build-up.mjs";
 
 /** Options the analysis can support with numbers. Ordered by escalation. */
 export const ACTION = Object.freeze({
@@ -45,9 +46,18 @@ export const ACTION = Object.freeze({
  * @param {object} [input.history]        a supplierHistory() result, if there is one.
  *                                        Passed in rather than looked up: this module
  *                                        has no business knowing where cases are stored.
+ * @param {object} [input.buildUp]        { cost, map } — a costPlan for this part and the
+ *                                        driver-to-element mapping somebody chose. Absent
+ *                                        when no build-up exists, which is the common case.
+ * @param {object} [input.supplyQuality]  a producerRecord() result for this supplier, if
+ *                                        any lots have been reviewed. Passed in for the
+ *                                        same reason as history.
  * @param {string} [input.generatedAt]    ISO timestamp; supplied so packs are reproducible in tests
  */
-export function buildDecisionPack({ meta = {}, bridge, evidenceInput = {}, position = {}, history = null, generatedAt }) {
+export function buildDecisionPack({
+  meta = {}, bridge, evidenceInput = {}, position = {}, history = null,
+  buildUp = null, supplyQuality = null, generatedAt,
+}) {
   if (!bridge || !bridge.contributions) throw new TypeError("A decision pack needs a costBridge result");
 
   const ev = assessEvidence(bridge, evidenceInput);
@@ -179,6 +189,24 @@ export function buildDecisionPack({ meta = {}, bridge, evidenceInput = {}, posit
       });
   }
 
+  /* --------------------------------------------------------- the build-up
+     What an independent cost model says about the structure the supplier
+     claims. It does not touch the warranted figure — build-up.mjs is explicit
+     that it challenges an input rather than replacing an answer — so it adds
+     a section and an uncertainty and changes nothing that was already here. */
+  let structure = null;
+  if (buildUp && buildUp.cost) {
+    const comparison = compareToBuildUp({ bridge, cost: buildUp.cost, map: buildUp.map ?? {} });
+    structure = comparison.ok
+      ? Object.freeze({
+        available: true,
+        name: buildUp.name ?? null,
+        comparison,
+        questions: questionsFrom(comparison),
+      })
+      : Object.freeze({ available: false, name: buildUp.name ?? null, why: comparison.why });
+  }
+
   /* ---------------------------------------------- recommendation by rule */
   const recommendation = recommend({ bridge, ev, options });
 
@@ -198,6 +226,21 @@ export function buildDecisionPack({ meta = {}, bridge, evidenceInput = {}, posit
     if (x.claim?.evidence?.quote) sources.push({ for: "supplier assertion", detail: `supplier letter: "${x.claim.evidence.quote}"`, kind: "document-passage" });
   }
   if (bridge.currency) sources.push({ for: "exchange rates", detail: bridge.currency.lineage, kind: "externally-sourced" });
+  if (structure && structure.available) {
+    sources.push({
+      for: "claimed cost structure",
+      detail: `an independent build-up${structure.name ? ` (${structure.name})` : ""}, ` +
+              `${structure.comparison.buildUpConfidence}`,
+      kind: "own-cost-model",
+    });
+  }
+  if (supplyQuality) {
+    sources.push({
+      for: "supplier quality record",
+      detail: supplyQuality.conformity.statement,
+      kind: "reviewed-lots",
+    });
+  }
 
   return Object.freeze({
     meta: Object.freeze({
@@ -236,6 +279,16 @@ export function buildDecisionPack({ meta = {}, bridge, evidenceInput = {}, posit
     negotiation: prepareNegotiation({ bridge, ev, position, generatedAt }),
     history,
 
+    /* An independent view of the structure the claim rests on. Null where
+       no build-up exists, which says plainly that this claim was argued in
+       the supplier's own numbers. */
+    structure,
+
+    /* How the material from this supplier has actually reviewed out. It has
+       no bearing on what is warranted and every bearing on the conversation,
+       which is why it sits beside the position rather than inside the sums. */
+    supplyQuality,
+
     evidence: ev,
     currency: bridge.currency,
     contract: Object.freeze({
@@ -263,7 +316,7 @@ export function buildDecisionPack({ meta = {}, bridge, evidenceInput = {}, posit
     }),
     assumptionsToVerify: assumptionsToVerify(bridge, ev),
     assumptions: bridge.assumptions,
-    uncertainties: uncertaintiesFor(bridge, ev),
+    uncertainties: uncertaintiesFor(bridge, ev, structure),
     sources,
 
     approval: Object.freeze({
@@ -333,8 +386,21 @@ function headlineFor(bridge, ev, cur) {
          `the evidence would support.`;
 }
 
-function uncertaintiesFor(bridge, ev) {
+function uncertaintiesFor(bridge, ev, structure = null) {
   const out = [];
+  /* First, because it is about the weights every other figure is built on. */
+  if (structure && structure.available) {
+    for (const row of structure.comparison.raisable) {
+      out.push(
+        `${row.driver} is claimed at ${formatPercent(row.claimedWeight)} of unit cost and an independent ` +
+        `build-up puts ${row.element} at ${formatPercent(row.buildUpShare)}` +
+        (row.difference > 0n && row.atClaimedMovement > 0n
+          ? `. At the claimed movement that difference is worth ${formatPercent(row.atClaimedMovement)} of ` +
+            `the increase requested. The warranted figure above accepts the claimed weight.`
+          : `. The warranted figure above accepts the claimed weight.`));
+    }
+    if (structure.comparison.partial) out.push(structure.comparison.caveat);
+  }
   if (bridge.unexplainedWeight > 0n) {
     out.push(`${formatPercent(bridge.unexplainedWeight)} of unit cost is not attributed to any driver. ` +
              "It is treated as unchanged, which may understate or overstate the warranted figure.");

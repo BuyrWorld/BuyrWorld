@@ -44,6 +44,7 @@ Deploys are GitHub → Vercel. Pushing to `main` deploys production.
 - **Index movement is derived, never accepted on trust.** A driver may state a movement directly, but the defensible form names an index plus the *contractual* base period and lag. A supplier's claimed base period never influences the warranted figure — it is only reported as an overstatement.
 - **Never interpolate a missing index observation.** A gap in a series is an error. An invented data point is worse than a stopped calculation.
 - **No floating point is now enforced, not just stated.** `tests/security/no-floats.test.mjs` is a ratchet: every float construct currently in `src/calc` is listed with why it is safe, and anything else fails. The list may shrink, not grow.
+- **Nothing added to the decision pack may move a figure in it.** The build-up comparison and the supplier quality record are sections, sources and uncertainties; the warranted change, the scenarios and the recommendation are byte-identical with and without them, and `tests/unit/decision-pack-join.test.mjs` asserts that directly.
 - **Every calculation change needs a test.** `node scripts/verify.mjs` must pass before any commit that touches `src/calc/`.
 
 ## Post-audit rules (added Sept 2026)
