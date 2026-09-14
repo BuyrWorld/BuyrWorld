@@ -2968,7 +2968,11 @@ function dashRadar(){
   /* The spend analysis is whatever is on screen in the analyser. Nothing is
      stored, so if nobody has run one the radar simply cannot see spend. */
   try{ spend=(window.MI&&MI.spendAnalysis)||null; }catch(e){ spend=null; }
-  try{ return window.BW.scanOpportunities({spend:spend,outcomes:outcomes,cases:cases,parts:parts,suppliers:[]}); }
+  /* Reviewed lots too. A supplier whose material has been failing is the one
+     thing the radar could not see, and it is the strongest signal it has when
+     that supplier is also asking for more. */
+  var lots=[]; try{ lots=window.BW.loadLots?window.BW.loadLots():[]; }catch(e){ lots=[]; }
+  try{ return window.BW.scanOpportunities({spend:spend,outcomes:outcomes,cases:cases,parts:parts,suppliers:[],lots:lots}); }
   catch(e){ return null; }
 }
 

@@ -27,11 +27,13 @@
  * this system exists to avoid.
  */
 
-import { SCALE, money, moneyToDecimalString, ratioToPercentString } from "./exact.mjs";
+import { SCALE, ONE, money, moneyToDecimalString, ratioToPercentString, scaleDiv } from "./exact.mjs";
 import { supplierHistory, historyBySupplier } from "./supplier-history.mjs";
 import { portfolio } from "./portfolio.mjs";
 import { findComparable, priceGap } from "./comparable.mjs";
 import { suggestMerges } from "../domain/registry.mjs";
+import { millPerformance, DEFAULT_MINIMUM_LOTS } from "./mill.mjs";
+import { normaliseName } from "../domain/ids.mjs";
 
 const pct = (r) => ratioToPercentString(r, 2);
 
@@ -47,6 +49,16 @@ export const THRESHOLDS = Object.freeze({
   tailSuppliers: 10,                 // a tail worth consolidating
   overAskMaterial: 20_000_000n,      // 2.00 percentage points above the evidence
   minimumClaims: 3,                  // below this a pattern is an anecdote
+
+  /* Lots. The conformity thresholds are product rules, exactly as they are in
+     mill.mjs, and mean nothing statistically — they are the point at which a
+     buyer would want to be asked the question. */
+  conformityConcern: 900_000_000n,   // 90% of reviewed lots conforming
+  conformityPoor: 800_000_000n,      // 80%
+  completenessConcern: 800_000_000n, // 80% of first submissions complete
+  unattributedShare: 200_000_000n,   // 20% of lots naming no producer
+  pendingLots: 5,                    // decisions outstanding
+  minimumLots: DEFAULT_MINIMUM_LOTS, // below this no rate is read at all
 });
 
 const finding = (o) => Object.freeze({
@@ -227,6 +239,160 @@ function fromParts(parts) {
 }
 
 /** Two records that may be one company. */
+/* ------------------------------------------------------------------ lots ---
+   What the reviewed-lot record says, and the one place it meets a claim.
+
+   Every rate here is read from mill.mjs rather than worked out again. That
+   module refuses to show a percentage below its evidence threshold, and a
+   radar that recomputed the division would quietly undo the refusal — two
+   good lots out of two would become a hundred per cent finding. So the rule
+   is simple: if mill.mjs withheld the rate, there is nothing here to fire on.
+*/
+function fromLots(lots, cases) {
+  const list = Array.isArray(lots) ? lots.filter(Boolean) : [];
+  if (list.length === 0) return [];
+
+  const perf = millPerformance(list, { minimumLots: THRESHOLDS.minimumLots });
+  const out = [];
+
+  /* Suppliers with an open claim, by name. Name matching is what there is —
+     a certificate names a mill and a letter names a supplier, and nothing
+     guarantees they are written the same way. Where it misses, the two
+     findings simply stay separate, which is the safe direction to miss in. */
+  const claiming = new Map();
+  for (const c of Array.isArray(cases) ? cases : []) {
+    const name = String(c?.meta?.supplier ?? "").trim();
+    if (!name) continue;
+    claiming.set(normaliseName(name), c);
+  }
+
+  for (const row of perf.rows) {
+    const rate = row.conformity;
+
+    /* ---- the join: quality behind a claim ---- */
+    const open = claiming.get(normaliseName(row.producer));
+    if (open && rate.sufficient && rate.ratio !== null && rate.ratio < THRESHOLDS.conformityConcern) {
+      const exposure = open.annualUnsupportedMinor && open.currency
+        ? money(BigInt(open.annualUnsupportedMinor), open.currency, null)
+        : null;
+      out.push(finding({
+        id: `quality-behind-claim-${row.producer}`,
+        kind: "claiming-while-underperforming",
+        title: `${row.producer} is asking for more while ${pct(ONE - rate.ratio)} of reviewed lots did not conform`,
+        subject: row.producer,
+        severity: SEVERITY.HIGH,
+        why: `${rate.numerator} of ${rate.denominator} reviewed lots conformed. There is an open claim from ` +
+             `the same name. Quality is not a reason to refuse a justified increase, and it is a reason to ` +
+             `ask why the price should rise before the record does.`,
+        valueAtStake: exposure,
+        evidence: Object.freeze([rate.statement, "Matched to the open claim by supplier name."]),
+        action: "Put the two together in the same conversation. They are usually held in separate ones.",
+        missing: Object.freeze([
+          "Whether the mill on those certificates and the supplier on that letter are the same legal entity. " +
+          "This matched them by name.",
+        ]),
+      }));
+    }
+
+    /* ---- the record itself ---- */
+    if (rate.sufficient && rate.ratio !== null && rate.ratio < THRESHOLDS.conformityConcern) {
+      out.push(finding({
+        id: `conformity-${row.producer}`,
+        kind: "reviewed-lot-conformity",
+        title: `${row.producer}: ${rate.percent} of reviewed lots conformed`,
+        subject: row.producer,
+        severity: rate.ratio < THRESHOLDS.conformityPoor ? SEVERITY.HIGH : SEVERITY.MEDIUM,
+        why: `${rate.statement} Below ${pct(THRESHOLDS.conformityConcern)} is the point this asks the ` +
+             `question; it is a product rule and not a statistical one.`,
+        evidence: Object.freeze([
+          rate.statement,
+          row.from ? `Reviewed between ${row.from} and ${row.to}.` : "No review dates recorded.",
+        ]),
+        action: "Ask what changed. A rate is a record of what happened, not a forecast of the next delivery.",
+        missing: Object.freeze([
+          ...(row.pending ? [`${row.pending} lot(s) have no decision yet and are in neither figure.`] : []),
+          ...(row.partialScopeLots
+            ? [`${row.partialScopeLots} lot(s) were compared against only some requirements, so this is not complete lot conformity.`]
+            : []),
+        ]),
+      }));
+    }
+
+    /* ---- paperwork, which is a different problem with a different fix ---- */
+    const paper = row.firstPassCompleteness;
+    if (paper.sufficient && paper.ratio !== null && paper.ratio < THRESHOLDS.completenessConcern) {
+      out.push(finding({
+        id: `completeness-${row.producer}`,
+        kind: "document-completeness",
+        title: `${row.producer}: ${paper.percent} of first submissions arrived complete`,
+        subject: row.producer,
+        severity: SEVERITY.MEDIUM,
+        why: `${paper.statement} Chasing paperwork is work somebody does every time, and it is not the ` +
+             `same problem as material that does not conform.`,
+        evidence: Object.freeze([paper.statement]),
+        action: "Send them the list of what a complete submission contains. It is usually never been asked for.",
+        missing: Object.freeze([]),
+      }));
+    }
+
+    /* ---- blame, where the record already answers it ---- */
+    if (row.attributedToDistributor > 0) {
+      const total = row.nonconformityCategories.reduce((t, c) => t + c.count, 0);
+      if (row.attributedToDistributor * 2 >= total) {
+        out.push(finding({
+          id: `distributor-${row.producer}`,
+          kind: "issues-are-the-distributor's",
+          title: `Most confirmed issues against ${row.producer} were the distributor's`,
+          subject: row.producer,
+          severity: SEVERITY.MEDIUM,
+          why: `${row.attributedToDistributor} of ${total} confirmed issue(s) were attributed to the ` +
+               `distributor rather than the mill. The conversation about them is with a different company.`,
+          evidence: Object.freeze([row.attributionNote].filter(Boolean)),
+          action: "Take the paperwork problems to whoever is supplying, not to whoever is making.",
+          missing: Object.freeze([]),
+        }));
+      }
+    }
+
+    if (row.pending >= THRESHOLDS.pendingLots) {
+      out.push(finding({
+        id: `pending-${row.producer}`,
+        kind: "lots-awaiting-decision",
+        title: `${row.pending} lots from ${row.producer} have no decision`,
+        subject: row.producer,
+        severity: SEVERITY.LOW,
+        why: "Every rate above this supplier's name is computed over the lots that were decided. These " +
+             "are not counted as good and not counted as bad; they are not counted.",
+        evidence: Object.freeze([`${row.lots} lot(s) recorded, ${row.pending} undecided`]),
+        action: "Decide them. Until then the record is about less material than you have.",
+        missing: Object.freeze([]),
+      }));
+    }
+  }
+
+  /* ---- the finding that tells you what to go and record ---- */
+  if (perf.unattributed > 0 && perf.lots > 0) {
+    const share = scaleDiv(BigInt(perf.unattributed) * SCALE, BigInt(perf.lots));
+    if (share >= THRESHOLDS.unattributedShare) {
+      out.push(finding({
+        id: "unattributed-lots",
+        kind: "producer-not-identified",
+        title: `${pct(share)} of lots do not identify the producer`,
+        subject: null,
+        severity: SEVERITY.MEDIUM,
+        why: `${perf.unattributed} of ${perf.lots} lot(s) name no mill, so they belong to nobody's record. ` +
+             `No amount of reviewing builds a supplier quality picture out of certificates that do not say ` +
+             `who made the material.`,
+        evidence: Object.freeze([perf.unattributedNote].filter(Boolean)),
+        action: "Ask for certificates that name the producer. It is a purchase-order requirement, not a favour.",
+        missing: Object.freeze([]),
+      }));
+    }
+  }
+
+  return out;
+}
+
 function fromSuppliers(suppliers) {
   return suggestMerges(suppliers ?? []).map((m) =>
     finding({
@@ -262,6 +428,7 @@ export function scanOpportunities(input = {}) {
     ...fromPortfolio(input.outcomes ?? [], input.cases ?? []),
     ...fromParts(input.parts ?? []),
     ...fromSuppliers(input.suppliers),
+    ...fromLots(input.lots ?? [], input.cases ?? []),
   ];
 
   /* Severity first, then value where it is known. A finding with no figure is

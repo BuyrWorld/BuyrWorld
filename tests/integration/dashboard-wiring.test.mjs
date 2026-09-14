@@ -320,3 +320,20 @@ describe("the radar leads the workspace", () => {
     assert.match(html, /MI\.spendAnalysis=A\.ok\?A:null/);
   });
 });
+
+describe("the radar can see reviewed lots", () => {
+  test("the workspace passes them in", () => {
+    // The radar reads the whole corpus. A class of record it cannot see is a
+    // class of finding it cannot make, and a supplier whose material has been
+    // failing is the strongest signal it has.
+    assert.match(html, /lots:lots\}\)/);
+    assert.match(html, /window\.BW\.loadLots\?window\.BW\.loadLots\(\):\[\]/);
+  });
+
+  test("a store that throws does not take the radar down with it", () => {
+    // Site data can be blocked, in which case reading it raises rather than
+    // returning nothing. The rest of the radar still has something to say.
+    const fn = html.slice(html.indexOf("var lots=[];"), html.indexOf("var lots=[];") + 140);
+    assert.match(fn, /catch\(e\)\{ lots=\[\]; \}/);
+  });
+});
