@@ -259,6 +259,19 @@ export function sheetLayout(sheet, blank, { kerf, edgeMargin, rotationAllowed = 
     columns: chosen.cols,
     rows: chosen.rows,
     perSheet: chosen.count,
+
+    /* The inputs travel with the result. A saved estimate has to be
+       reproducible without the form that produced it, and a diagram drawn
+       from anything other than these numbers can disagree with the count
+       beside it. `blankWidthUm` is the chosen orientation, not the entered
+       one, so a drawing of it is of the part as it will actually be cut. */
+    sheetWidthUm: sheet.width.um,
+    sheetLengthUm: sheet.length.um,
+    blankWidthUm: chosen.blankWidth,
+    blankLengthUm: chosen.blankLength,
+    kerfUm: kerf.um,
+    edgeMarginUm: edgeMargin.um,
+
     sheetAreaUm2: sheetArea,
     usedAreaUm2: usedArea,
     unusedAreaUm2: sheetArea - usedArea,
@@ -299,6 +312,11 @@ export function barLayout(bar, blankLength, { kerf, endTrim } = {}) {
   return Object.freeze({
     ok: true, kind: "bar cutting",
     perBar,
+    /* As above: the inputs travel with the result. */
+    barLengthUm: bar.length.um,
+    blankLengthUm: blankLength.um,
+    kerfUm: kerf.um,
+    endTrimUm: endTrim.um,
     usableLengthUm: usable,
     usedLengthUm: used,
     kerfLengthUm: perBar * kerf.um,

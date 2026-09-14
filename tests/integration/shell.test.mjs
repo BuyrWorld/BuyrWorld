@@ -139,7 +139,7 @@ describe("one palette, not two", () => {
   });
 });
 
-describe("one list of eleven becomes four groups", () => {
+describe("the flat list becomes four groups", () => {
   const linkKeys = [...html.match(/const LINKS=\[(.*?)\];/s)[1].matchAll(/\["([a-z-]+)","([^"]+)"\]/g)]
     .map((m) => ({ key: m[1], label: m[2] }));
 
@@ -157,7 +157,7 @@ describe("one list of eleven becomes four groups", () => {
     // Relabelling is safe; losing a route is not. The keys are the routes.
     assert.deepEqual(
       linkKeys.map((l) => l.key).sort(),
-      ["academy", "ai", "blog", "contact", "dash", "home", "inbox", "market", "parts", "templates", "tools"],
+      ["academy", "ai", "blog", "contact", "dash", "home", "inbox", "market", "parts", "shouldcost", "templates", "tools"],
     );
   });
 

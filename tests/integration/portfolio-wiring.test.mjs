@@ -73,8 +73,13 @@ describe("it is wired in", () => {
   });
 
   test("the two step-5 headings introduced earlier were renumbered", () => {
-    assert.equal((html.match(/>5 &middot; /g) || []).length, 1, "two sections numbered 5 is a defect");
-    assert.match(html, />6 &middot; Record what was agreed/);
+    // Scoped to the defender page, which is the page this was ever about.
+    // Counting across the whole file made every other numbered sequence in
+    // the product collide with this one — a page is allowed its own step 5.
+    const page = html.slice(html.indexOf('id="page-tool-defender"'));
+    const defender = page.slice(0, page.indexOf('<div class="page"'));
+    assert.equal((defender.match(/>5 &middot; /g) || []).length, 1, "two sections numbered 5 is a defect");
+    assert.match(defender, />6 &middot; Record what was agreed/);
   });
 });
 

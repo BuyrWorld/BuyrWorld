@@ -1094,6 +1094,103 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   </div></section>
 </div>
 
+<!-- ============ SHOULD COST EXPERT ============ -->
+<div class="page" id="page-shouldcost">
+  <section class="sec"><div class="wrap" style="max-width:1320px">
+    <h2 style="font-size:var(--bw-t-page);margin-bottom:4px">What should this part cost?</h2>
+    <p style="color:var(--bw-muted);font-size:var(--bw-t-body);margin-bottom:var(--bw-4);max-width:760px">The finished part's weight is not the question. Between it and the stock you buy sit a bigger blank, a saw that turns metal into dust, a sheet that does not divide evenly, scrap at every operation and a supplier who sells sheets rather than square millimetres. This works out <b style="color:var(--bw-text)">what to order, how much, and why</b> &mdash; every quantity separately, so a challenge can be answered.</p>
+
+    <div class="bw-panel" style="border-color:var(--bw-border-strong);margin-bottom:var(--bw-4)">
+      <div class="bw-panel-head"><div class="bw-panel-title">What this release does, and what it does not</div></div>
+      <p style="color:var(--bw-body);font-size:var(--bw-t-body);margin:0;line-height:1.6"><b style="color:var(--bw-text)">Estimate material and cost</b> &mdash; working, below. Everything is entered by hand: <b style="color:var(--bw-text)">there is no drawing extraction in this build</b>, and nothing on this page reads a PDF, a photograph or a CAD file. A 2D drawing does not contain recoverable 3D geometry, and no dimension here was recovered from one.</p>
+      <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6"><b>Check a material certificate</b> and <b>view mill performance</b> are the next two releases and are not built. They are named here so the shape of the module is visible, not to suggest they exist.</p>
+    </div>
+
+    <div class="bw-grid bw-grid-2" style="align-items:start">
+      <div>
+        <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+          <div class="bw-panel-head"><div class="bw-panel-title">1 &middot; The part</div></div>
+          <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+            <label class="bw-field">Accepted parts required<input class="bwin" id="sc-qty" inputmode="numeric" placeholder="1000"></label>
+            <label class="bw-field">Length units<select class="bwin" id="sc-unit"><option value="mm">mm</option><option value="cm">cm</option><option value="m">m</option><option value="in">in</option><option value="ft">ft</option></select></label>
+            <label class="bw-field">Material<input class="bwin" id="sc-grade" placeholder="Fictional grade FG-300"></label>
+          </div>
+          <div class="eyebrow" style="margin:var(--bw-4) 0 6px">Blank &mdash; what is released into production</div>
+          <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+            <label class="bw-field">Width<input class="bwin" id="sc-bw" inputmode="decimal" placeholder="200"></label>
+            <label class="bw-field">Length<input class="bwin" id="sc-bl" inputmode="decimal" placeholder="100"></label>
+            <label class="bw-field">Thickness<input class="bwin" id="sc-bt" inputmode="decimal" placeholder="5"></label>
+          </div>
+          <div class="eyebrow" style="margin:var(--bw-4) 0 6px">Finished part &mdash; optional, and only where the geometry is this simple</div>
+          <div class="bw-fields">
+            <label class="bw-field">Width<input class="bwin" id="sc-pw" inputmode="decimal" placeholder="180"></label>
+            <label class="bw-field">Length<input class="bwin" id="sc-pl" inputmode="decimal" placeholder="80"></label>
+            <label class="bw-field">Thickness<input class="bwin" id="sc-pt" inputmode="decimal" placeholder="5"></label>
+          </div>
+          <p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-2) 0 0;line-height:1.5">Leave these empty unless the part really is a plain rectangle. A net mass computed from a shape the part does not have is worse than no net mass.</p>
+        </div>
+
+        <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+          <div class="bw-panel-head"><div class="bw-panel-title">2 &middot; Density</div></div>
+          <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Mass and therefore material cost rest on this. It depends on grade, condition and specification revision &mdash; it is not implied by an alloy name, so <b style="color:var(--bw-text)">nothing here supplies one for you</b>.</p>
+          <div class="bw-fields">
+            <label class="bw-field">Density<input class="bwin" id="sc-dv" inputmode="decimal" placeholder="7.85"></label>
+            <label class="bw-field">Unit<select class="bwin" id="sc-du"><option value="g/cm3">g/cm&sup3;</option><option value="kg/m3">kg/m&sup3;</option><option value="g/mm3">g/mm&sup3;</option></select></label>
+            <label class="bw-field">Where it came from<input class="bwin" id="sc-ds" placeholder="Synthetic datasheet, revision B"></label>
+          </div>
+        </div>
+
+        <div class="bw-panel">
+          <div class="bw-panel-head"><div class="bw-panel-title">3 &middot; The stock you can buy</div></div>
+          <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+            <label class="bw-field">Form<select class="bwin" id="sc-form"><option value="sheet">Sheet or plate</option><option value="bar">Bar</option></select></label>
+            <label class="bw-field"><span id="sc-s1-label">Stock width</span><input class="bwin" id="sc-s1" inputmode="decimal" placeholder="2000" aria-labelledby="sc-s1-label"></label>
+            <label class="bw-field">Stock length<input class="bwin" id="sc-s2" inputmode="decimal" placeholder="1000"></label>
+          </div>
+          <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+            <label class="bw-field">Saw kerf<input class="bwin" id="sc-kerf" inputmode="decimal" placeholder="3"></label>
+            <label class="bw-field"><span id="sc-edge-label">Edge margin</span><input class="bwin" id="sc-edge" inputmode="decimal" placeholder="10" aria-labelledby="sc-edge-label"></label>
+            <label class="bw-field">Pack increment<input class="bwin" id="sc-pack" inputmode="numeric" placeholder="1"></label>
+            <label class="bw-field">Minimum order<input class="bwin" id="sc-moq" inputmode="numeric" placeholder="0"></label>
+          </div>
+          <label class="bw-field" style="display:flex;align-items:center;gap:8px;margin-top:var(--bw-2)">
+            <input type="checkbox" id="sc-rot" style="width:auto;margin:0">
+            <span>The part may be rotated 90&deg; on the stock</span>
+          </label>
+          <p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-2) 0 0;line-height:1.5">Leave that unticked where grain direction, finish or a drawing note fixes the orientation. Nothing here will turn a part you did not say could be turned.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+          <div class="bw-panel-head"><div class="bw-panel-title">4 &middot; The route</div></div>
+          <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">A yield is <b style="color:var(--bw-text)">accepted output divided by input</b>. It is not a scrap percentage added to demand: 100 parts at 95% yield needs 106 blanks, not 105, and across a route the difference compounds. Setup and test pieces must say which side of the yield they come from &mdash; that is the mistake that counts the same pieces twice.</p>
+          <div id="sc-stages"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--bw-3)">
+            <button class="bw-act bw-act-secondary" data-sc-act="add-stage">+ Add an operation</button>
+          </div>
+        </div>
+
+        <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+          <div class="bw-panel-head"><div class="bw-panel-title">5 &middot; Contingency</div></div>
+          <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Extra blanks above what the route requires, kept as <b style="color:var(--bw-text)">a separate line with its own name</b>. Material quietly inflated to be safe cannot be told apart from material planning that is wrong, and neither can be defended.</p>
+          <div class="bw-fields">
+            <label class="bw-field">Contingency %<input class="bwin" id="sc-cont" inputmode="decimal" placeholder="0"></label>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="bw-act bw-act-primary" data-sc-act="run">Work out the material &rarr;</button>
+          <button class="bw-act bw-act-secondary" data-sc-act="example">Load synthetic example</button>
+          <button class="bw-act bw-act-text" data-sc-act="clear">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="sc-out" style="margin-top:var(--bw-6)"></div>
+  </div></section>
+</div>
+
 <!-- ============ WORKSPACE ============ -->
 <div class="page" id="page-dash">
   <section class="sec"><div class="wrap" style="max-width:1320px">
@@ -1290,7 +1387,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <script>
 
 // ---------- Navigation ----------
-const LINKS=[["home","Home"],["dash","Workspace"],["inbox","Inbox"],["parts","Parts"],["tools","Tools"],["ai","Buyr AI"],["market","Market Intel"],["academy","Academy"],["templates","Templates"],["blog","Blog"],["contact","About"]];
+const LINKS=[["home","Home"],["dash","Workspace"],["inbox","Inbox"],["parts","Parts"],["shouldcost","Should Cost Expert"],["tools","Tools"],["ai","Buyr AI"],["market","Market Intel"],["academy","Academy"],["templates","Templates"],["blog","Blog"],["contact","About"]];
 /* The sidebar groups the same destinations by the job they belong to. A
    heading of null is a destination that belongs to no group — Home, and
    the page about the project. Every key here must exist in LINKS, which
@@ -1298,12 +1395,12 @@ const LINKS=[["home","Home"],["dash","Workspace"],["inbox","Inbox"],["parts","Pa
 const NAV_GROUPS=[
   [null,["home"]],
   ["Your work",["dash","inbox","parts"]],
-  ["Analysis",["tools","ai","market"]],
+  ["Analysis",["shouldcost","tools","ai","market"]],
   ["Learning",["academy","templates","blog"]],
   [null,["contact"]]
 ];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="tool-quotes"&&typeof qnBind==="function")qnBind();if(p==="parts"&&typeof ptBind==="function")ptBind();if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function"){defBindAlts();if(typeof defShadowBind==="function")defShadowBind();}if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
+function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="shouldcost"&&typeof scBind==="function")scBind();if(p==="tool-quotes"&&typeof qnBind==="function")qnBind();if(p==="parts"&&typeof ptBind==="function")ptBind();if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function"){defBindAlts();if(typeof defShadowBind==="function")defShadowBind();}if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
   // Without this, activating a nav item changes the page but leaves focus where
   // it was, so a screen reader stays on the old content.
   var m=document.getElementById("main"); if(m)m.focus({preventScroll:true});}
@@ -1330,6 +1427,7 @@ const NAV_ICONS={
   templates:'<path d="M8 3h8l4 4v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M16 3v5h4"/>',
   academy:'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>',
   blog:'<path d="M5 4h11l3 3v13H5z"/><path d="M8 9h8M8 13h8M8 17h5"/>',
+  shouldcost:'<path d="M3 7h18v10H3z"/><path d="M7 7v4M11 7v3M15 7v4M19 7v3"/><path d="M3 17l4-4"/>',
   contact:'<circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/>'
 };
 
@@ -3329,6 +3427,328 @@ function qnBind(){
     else if(act==="run")qnRun();
     else if(act==="example")qnExample();
     else if(act==="remove")qnRemove(Number(t.dataset.qn));
+  });
+}
+
+/* ----------------------------------------------------------- should cost ---
+   Release 1: the material planner. The page collects and draws; every
+   quantity, mass and percentage below comes out of should-cost.mjs. The only
+   arithmetic here turns exact integers into diagram coordinates. */
+
+// [name, yieldPercent, fixedPieces, consumes]
+var _scStages=[["Laser cut","98","0","input"],["Form","95","4","input"]];
+
+function scStageRow(a,i){
+  var f=function(k,label,ph,mode){
+    return '<label class="bw-field" style="flex:1;min-width:96px">'+ciEsc(label)
+      +'<input class="bwin" value="'+attrEsc(a[k]||"")+'" data-sc-stage="'+i+'" data-sc-field="'+k+'"'
+      +(mode?' inputmode="'+mode+'"':'')+' placeholder="'+attrEsc(ph)+'" aria-label="'+attrEsc(label)+'"></label>';
+  };
+  var sel='<label class="bw-field" style="flex:1;min-width:150px">Setup pieces come out of'
+    +'<select class="bwin" data-sc-stage="'+i+'" data-sc-field="3" aria-label="Where setup and test pieces are taken from">'
+    +'<option value="input"'+(a[3]==="input"?' selected':'')+'>the input</option>'
+    +'<option value="output"'+(a[3]==="output"?' selected':'')+'>accepted output</option>'
+    +'</select></label>';
+  return '<div style="border:1px solid var(--bw-border);border-radius:var(--bw-r-sm);padding:10px 12px;margin-bottom:8px">'
+    +'<div style="display:flex;gap:var(--bw-3);flex-wrap:wrap">'
+    +f(0,"Operation","Laser cut")+f(1,"Yield %","95","decimal")+f(2,"Setup / test pieces","0","numeric")+sel
+    +'</div>'
+    +'<button class="bw-act bw-act-text" data-sc-act="remove-stage" data-sc-stage="'+i+'" aria-label="Remove this operation">&times; Remove</button>'
+    +'</div>';
+}
+
+function scRenderStages(){
+  var host=document.getElementById("sc-stages");
+  if(!host)return;
+  host.innerHTML=_scStages.length
+    ? _scStages.map(scStageRow).join("")
+    : '<p style="font-size:12.5px;color:var(--bw-muted);margin:0">No operations. Every blank released reaches the end, which is a claim about the process, not a default.</p>';
+  if(!host.dataset.delegated){
+    host.dataset.delegated="1";
+    var sync=function(e){
+      var t=e.target;
+      if(!t||!t.dataset||t.dataset.scStage===undefined)return;
+      var row=_scStages[Number(t.dataset.scStage)];
+      if(row)row[Number(t.dataset.scField)]=t.value;
+    };
+    host.addEventListener("input",sync);
+    host.addEventListener("change",sync);
+  }
+}
+
+function scVal(id){var e=document.getElementById(id);return e?String(e.value).trim():"";}
+function scInt(id){var t=scVal(id).replace(/[^0-9]/g,"");return t===""?null:parseInt(t,10);}
+
+function scExample(){
+  var set=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+  set("sc-qty","1000");set("sc-unit","mm");set("sc-grade","Fictional grade FG-300");
+  set("sc-bw","200");set("sc-bl","100");set("sc-bt","5");
+  set("sc-pw","180");set("sc-pl","80");set("sc-pt","5");
+  set("sc-dv","7.85");set("sc-du","g/cm3");set("sc-ds","Synthetic datasheet, fictional grade");
+  set("sc-form","sheet");set("sc-s1","2000");set("sc-s2","1000");
+  set("sc-kerf","3");set("sc-edge","10");set("sc-pack","1");set("sc-moq","0");set("sc-cont","0");
+  var r=document.getElementById("sc-rot"); if(r)r.checked=false;
+  _scStages=[["Laser cut","98","0","input"],["Form","95","4","input"]];
+  scRenderStages();scFormLabels();
+}
+
+function scClear(){
+  ["sc-qty","sc-grade","sc-bw","sc-bl","sc-bt","sc-pw","sc-pl","sc-pt","sc-dv","sc-ds",
+   "sc-s1","sc-s2","sc-kerf","sc-edge","sc-pack","sc-moq","sc-cont"].forEach(function(id){
+    var e=document.getElementById(id); if(e)e.value="";
+  });
+  var r=document.getElementById("sc-rot"); if(r)r.checked=false;
+  var o=document.getElementById("sc-out"); if(o)o.innerHTML="";
+}
+
+/* A bar has one dimension and a trim, not two and a margin. */
+function scFormLabels(){
+  var bar=scVal("sc-form")==="bar";
+  var a=document.getElementById("sc-s1-label"); if(a)a.textContent=bar?"Bar length":"Stock width";
+  var b=document.getElementById("sc-edge-label"); if(b)b.textContent=bar?"End trim (each end)":"Edge margin";
+  var s2=document.getElementById("sc-s2");
+  if(s2&&s2.parentElement)s2.parentElement.style.display=bar?"none":"";
+  var rot=document.getElementById("sc-rot");
+  if(rot&&rot.parentElement)rot.parentElement.style.display=bar?"none":"";
+}
+
+function scErr(m){
+  return '<div class="bw-panel" style="border-color:var(--bw-danger)"><p style="color:var(--bw-danger);font-size:var(--bw-t-body);margin:0;line-height:1.6">'+ciEsc(m)+'</p></div>';
+}
+
+function scRun(){
+  var out=document.getElementById("sc-out");
+  if(!out||!window.BW||!window.BW.planMaterial)return;
+  var B=window.BW;
+  var u=scVal("sc-unit")||"mm";
+  var L=function(id,what){return B.scLength(scVal(id),u,what);};
+
+  var plan;
+  try{
+    var qty=scInt("sc-qty");
+    if(qty===null)throw new Error("Enter how many accepted parts are required. Everything else is worked out backwards from it.");
+
+    var bw=L("sc-bw","Blank width"),bl=L("sc-bl","Blank length"),bt=L("sc-bt","Blank thickness");
+    var kerf=L("sc-kerf","Saw kerf"),edge=L("sc-edge",scVal("sc-form")==="bar"?"End trim":"Edge margin");
+
+    var d=null;
+    if(scVal("sc-dv")!==""){ d=B.scDensity(scVal("sc-dv"),scVal("sc-du"),scVal("sc-ds")); }
+
+    var stages=_scStages.filter(function(a){return String(a[0]).trim()&&String(a[1]).trim();}).map(function(a,i){
+      return B.scStage({
+        id:"s"+i, name:String(a[0]).trim(),
+        yield:B.pc(String(a[1]).trim()),
+        fixedPieces:a[2]===""?0:parseInt(String(a[2]).replace(/[^0-9]/g,"")||"0",10),
+        consumes:a[3]||"input"
+      });
+    });
+
+    var layout,stockVol;
+    if(scVal("sc-form")==="bar"){
+      var barLen=L("sc-s1","Bar length");
+      layout=B.barLayout({length:barLen},bl,{kerf:kerf,endTrim:edge});
+      stockVol=B.boxVolume(bw,barLen,bt);
+    }else{
+      var sw=L("sc-s1","Stock width"),sl=L("sc-s2","Stock length");
+      var rot=document.getElementById("sc-rot");
+      layout=B.sheetLayout({width:sw,length:sl},{width:bw,length:bl},
+        {kerf:kerf,edgeMargin:edge,rotationAllowed:Boolean(rot&&rot.checked)});
+      stockVol=B.boxVolume(sw,sl,bt);
+    }
+
+    var partVol=null;
+    if(scVal("sc-pw")!==""&&scVal("sc-pl")!==""&&scVal("sc-pt")!==""){
+      partVol=B.boxVolume(L("sc-pw","Part width"),L("sc-pl","Part length"),L("sc-pt","Part thickness"));
+    }
+
+    var cont=scVal("sc-cont");
+    plan=B.planMaterial({
+      goodParts:qty, stages:stages, layout:layout, density:d,
+      stockVolumeUm3:stockVol,
+      blankVolumeUm3:B.boxVolume(bw,bl,bt),
+      partVolumeUm3:partVol,
+      packIncrement:scInt("sc-pack")||1,
+      minimumOrder:scInt("sc-moq")||0,
+      contingency:cont===""?0n:B.pc(cont)
+    });
+  }catch(e){ out.innerHTML=scErr(String(e.message||e)); return; }
+
+  if(!plan.ok){ out.innerHTML=scErr(plan.reason); return; }
+  out.innerHTML=scPlanHTML(plan,u);
+}
+
+/* ---- rendering. Numbers in, markup out; nothing computed. ---- */
+
+function scRow(label,value,note){
+  return '<tr><td>'+ciEsc(label)+'</td><td class="n">'+value+'</td>'
+    +'<td style="color:var(--bw-muted);font-size:12px">'+(note?ciEsc(note):"")+'</td></tr>';
+}
+
+function scPlanHTML(plan,u){
+  var B=window.BW,q=plan.quantities,L=plan.layout;
+  var pct=function(r){return B.formatPercent?B.formatPercent(r):"";};
+
+  var quantities='<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Quantity</th><th class="n">Number</th><th>Why it differs from the one above</th></tr></thead><tbody>'
+    +scRow("Accepted parts required",q.acceptedPartsRequired,"what the customer gets")
+    +scRow("Blanks the route requires",q.blanksForProcess,"yield losses and setup pieces, worked backwards")
+    +(q.contingencyBlanks>0n?scRow("Contingency blanks",q.contingencyBlanks,"a separate decision, not part of the requirement"):"")
+    +scRow("Blanks to release",q.blanksToRelease,"what goes into production")
+    +scRow("Stock units needed",q.stockUnitsNeeded,q.blanksPerStockUnit+" blanks per unit")
+    +scRow("Stock units to buy",q.stockUnitsToBuy,q.roundedUpForPurchase>0n?"rounded up to what the supplier sells":"no rounding needed")
+    +'</tbody></table></div>';
+
+  var massRows="";
+  if(plan.mass.grossPurchasedUg!==null){
+    massRows='<div class="bw-table-wrap" style="margin-top:var(--bw-4)"><table class="bw-table">'
+      +'<thead><tr><th>Mass</th><th class="n">kg</th><th>Source</th></tr></thead><tbody>'
+      +(plan.mass.finishedPartsNetUg!==null?scRow("Finished parts, net",B.formatMass(plan.mass.finishedPartsNetUg,"kg",2),"only where the geometry supports it"):"")
+      +(plan.mass.oneBlankUg!==null?scRow("One blank",B.formatMass(plan.mass.oneBlankUg,"kg",3),""):"")
+      +scRow("Gross purchased",B.formatMass(plan.mass.grossPurchasedUg,"kg",2),plan.mass.densitySource)
+      +'</tbody></table></div>';
+  }else{
+    massRows='<p style="font-size:12.5px;color:var(--bw-muted);margin:var(--bw-4) 0 0;line-height:1.6">No density was supplied, so there is no mass here. A density is a fact about a grade, a condition and a specification revision, and inventing one would put a made-up number into the material cost.</p>';
+  }
+
+  var losses='<div class="eyebrow" style="margin:var(--bw-5) 0 6px">Where the extra material went</div>'
+    +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+    +'<li><b style="color:var(--bw-text)">'+plan.losses.processLossPieces+' pieces</b> to the route &mdash; yield losses and setup pieces, stage by stage</li>'
+    +(plan.losses.contingencyPieces>0n?'<li><b style="color:var(--bw-text)">'+plan.losses.contingencyPieces+' pieces</b> to contingency &mdash; a decision somebody made, not a requirement</li>':'')
+    +'<li><b style="color:var(--bw-text)">'+plan.losses.purchaseRoundingUnits+' stock units</b> to purchase rounding &mdash; the supplier does not sell part of a sheet</li>'
+    +'</ul>';
+
+  var steps=plan.route.steps.map(function(st){
+    return '<tr><td>'+ciEsc(st.stage.name)+'</td>'
+      +'<td class="n">'+st.requiredInput+'</td>'
+      +'<td class="n">'+st.goodOutput+'</td>'
+      +'<td class="n">'+st.lostToYield+'</td>'
+      +'<td class="n">'+st.lostToFixed+'</td>'
+      +'<td style="color:var(--bw-muted);font-size:12px">'+ciEsc(st.consumes==="output"?"from accepted output":"from the input")+'</td></tr>';
+  }).join("");
+
+  var route=steps?'<div class="eyebrow" style="margin:var(--bw-5) 0 6px">The route, worked backwards</div>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Operation</th><th class="n">In</th><th class="n">Good out</th><th class="n">Lost to yield</th><th class="n">Setup / test</th><th>Taken</th></tr></thead>'
+    +'<tbody>'+steps+'</tbody></table></div>':"";
+
+  var assume=(B.scAssumptions?B.scAssumptions(plan,null):[]).map(function(r){
+    var v=r.kind==="ratio"?pct(r.value):(r.kind==="pieces"?String(r.value):"");
+    return '<tr><td>'+ciEsc(r.what)+'</td><td class="n">'+ciEsc(v)+'</td>'
+      +'<td>'+ciEsc(r.basis)+'</td><td style="color:var(--bw-muted);font-size:12px">'+ciEsc(r.affects)+'</td></tr>';
+  }).join("");
+
+  return '<div class="bw-panel">'
+    +'<div class="bw-panel-head"><div class="bw-panel-title">What to order</div>'
+    +'<span class="bw-status bw-status--derived">material plan</span></div>'
+    +'<p style="font-size:var(--bw-t-body);color:var(--bw-body);margin:0 0 var(--bw-4);line-height:1.6">'+ciEsc(plan.statement)+'</p>'
+    +quantities
+    +massRows
+    +losses
+    +route
+    +'</div>'
+    +'<div class="bw-panel" style="margin-top:var(--bw-4)">'
+    +'<div class="bw-panel-head"><div class="bw-panel-title">The layout</div>'
+    +'<span class="bw-status bw-status--review">'+ciEsc(L.kind)+'</span></div>'
+    +scLayoutHTML(plan,u)
+    +'</div>'
+    +'<div class="bw-panel" style="margin-top:var(--bw-4)">'
+    +'<div class="bw-panel-head"><div class="bw-panel-title">Assumptions this rests on</div></div>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>What</th><th class="n">Value</th><th>Basis</th><th>Affects</th></tr></thead>'
+    +'<tbody>'+assume+'</tbody></table></div>'
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.5">'+ciEsc(plan.route.method)+'</p>'
+    +'</div>';
+}
+
+/* The diagram is drawn from the same integers as the table above it, so it
+   cannot disagree with them. It is to scale, and says so. */
+function scLayoutHTML(plan,u){
+  var B=window.BW,L=plan.layout;
+  var num=function(x){return Number(x);};
+
+  if(L.kind==="bar cutting"){
+    var W=680,H=54;
+    var barLen=num(L.usableLengthUm+L.trimLengthUm);
+    var sx=function(um){return W*num(um)/barLen;};
+    var trim=num(L.trimLengthUm)/2;
+    var cuts="";
+    var blank=num(L.usedLengthUm)/num(L.perBar);
+    var kerf=num(L.kerfLengthUm)/num(L.perBar);
+    var maxDraw=Number(L.perBar)>400?400:Number(L.perBar);
+    for(var i=0;i<maxDraw;i++){
+      var x=sx(trim+i*(blank+kerf));
+      cuts+='<rect x="'+x.toFixed(2)+'" y="14" width="'+Math.max(0.6,sx(blank)).toFixed(2)+'" height="26" fill="var(--bw-accent-soft)" stroke="var(--bw-accent)" stroke-width="0.6"/>';
+    }
+    return '<div style="overflow-x:auto"><svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px;display:block" role="img" aria-label="Bar cutting plan, to scale">'
+      +'<rect x="0" y="10" width="'+W+'" height="34" fill="var(--bw-surface-2)" stroke="var(--bw-border-strong)"/>'
+      +'<rect x="0" y="10" width="'+sx(trim).toFixed(2)+'" height="34" fill="var(--bw-danger-soft)"/>'
+      +'<rect x="'+(W-sx(trim)).toFixed(2)+'" y="10" width="'+sx(trim).toFixed(2)+'" height="34" fill="var(--bw-danger-soft)"/>'
+      +cuts+'</svg></div>'
+      +'<p style="font-size:12.5px;color:var(--bw-body);margin:var(--bw-3) 0 0;line-height:1.6"><b style="color:var(--bw-text)">'+L.perBar+' blanks per bar.</b> '
+      +'End trim '+ciEsc(B.formatLength(L.trimLengthUm,u,1))+ciEsc(u)+' in total, saw kerf '+ciEsc(B.formatLength(L.kerfLengthUm,u,1))+ciEsc(u)+' in total, '
+      +ciEsc(B.formatLength(L.remainderUm,u,1))+ciEsc(u)+' left over. Drawn to scale'+(Number(L.perBar)>400?', first 400 blanks shown':'')+'.</p>'
+      +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-2) 0 0;line-height:1.5">'+ciEsc(L.note)+'</p>';
+  }
+
+  /* To scale, from the layout's own integers: one factor applied to every
+     dimension, so the drawing cannot disagree with the count beside it. */
+  var cols=Number(L.columns),rows=Number(L.rows);
+  var vbW=680;
+  var k=vbW/num(L.sheetWidthUm);
+  var vbH=k*num(L.sheetLengthUm);
+  var sx=function(um){return k*num(um);};
+
+  var margin=sx(L.edgeMarginUm);
+  var bw=sx(L.blankWidthUm),bl=sx(L.blankLengthUm),kf=sx(L.kerfUm);
+
+  var maxCells=2400;
+  var drawAll=cols*rows<=maxCells;
+  var cells="";
+  if(drawAll){
+    for(var r=0;r<rows;r++){
+      for(var c=0;c<cols;c++){
+        cells+='<rect x="'+(margin+c*(bw+kf)).toFixed(2)+'" y="'+(margin+r*(bl+kf)).toFixed(2)
+          +'" width="'+Math.max(0.5,bw).toFixed(2)+'" height="'+Math.max(0.5,bl).toFixed(2)
+          +'" fill="var(--bw-accent-soft)" stroke="var(--bw-accent)" stroke-width="0.5"/>';
+      }
+    }
+  }
+
+  return '<div style="overflow-x:auto"><svg viewBox="0 0 '+vbW+' '+vbH.toFixed(1)+'" width="100%" style="max-width:'+vbW+'px;display:block" role="img" aria-label="Stock layout to scale, '+cols+' blanks across by '+rows+' down">'
+    +'<rect x="0" y="0" width="'+vbW+'" height="'+vbH.toFixed(1)+'" fill="var(--bw-surface-2)" stroke="var(--bw-border-strong)"/>'
+    +'<rect x="'+margin.toFixed(2)+'" y="'+margin.toFixed(2)+'" width="'+(vbW-2*margin).toFixed(2)+'" height="'+(vbH-2*margin).toFixed(2)+'" fill="none" stroke="var(--bw-border-strong)" stroke-dasharray="4 3"/>'
+    +cells+'</svg></div>'
+    +'<p style="font-size:12.5px;color:var(--bw-body);margin:var(--bw-3) 0 0;line-height:1.6">'
+    +'<b style="color:var(--bw-text)">'+L.columns+' across by '+L.rows+' down &mdash; '+L.perSheet+' per stock unit</b>, '+ciEsc(L.orientation)+'. '
+    +'Stock '+ciEsc(B.formatLength(L.sheetWidthUm,u,1))+' &times; '+ciEsc(B.formatLength(L.sheetLengthUm,u,1))+ciEsc(u)+', '
+    +'blank '+ciEsc(B.formatLength(L.blankWidthUm,u,1))+' &times; '+ciEsc(B.formatLength(L.blankLengthUm,u,1))+ciEsc(u)+' as cut, '
+    +'kerf '+ciEsc(B.formatLength(L.kerfUm,u,2))+ciEsc(u)+', edge margin '+ciEsc(B.formatLength(L.edgeMarginUm,u,1))+ciEsc(u)+' (the dashed line). '
+    +'Utilisation '+ciEsc(B.formatPercent?B.formatPercent(L.utilisation):"")+', leaving '+ciEsc(B.formatArea(L.unusedAreaUm2,"m2",3))+'m&sup2; unused per stock unit. '
+    +'<b style="color:var(--bw-text)">Drawn to scale.</b>'
+    +(drawAll?'':' Too many blanks to draw individually, so only the counts above are shown.')
+    +(L.rotationWouldHelp?' <b style="color:var(--bw-warning)">Rotating the part would fit more on, and rotation is not permitted.</b>':'')
+    +'</p>'
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-2) 0 0;line-height:1.5">'+ciEsc(L.note)+'</p>';
+}
+
+function scBind(){
+  var page=document.getElementById("page-shouldcost");
+  if(!page||page.dataset.scBound)return;
+  page.dataset.scBound="1";
+  scRenderStages();
+  scFormLabels();
+  page.addEventListener("change",function(e){
+    if(e.target&&e.target.id==="sc-form")scFormLabels();
+  });
+  page.addEventListener("click",function(e){
+    var t=e.target&&e.target.closest?e.target.closest("[data-sc-act]"):null;
+    if(!t)return;
+    var act=t.dataset.scAct;
+    if(act==="run")scRun();
+    else if(act==="example")scExample();
+    else if(act==="clear")scClear();
+    else if(act==="add-stage"){_scStages.push(["","","0","input"]);scRenderStages();}
+    else if(act==="remove-stage"){_scStages.splice(Number(t.dataset.scStage),1);scRenderStages();}
   });
 }
 
@@ -5603,6 +6023,10 @@ async function send(id,text){
   import { scanOpportunities, SEVERITY } from "./src/calc/radar.mjs";
   import { nextMoves, recordRound, MOVE } from "./src/calc/shadow.mjs";
   import { quote as makeQuote, compareQuotes, questionsFor, SCOPE } from "./src/calc/sourcing.mjs";
+  import { length as scLength, density as scDensity, boxVolume, formatLength, formatMass, formatArea,
+           LENGTH_UNITS, DENSITY_UNITS } from "./src/calc/units.mjs";
+  import { stage as scStage, routeInput, sheetLayout, barLayout, planMaterial, costPlan,
+           assumptions as scAssumptions, BASIS, CONFIDENCE, CONSUMES, COST_ELEMENTS } from "./src/calc/should-cost.mjs";
   import { part as makePart, savePart, loadParts, deletePart, storeStatus as partStoreStatus,
            forComparison } from "./src/services/part-store.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
@@ -5631,6 +6055,9 @@ async function send(id,text){
                 scanOpportunities, SEVERITY,
                 nextMoves, recordRound, MOVE,
                 makeQuote, compareQuotes, questionsFor, SCOPE,
+                scLength, scDensity, boxVolume, formatLength, formatMass, formatArea, LENGTH_UNITS, DENSITY_UNITS,
+                scStage, routeInput, sheetLayout, barLayout, planMaterial, costPlan, scAssumptions,
+                BASIS, CONFIDENCE, CONSUMES, COST_ELEMENTS,
                 makePart, savePart, loadParts, deletePart, partStoreStatus, forComparison,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
