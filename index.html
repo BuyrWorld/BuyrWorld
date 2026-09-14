@@ -1172,7 +1172,20 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         </div>
 
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
-          <div class="bw-panel-head"><div class="bw-panel-title">5 &middot; Contingency</div></div>
+          <div class="bw-panel-head"><div class="bw-panel-title">5 &middot; The cost</div>
+            <label class="bw-field" style="display:flex;align-items:center;gap:6px;margin:0">Currency
+              <select class="bwin" id="sc-cur" style="max-width:88px"><option>GBP</option><option>EUR</option><option>USD</option></select></label>
+          </div>
+          <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Fill in what you have. <b style="color:var(--bw-text)">Leave an amount blank and it stays blank</b> &mdash; it becomes a declared gap that blocks the total and says what it needs, rather than a zero that reads as free. An element that does not apply to this part, leave switched off entirely.</p>
+          <div id="sc-costs"></div>
+          <label class="bw-field" style="display:flex;align-items:center;gap:8px;margin-top:var(--bw-3)">
+            <input type="checkbox" id="sc-amort" style="width:auto;margin:0">
+            <span>Spread tooling over this quantity instead of showing it separately</span>
+          </label>
+        </div>
+
+        <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+          <div class="bw-panel-head"><div class="bw-panel-title">6 &middot; Contingency</div></div>
           <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Extra blanks above what the route requires, kept as <b style="color:var(--bw-text)">a separate line with its own name</b>. Material quietly inflated to be safe cannot be told apart from material planning that is wrong, and neither can be defended.</p>
           <div class="bw-fields">
             <label class="bw-field">Contingency %<input class="bwin" id="sc-cont" inputmode="decimal" placeholder="0"></label>
@@ -3489,7 +3502,13 @@ function scExample(){
   set("sc-kerf","3");set("sc-edge","10");set("sc-pack","1");set("sc-moq","0");set("sc-cont","0");
   var r=document.getElementById("sc-rot"); if(r)r.checked=false;
   _scStages=[["Laser cut","98","0","input"],["Form","95","4","input"]];
-  scRenderStages();scFormLabels();
+  _scCosts={
+    stock:{on:true,amount:"4620.00",basis:"quoted sheet price, synthetic supplier",quality:"quote-backed"},
+    preparation:{on:true,amount:"880.00",basis:"setup plus cut time at the stated rate",quality:"user-reviewed"},
+    manufacturing:{on:true,amount:"",basis:"",quality:"assumed"},
+    tooling:{on:true,amount:"15000.00",basis:"quoted one-off, synthetic supplier",quality:"quote-backed"}
+  };
+  scRenderStages();scRenderCosts();scFormLabels();
 }
 
 function scClear(){
@@ -3498,6 +3517,8 @@ function scClear(){
     var e=document.getElementById(id); if(e)e.value="";
   });
   var r=document.getElementById("sc-rot"); if(r)r.checked=false;
+  var a=document.getElementById("sc-amort"); if(a)a.checked=false;
+  _scCosts={}; scRenderCosts();
   var o=document.getElementById("sc-out"); if(o)o.innerHTML="";
 }
 
@@ -3574,7 +3595,14 @@ function scRun(){
   }catch(e){ out.innerHTML=scErr(String(e.message||e)); return; }
 
   if(!plan.ok){ out.innerHTML=scErr(plan.reason); return; }
-  out.innerHTML=scPlanHTML(plan,u);
+
+  var cost=null;
+  try{
+    var amort=document.getElementById("sc-amort");
+    cost=B.costPlan(plan,scCostEntries(),{currency:scVal("sc-cur")||"GBP",amortiseTooling:Boolean(amort&&amort.checked)});
+  }catch(e){ out.innerHTML=scPlanHTML(plan,u)+scErr(String(e.message||e)); return; }
+
+  out.innerHTML=scPlanHTML(plan,u)+scCostHTML(plan,cost)+scAssumptionsHTML(plan,cost);
 }
 
 /* ---- rendering. Numbers in, markup out; nothing computed. ---- */
@@ -3586,7 +3614,6 @@ function scRow(label,value,note){
 
 function scPlanHTML(plan,u){
   var B=window.BW,q=plan.quantities,L=plan.layout;
-  var pct=function(r){return B.formatPercent?B.formatPercent(r):"";};
 
   var quantities='<div class="bw-table-wrap"><table class="bw-table">'
     +'<thead><tr><th>Quantity</th><th class="n">Number</th><th>Why it differs from the one above</th></tr></thead><tbody>'
@@ -3631,12 +3658,6 @@ function scPlanHTML(plan,u){
     +'<thead><tr><th>Operation</th><th class="n">In</th><th class="n">Good out</th><th class="n">Lost to yield</th><th class="n">Setup / test</th><th>Taken</th></tr></thead>'
     +'<tbody>'+steps+'</tbody></table></div>':"";
 
-  var assume=(B.scAssumptions?B.scAssumptions(plan,null):[]).map(function(r){
-    var v=r.kind==="ratio"?pct(r.value):(r.kind==="pieces"?String(r.value):"");
-    return '<tr><td>'+ciEsc(r.what)+'</td><td class="n">'+ciEsc(v)+'</td>'
-      +'<td>'+ciEsc(r.basis)+'</td><td style="color:var(--bw-muted);font-size:12px">'+ciEsc(r.affects)+'</td></tr>';
-  }).join("");
-
   return '<div class="bw-panel">'
     +'<div class="bw-panel-head"><div class="bw-panel-title">What to order</div>'
     +'<span class="bw-status bw-status--derived">material plan</span></div>'
@@ -3650,12 +3671,25 @@ function scPlanHTML(plan,u){
     +'<div class="bw-panel-head"><div class="bw-panel-title">The layout</div>'
     +'<span class="bw-status bw-status--review">'+ciEsc(L.kind)+'</span></div>'
     +scLayoutHTML(plan,u)
-    +'</div>'
-    +'<div class="bw-panel" style="margin-top:var(--bw-4)">'
+    +'</div>';
+}
+
+/* Every assumption the result rests on, material and cost together, so a
+   saved estimate can be reproduced from the table rather than from the form. */
+function scAssumptionsHTML(plan,cost){
+  var B=window.BW;
+  var rows=(B.scAssumptions?B.scAssumptions(plan,cost):[]).map(function(r){
+    var v=r.kind==="ratio"?B.formatPercent(r.value)
+      :r.kind==="pieces"?String(r.value)
+      :r.kind==="money"?(r.value.currency+" "+B.moneyToDecimalString(r.value)):"";
+    return '<tr><td>'+ciEsc(r.what)+'</td><td class="n">'+ciEsc(v)+'</td>'
+      +'<td>'+ciEsc(r.basis)+'</td><td style="color:var(--bw-muted);font-size:12px">'+ciEsc(r.affects)+'</td></tr>';
+  }).join("");
+  return '<div class="bw-panel" style="margin-top:var(--bw-4)">'
     +'<div class="bw-panel-head"><div class="bw-panel-title">Assumptions this rests on</div></div>'
     +'<div class="bw-table-wrap"><table class="bw-table">'
     +'<thead><tr><th>What</th><th class="n">Value</th><th>Basis</th><th>Affects</th></tr></thead>'
-    +'<tbody>'+assume+'</tbody></table></div>'
+    +'<tbody>'+rows+'</tbody></table></div>'
     +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.5">'+ciEsc(plan.route.method)+'</p>'
     +'</div>';
 }
@@ -3736,6 +3770,7 @@ function scBind(){
   if(!page||page.dataset.scBound)return;
   page.dataset.scBound="1";
   scRenderStages();
+  scRenderCosts();
   scFormLabels();
   page.addEventListener("change",function(e){
     if(e.target&&e.target.id==="sc-form")scFormLabels();
@@ -3750,6 +3785,125 @@ function scBind(){
     else if(act==="add-stage"){_scStages.push(["","","0","input"]);scRenderStages();}
     else if(act==="remove-stage"){_scStages.splice(Number(t.dataset.scStage),1);scRenderStages();}
   });
+}
+
+/* Cost capture. Three states per element, and the middle one is the point:
+   off (does not apply), on with an amount, on with no amount (a declared
+   gap). Nothing here adds anything up. */
+var _scCosts={};
+
+function scCostRow(def){
+  var c=_scCosts[def.id]||{};
+  var on=Boolean(c.on);
+  return '<div style="border:1px solid var(--bw-border);border-radius:var(--bw-r-sm);padding:10px 12px;margin-bottom:8px'
+    +(on?'':';opacity:.62')+'">'
+    +'<label class="bw-field" style="display:flex;align-items:center;gap:8px;margin-bottom:'+(on?'10px':'0')+'">'
+    +'<input type="checkbox" style="width:auto;margin:0" data-sc-cost="'+attrEsc(def.id)+'" data-sc-cost-field="on" aria-label="Include '+attrEsc(def.label)+' in this estimate"'+(on?' checked':'')+'>'
+    +'<span style="color:var(--bw-text);font-size:var(--bw-t-body)">'+ciEsc(def.label)+'</span>'
+    +(def.credit?' <span class="bw-status bw-status--evidenced">credit</span>':'')
+    +(def.oneTime?' <span class="bw-status bw-status--review">one-time</span>':'')
+    +'</label>'
+    +(on
+      ? '<div class="bw-fields">'
+        +'<label class="bw-field">Amount<input class="bwin" inputmode="decimal" placeholder="leave blank if unknown" value="'+attrEsc(c.amount||"")+'" data-sc-cost="'+attrEsc(def.id)+'" data-sc-cost-field="amount" aria-label="'+attrEsc(def.label)+' amount"></label>'
+        +'<label class="bw-field">Where it came from<input class="bwin" placeholder="'+attrEsc(def.basisNeeded)+'" value="'+attrEsc(c.basis||"")+'" data-sc-cost="'+attrEsc(def.id)+'" data-sc-cost-field="basis" aria-label="'+attrEsc(def.label)+' basis"></label>'
+        +'<label class="bw-field">How strong<select class="bwin" data-sc-cost="'+attrEsc(def.id)+'" data-sc-cost-field="quality" aria-label="'+attrEsc(def.label)+' strength of basis">'
+        +'<option value="assumed"'+(c.quality==="assumed"||!c.quality?' selected':'')+'>assumed</option>'
+        +'<option value="user-reviewed"'+(c.quality==="user-reviewed"?' selected':'')+'>user-reviewed</option>'
+        +'<option value="quote-backed"'+(c.quality==="quote-backed"?' selected':'')+'>quote-backed</option>'
+        +'</select></label>'
+        +'</div>'
+        +'<p style="font-size:11.5px;color:var(--bw-muted);margin:8px 0 0;line-height:1.5">Needs: '+ciEsc(def.basisNeeded)+'</p>'
+      : '<p style="font-size:11.5px;color:var(--bw-muted);margin:6px 0 0 26px;line-height:1.5">Not part of this estimate.</p>')
+    +'</div>';
+}
+
+function scRenderCosts(){
+  var host=document.getElementById("sc-costs");
+  if(!host||!window.BW||!window.BW.COST_ELEMENTS)return;
+  host.innerHTML=window.BW.COST_ELEMENTS.map(scCostRow).join("");
+  if(!host.dataset.delegated){
+    host.dataset.delegated="1";
+    var sync=function(e){
+      var t=e.target;
+      if(!t||!t.dataset||!t.dataset.scCost)return;
+      var id=t.dataset.scCost,field=t.dataset.scCostField;
+      if(!_scCosts[id])_scCosts[id]={};
+      _scCosts[id][field]=field==="on"?t.checked:t.value;
+      if(field==="on")scRenderCosts();
+    };
+    host.addEventListener("input",sync);
+    host.addEventListener("change",sync);
+  }
+}
+
+/* Turn the captured rows into engine entries. An amount left blank becomes a
+   null, which is what makes it a gap rather than a zero. */
+function scCostEntries(){
+  var B=window.BW,cur=scVal("sc-cur")||"GBP",out=[];
+  B.COST_ELEMENTS.forEach(function(def){
+    var c=_scCosts[def.id];
+    if(!c||!c.on)return;
+    var typed=String(c.amount||"").trim();
+    var amount=null;
+    if(typed!==""){
+      var m=B.parseAmount(typed);
+      if(m===null)throw new Error(def.label+": "+JSON.stringify(typed)+" is not an amount. Leave it blank if it is not known.");
+      amount=B.money(m,cur,null);
+    }
+    out.push({id:def.id,amount:amount,basis:c.basis||"",quality:c.quality||"assumed"});
+  });
+  return out;
+}
+
+function scCostHTML(plan,cost){
+  if(!cost||!cost.ok)return"";
+  var B=window.BW,M=B.moneyToDecimalString;
+  var chip=cost.complete
+    ? '<span class="bw-status bw-status--'+(cost.confidence==="quote-backed"?"evidenced":cost.confidence==="user-reviewed"?"supplied":"assumed")+'">'+ciEsc(cost.confidence)+'</span>'
+    : '<span class="bw-status bw-status--high">incomplete</span>';
+
+  var rows=cost.lines.map(function(l){
+    return '<tr><td>'+ciEsc(l.label)
+      +(l.oneTime?' <span class="bw-status bw-status--review">one-time</span>':'')
+      +'</td>'
+      +'<td class="n">'+(l.amount
+        ? (l.credit?'&minus;':'')+ciEsc(cost.currency)+' '+M(l.amount)
+        : '<span style="color:var(--bw-warning)">no figure</span>')+'</td>'
+      +'<td>'+(l.quality?'<span class="bw-status bw-status--'+(l.quality==="quote-backed"?"evidenced":l.quality==="user-reviewed"?"supplied":"assumed")+'">'+ciEsc(l.quality)+'</span>':'')+'</td>'
+      +'<td style="color:var(--bw-muted);font-size:12px">'+ciEsc(l.basis||l.note||"")+'</td></tr>';
+  }).join("");
+
+  var gaps=cost.missing.map(function(m){
+    return '<li><b style="color:var(--bw-text)">'+ciEsc(m.label)+'</b> &mdash; needs '+ciEsc(m.needs)+'</li>';
+  }).join("");
+
+  return '<div class="bw-panel" style="margin-top:var(--bw-4)">'
+    +'<div class="bw-panel-head"><div class="bw-panel-title">'+(cost.complete?"What it should cost":"What it should cost, so far")+'</div>'+chip+'</div>'
+    +'<p style="font-size:var(--bw-t-body);color:var(--bw-body);margin:0 0 var(--bw-4);line-height:1.6">'+ciEsc(cost.statement)+'</p>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Element</th><th class="n">Amount</th><th>Basis</th><th>Where it came from</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +'<div class="bw-metric-grid" style="margin-top:var(--bw-4)">'
+    +'<div class="bw-metric"><div class="bw-metric-label">'+(cost.complete?"Total, recurring":"Subtotal so far")+'</div>'
+    +'<div class="bw-metric-value">'+ciEsc(cost.currency)+' '+M(cost.subtotal)+'</div>'
+    +'<div class="bw-metric-sub">'+(cost.complete?"for "+plan.quantities.acceptedPartsRequired+" accepted parts":"not a total &mdash; elements are missing")+'</div></div>'
+    +'<div class="bw-metric"><div class="bw-metric-label">Per accepted part</div>'
+    +'<div class="bw-metric-value">'+(cost.perAcceptedPart?ciEsc(cost.currency)+' '+M(cost.perAcceptedPart):'&mdash;')+'</div>'
+    +'<div class="bw-metric-sub">'+(cost.perAcceptedPart?"over the parts actually required":"withheld while the estimate has gaps")+'</div></div>'
+    +(cost.lines.some(function(l){return l.oneTime;})
+      ? '<div class="bw-metric"><div class="bw-metric-label">One-time</div>'
+        +'<div class="bw-metric-value">'+ciEsc(cost.currency)+' '+M(cost.oneTime)+'</div>'
+        +'<div class="bw-metric-sub">shown apart from the recurring cost</div></div>'
+      : '')
+    +(cost.materialShare!==null?'<div class="bw-metric"><div class="bw-metric-label">Material share</div>'
+      +'<div class="bw-metric-value">'+ciEsc(B.formatPercent(cost.materialShare))+'</div>'
+      +'<div class="bw-metric-sub">of the recurring cost</div></div>':'')
+    +'</div>'
+    +(gaps?'<div class="eyebrow" style="margin:var(--bw-5) 0 6px">No figure yet</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+gaps+'</ul>':'')
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-4) 0 0;line-height:1.5">'+ciEsc(cost.method)+'</p>'
+    +'</div>';
 }
 
 function defHistoryHTML(){

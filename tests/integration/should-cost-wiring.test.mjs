@@ -18,12 +18,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-import { ratioFromPercent, ratioToPercentString } from "../../src/calc/exact.mjs";
+import {
+  ratioFromPercent, ratioToPercentString, money, moneyFromDecimal, moneyToDecimalString,
+} from "../../src/calc/exact.mjs";
 import {
   length as scLength, density as scDensity, boxVolume, formatLength, formatMass, formatArea,
 } from "../../src/calc/units.mjs";
 import {
-  stage as scStage, sheetLayout, barLayout, planMaterial, assumptions as scAssumptions, CONSUMES,
+  stage as scStage, sheetLayout, barLayout, planMaterial, costPlan,
+  assumptions as scAssumptions, CONSUMES, COST_ELEMENTS,
 } from "../../src/calc/should-cost.mjs";
 
 const html = readFileSync("index.html", "utf8");
@@ -37,7 +40,7 @@ function fnSource(name) {
 }
 
 /** Run the page's should-cost code over a stub form. */
-function run(fields = {}, { stages, checked = false } = {}) {
+function run(fields = {}, { stages, checked = false, costs = {}, amortise = false } = {}) {
   const values = {
     "sc-qty": "1000", "sc-unit": "mm", "sc-grade": "Fictional grade FG-300",
     "sc-bw": "200", "sc-bl": "100", "sc-bt": "5",
@@ -45,20 +48,29 @@ function run(fields = {}, { stages, checked = false } = {}) {
     "sc-dv": "7.85", "sc-du": "g/cm3", "sc-ds": "Synthetic datasheet",
     "sc-form": "sheet", "sc-s1": "2000", "sc-s2": "1000",
     "sc-kerf": "3", "sc-edge": "10", "sc-pack": "1", "sc-moq": "0", "sc-cont": "0",
+    "sc-cur": "GBP",
     ...fields,
   };
   const out = { innerHTML: "" };
-  const rot = { checked };
+  const boxes = { "sc-rot": { checked }, "sc-amort": { checked: amortise } };
   const sandbox = {
     document: {
       getElementById: (id) =>
-        (id === "sc-out" ? out : id === "sc-rot" ? rot : (id in values ? { value: values[id] } : null)),
+        (id === "sc-out" ? out : (id in boxes ? boxes[id] : (id in values ? { value: values[id] } : null))),
     },
     window: {
       BW: {
         pc: ratioFromPercent, formatPercent: (r) => ratioToPercentString(r, 1),
+        money, moneyToDecimalString,
+        /* The page's own amount parser, which the defender already uses. */
+        parseAmount: (v) => {
+          const t = String(v).replace(/[^0-9.]/g, "");
+          if (t === "" || !/^\d+(\.\d{1,2})?$/.test(t)) return null;
+          return moneyFromDecimal(t, "GBP", null).minor;
+        },
         scLength, scDensity, boxVolume, formatLength, formatMass, formatArea,
-        scStage, sheetLayout, barLayout, planMaterial, scAssumptions, CONSUMES,
+        scStage, sheetLayout, barLayout, planMaterial, costPlan, scAssumptions,
+        CONSUMES, COST_ELEMENTS,
       },
     },
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
@@ -66,12 +78,18 @@ function run(fields = {}, { stages, checked = false } = {}) {
     attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
     console,
     _scStages: stages ?? [["Laser cut", "98", "0", "input"], ["Form", "95", "4", "input"]],
+    _scCosts: costs,
   };
-  const src = ["scVal", "scInt", "scErr", "scRun", "scRow", "scPlanHTML", "scLayoutHTML"].map(fnSource).join("\n");
+  const src = ["scVal", "scInt", "scErr", "scRun", "scRow", "scPlanHTML", "scLayoutHTML",
+               "scCostEntries", "scCostHTML", "scAssumptionsHTML"].map(fnSource).join("\n");
   vm.createContext(sandbox);
   new vm.Script(src + "\n;scRun();").runInContext(sandbox);
   return out.innerHTML;
 }
+
+/** The shape the cost capture stores per element. */
+const costed = (amount, quality = "quote-backed", basis = "synthetic quote") =>
+  ({ on: true, amount, basis, quality });
 
 describe("it is wired in", () => {
   test("both modules are imported and mounted", () => {
@@ -279,5 +297,99 @@ describe("escaping", () => {
 
   test("nothing raw reaches the markup", () => {
     assert.equal(/\[object Object\]|undefined|NaN/.test(run()), false);
+  });
+});
+
+describe("the cost, and the empty field", () => {
+  test("an element switched off is simply absent, and the estimate is complete", () => {
+    const o = run({}, { costs: { stock: costed("4620.00") } });
+    assert.match(o, /What it should cost<\/div>/);
+    assert.match(o, /quote-backed/);
+    assert.equal(/no figure/.test(o), false);
+  });
+
+  test("an element switched on with no amount is a gap, not a zero", () => {
+    // The failure this page exists to avoid: a blank row rendering as 0.00,
+    // which on screen reads as free.
+    const o = run({}, { costs: { stock: costed("4620.00"), manufacturing: { on: true, amount: "" } } });
+    assert.match(o, /no figure/);
+    assert.equal(/GBP 0\.00/.test(o), false);
+    assert.match(o, /What it should cost, so far/);
+    assert.match(o, /incomplete/);
+  });
+
+  test("a gap blocks the per-part figure rather than dividing a partial sum", () => {
+    const o = run({}, { costs: { stock: costed("4620.00"), manufacturing: { on: true, amount: "" } } });
+    assert.match(o, /withheld while the estimate has gaps/);
+    assert.match(o, /Subtotal so far/);
+    assert.match(o, /not a total/);
+  });
+
+  test("a gap says what it needs, so it can be closed", () => {
+    const o = run({}, { costs: { stock: costed("4620.00"), manufacturing: { on: true, amount: "" } } });
+    assert.match(o, /No figure yet/);
+    assert.match(o, /needs operation setup and cycle rate/);
+  });
+
+  test("the weakest basis sets the confidence of the whole estimate", () => {
+    const o = run({}, {
+      costs: {
+        stock: costed("4620.00", "quote-backed"),
+        manufacturing: costed("880.00", "assumed", "estimated cycle time"),
+      },
+    });
+    assert.match(o, /bw-status--assumed">budgetary/);
+  });
+
+  test("tooling is shown apart from the recurring cost", () => {
+    const o = run({}, { costs: { stock: costed("4620.00"), tooling: costed("15000.00") } });
+    assert.match(o, /one-time/);
+    assert.match(o, /GBP 4620\.00/);
+    assert.match(o, /GBP 15000\.00/);
+  });
+
+  test("amortising tooling moves it into the recurring figure", () => {
+    const o = run({}, { costs: { stock: costed("4620.00"), tooling: costed("15000.00") }, amortise: true });
+    assert.match(o, /GBP 19620\.00/);
+  });
+
+  test("a scrap credit is shown as a subtraction, not as a cost", () => {
+    const o = run({}, { costs: { stock: costed("4620.00"), scrapCredit: costed("200.00") } });
+    assert.match(o, /&minus;GBP 200\.00/);
+    assert.match(o, /GBP 4420\.00/);
+  });
+
+  test("an amount that is not an amount is refused, and says to leave it blank", () => {
+    const o = run({}, { costs: { stock: { on: true, amount: "about four thousand", basis: "x" } } });
+    assert.match(o, /is not an amount/);
+    assert.match(o, /Leave it blank if it is not known/);
+  });
+
+  test("a priced element with no basis is refused rather than accepted", () => {
+    const o = run({}, { costs: { stock: { on: true, amount: "4620.00", basis: "" } } });
+    assert.match(o, /no basis/);
+    assert.match(o, /What to order/, "the material plan still renders — only the cost is rejected");
+  });
+
+  test("no cost entered at all still produces the material plan", () => {
+    const o = run();
+    assert.match(o, /What to order/);
+    assert.match(o, /Assumptions this rests on/);
+  });
+
+  test("the cost lines reach the assumptions table with their basis", () => {
+    const o = run({}, { costs: { stock: costed("4620.00", "quote-backed", "quoted sheet price") } });
+    const table = o.slice(o.indexOf("Assumptions this rests on"));
+    assert.match(table, /Raw stock/);
+    assert.match(table, /quote-backed — quoted sheet price/);
+    assert.match(table, /GBP 4620\.00/);
+  });
+
+  test("the material and cost assumptions sit in one table, not two half ones", () => {
+    const o = run({}, { costs: { stock: costed("4620.00") } });
+    assert.equal((o.match(/Assumptions this rests on/g) || []).length, 1);
+    const table = o.slice(o.indexOf("Assumptions this rests on"));
+    assert.match(table, /Laser cut yield/, "a material assumption");
+    assert.match(table, /Raw stock/, "a cost assumption");
   });
 });

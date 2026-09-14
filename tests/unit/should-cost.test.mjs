@@ -545,3 +545,36 @@ describe("a result without its assumptions is not a result", () => {
     assert.match(stock.basis, /quote-backed — quoted sheet price/);
   });
 });
+
+describe("a share of a partial sum is a number about the wrong total", () => {
+  test("material share is withheld while anything is missing", () => {
+    const c = costPlan(plateJob(), [
+      { id: "stock", amount: gbp("4620.00"), basis: "quoted", quality: BASIS.QUOTED },
+      { id: "manufacturing", amount: null },
+    ]);
+    assert.equal(c.materialShare, null,
+      "84% of a subtotal missing the machining is not 84%");
+    assert.equal(c.perAcceptedPart, null);
+  });
+
+  test("it returns once the gap is filled", () => {
+    const c = costPlan(plateJob(), [
+      { id: "stock", amount: gbp("3000.00"), basis: "quoted", quality: BASIS.QUOTED },
+      { id: "manufacturing", amount: gbp("1000.00"), basis: "quoted", quality: BASIS.QUOTED },
+    ]);
+    assert.equal(ratioToPercentString(c.materialShare, 0), "75%");
+  });
+
+  test("an unpriced element reaches the assumptions table as a gap, not as money", () => {
+    // It crashed here first: an assumptions row built from a null amount.
+    const p = plateJob();
+    const rows = assumptions(p, costPlan(p, [
+      { id: "stock", amount: gbp("4620.00"), basis: "quoted", quality: BASIS.QUOTED },
+      { id: "manufacturing", amount: null },
+    ]));
+    const gap = rows.find((r) => r.what === "Manufacturing");
+    assert.equal(gap.kind, "gap");
+    assert.equal(gap.value, null);
+    assert.match(gap.affects, /not a total until this is known/);
+  });
+});

@@ -556,8 +556,12 @@ export function costPlan(plan, entries = [], { currency = null, amortiseTooling 
     : CONFIDENCE.BUDGETARY;
 
   const perPart = parts > 0n ? money(scaleDiv(recurringMinor, parts), cur, null) : null;
-  const materialLine = lines.find((l) => l.id === "stock");
-  const materialShare = materialLine && recurringMinor > 0n
+  const materialLine = lines.find((l) => l.id === "stock" && l.amount !== null);
+  /* Withheld while anything is missing, for the same reason as the per-part
+     figure: a share of a partial sum is a real number about the wrong total,
+     and it moves the moment a gap is filled. Material at 84% of a subtotal
+     missing the machining is not material at 84%. */
+  const materialShare = complete && materialLine && recurringMinor > 0n
     ? scaleDiv(materialLine.amount.minor * SCALE, recurringMinor)
     : null;
 
@@ -633,6 +637,17 @@ export function assumptions(plan, cost) {
   }
   if (cost && cost.ok) {
     for (const l of cost.lines) {
+      /* A declared gap has no amount, and must not be rendered as one. It is
+         still an assumption the result rests on — the assumption that this
+         element will turn out to cost something nobody has established. */
+      if (l.amount === null) {
+        rows.push({
+          what: l.label, value: null, kind: "gap",
+          basis: "no figure",
+          affects: "the subtotal is not a total until this is known",
+        });
+        continue;
+      }
       rows.push({ what: l.label, value: l.amount, kind: "money", basis: `${l.quality} — ${l.basis}`, affects: "the estimate" });
     }
   }
