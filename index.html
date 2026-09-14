@@ -1113,6 +1113,19 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     </div>
 
     <div id="sc-mode-material" role="tabpanel" aria-labelledby="sc-tab-material">
+
+      <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+        <div class="bw-panel-head"><div class="bw-panel-title">0 &middot; Read it off the drawing</div>
+          <span class="bw-status bw-status--derived">optional</span></div>
+        <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Upload a PDF and the labelled values on it are read out, each with the page and the exact characters it came from. <b style="color:var(--bw-text)">The file never leaves this browser</b> &mdash; there is no upload, no extraction service and no prompt, so nothing written in the document can change what is read. Nothing found is used until you confirm it.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <label class="bw-act bw-act-secondary" style="cursor:pointer;margin:0">
+            Choose a PDF<input type="file" id="scx-file" accept=".pdf,application/pdf" style="display:none">
+          </label>
+          <span id="scx-name" style="font-size:12.5px;color:var(--bw-muted)"></span>
+        </div>
+        <div id="scx-out" style="margin-top:var(--bw-4)"></div>
+      </div>
     <div class="bw-grid bw-grid-2" style="align-items:start">
       <div>
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
@@ -1217,6 +1230,19 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6">No limit is supplied for you. This has no opinion about what any grade requires: every requirement below comes from a document you identify by revision and clause, because revisions change limits.</p>
       </div>
 
+
+      <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+        <div class="bw-panel-head"><div class="bw-panel-title">0 &middot; Read it off the document</div>
+          <span class="bw-status bw-status--derived">optional</span></div>
+        <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Upload a PDF and the labelled values on it are read out, each with the page and the exact characters it came from. <b style="color:var(--bw-text)">The file never leaves this browser</b> &mdash; there is no upload, no extraction service and no prompt, so nothing written in the document can change what is read. Nothing found is used until you confirm it.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <label class="bw-act bw-act-secondary" style="cursor:pointer;margin:0">
+            Choose a PDF<input type="file" id="ctx-file" accept=".pdf,application/pdf" style="display:none">
+          </label>
+          <span id="ctx-name" style="font-size:12.5px;color:var(--bw-muted)"></span>
+        </div>
+        <div id="ctx-out" style="margin-top:var(--bw-4)"></div>
+      </div>
       <div class="bw-grid bw-grid-2" style="align-items:start">
         <div>
           <div class="bw-panel" style="margin-bottom:var(--bw-4)">
@@ -3879,6 +3905,7 @@ function scBind(){
   scRenderStages();
   scRenderCosts();
   scFormLabels();
+  exBind(page);
   page.addEventListener("change",function(e){
     if(e.target&&e.target.id==="sc-form")scFormLabels();
   });
@@ -4321,6 +4348,223 @@ function mlBindActions(act){
       +'. Copy from the box below.</p>'
       +'<textarea class="bwin" style="margin-top:8px;min-height:120px;font-family:monospace;font-size:11px" readonly aria-label="Exported lot records">'+ciEsc(B.exportLots())+'</textarea>';
   }
+}
+
+/* ------------------------------------------------------------- extraction ---
+   Reading a PDF, per page, in this browser. Nothing is uploaded and no model
+   is asked; extract-document.mjs matches written rules and hands back what it
+   matched. */
+
+var _exState={scx:null,ctx:null};
+
+/**
+ * A PDF as per-page text, with the true page count.
+ *
+ * The comparator's extractFile flattens the pages into one string and stops
+ * at twelve without saying so. A value's page is part of its evidence here,
+ * and a page nobody read is a blocker rather than a silence, so this keeps
+ * both.
+ */
+async function scPdfPages(file){
+  var buf=await file.arrayBuffer();
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc=await verifiedWorkerURL("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js");
+  var pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  var limit=Math.min(pdf.numPages,60);
+  var pages=[];
+  for(var i=1;i<=limit;i++){
+    var pg=await pdf.getPage(i);
+    var c=await pg.getTextContent();
+    pages.push({page:i,text:c.items.map(function(x){return x.str;}).join(" ")});
+  }
+  return {pages:pages,pagesInDocument:pdf.numPages};
+}
+
+async function exRead(which,input){
+  var out=document.getElementById(which+"-out");
+  var nameEl=document.getElementById(which+"-name");
+  var f=input&&input.files&&input.files[0];
+  if(!out||!f)return;
+
+  if(nameEl)nameEl.textContent=f.name+" — reading…";
+  if(f.size>MAX_FILE_MB*1024*1024){
+    if(nameEl)nameEl.textContent=f.name;
+    out.innerHTML=exErr("That file is "+(f.size/1024/1024).toFixed(1)+"MB; the limit is "+MAX_FILE_MB+"MB.");
+    return;
+  }
+  if(!/\.pdf$/i.test(f.name)){
+    if(nameEl)nameEl.textContent=f.name;
+    out.innerHTML=exErr("This reads PDFs. An image is a picture of a document: no dimension may be derived from its pixels, so it is refused rather than guessed at. Enter the values by hand instead.");
+    return;
+  }
+
+  var read;
+  try{ read=await scPdfPages(f); }
+  catch(e){ if(nameEl)nameEl.textContent=f.name; out.innerHTML=exErr("That PDF could not be opened: "+String(e.message||e)); return; }
+
+  var target=which==="ctx"?window.BW.EX_TARGET.CERTIFICATE:window.BW.EX_TARGET.DRAWING;
+  var result=window.BW.extractDocument(read.pages,{
+    filename:f.name,target:target,pagesInDocument:read.pagesInDocument
+  });
+  _exState[which]=result;
+  if(nameEl)nameEl.textContent=f.name+" — "+read.pages.length+" of "+read.pagesInDocument+" page(s) read";
+  out.innerHTML=exResultHTML(which,result);
+  input.value="";
+}
+
+function exErr(m){
+  return '<p style="color:var(--bw-danger);font-size:var(--bw-t-body);margin:0;line-height:1.6">'+ciEsc(m)+'</p>';
+}
+
+function exResultHTML(which,r){
+  var B=window.BW,rows=B.reviewTable(r);
+  if(rows.length===0&&r.blockers.length===0){
+    return '<p style="font-size:var(--bw-t-body);color:var(--bw-muted);margin:0;line-height:1.6">Nothing on this document matched a rule. That is not a failure of the document &mdash; the rules here are deliberately narrow, and a value they did not match is one you enter by hand.</p>';
+  }
+
+  var chip=function(c){
+    return c===B.EX_CONFIDENCE.LABELLED?"evidenced":c===B.EX_CONFIDENCE.RECOGNISED?"review":"medium";
+  };
+
+  var body=rows.map(function(row,i){
+    var c=row.best;
+    return '<tr'+(row.needsAttention?' style="background:var(--bw-warning-soft)"':'')+'>'
+      +'<td>'+ciEsc(row.label)
+      +(row.alternatives.length?'<div style="font-size:11.5px;color:var(--bw-warning)">'+row.alternatives.length+' other reading(s) on this document</div>':'')
+      +(c.missingUnit?'<div style="font-size:11.5px;color:var(--bw-warning)">no unit stated</div>':'')
+      +'</td>'
+      +'<td><input class="bwin" value="'+attrEsc(c.value)+'" data-ex="'+attrEsc(which)+'" data-ex-row="'+i+'" aria-label="'+attrEsc(row.label)+' value"></td>'
+      +'<td>'+(c.unit?ciEsc(c.unit):'<span style="color:var(--bw-warning)">&mdash;</span>')+'</td>'
+      +'<td class="n">'+c.page+'</td>'
+      +'<td style="font-family:monospace;font-size:11.5px;color:var(--bw-muted)">'+ciEsc(c.quote)+'</td>'
+      +'<td><span class="bw-status bw-status--'+chip(c.confidence)+'">'+ciEsc(c.confidence)+'</span></td>'
+      +'<td><label class="bw-field" style="display:flex;align-items:center;gap:6px;margin:0">'
+      +'<input type="checkbox" style="width:auto;margin:0" data-ex="'+attrEsc(which)+'" data-ex-confirm="'+i+'"'+(c.state==="confirmed"?' checked':'')
+      +' aria-label="I have checked '+attrEsc(row.label)+' against the document"><span style="font-size:11.5px">checked</span></label></td>'
+      +'</tr>';
+  }).join("");
+
+  var blockers=r.blockers.map(function(b){
+    return '<li><b style="color:var(--bw-text)">'+ciEsc(b.what)+'</b> &mdash; '+ciEsc(b.detail)+'</li>';
+  }).join("");
+
+  var conflicts=r.conflicts.map(function(k){
+    return '<li><b style="color:var(--bw-text)">'+ciEsc(k.label)+'</b> &mdash; '
+      +k.values.map(function(v){return ciEsc(v.value)+' (p'+v.page+')';}).join(' &middot; ')
+      +'<br><span style="color:var(--bw-muted)">'+ciEsc(k.why)+'</span></li>';
+  }).join("");
+
+  return (blockers?'<div style="border:1px solid var(--bw-warning);background:var(--bw-warning-soft);border-radius:var(--bw-r-sm);padding:12px 14px;margin-bottom:var(--bw-4)">'
+      +'<div class="eyebrow" style="margin:0 0 6px">Resolve before anything rests on this</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+blockers+'</ul></div>':'')
+    +(conflicts?'<div class="eyebrow" style="margin:0 0 6px">The document disagrees with itself</div>'
+      +'<ul style="margin:0 0 var(--bw-4);padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+conflicts+'</ul>':'')
+    +(rows.length?'<div class="bw-table-wrap"><table class="bw-table">'
+      +'<thead><tr><th>Field</th><th>Value</th><th>Unit</th><th class="n">Page</th><th>Read from</th><th>How</th><th>Confirm</th></tr></thead>'
+      +'<tbody>'+body+'</tbody></table></div>'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--bw-4)">'
+      +'<button class="bw-act bw-act-primary" data-ex-act="apply" data-ex="'+attrEsc(which)+'">Use the confirmed values &rarr;</button>'
+      +'</div>'
+      +'<div id="'+attrEsc(which)+'-apply" style="margin-top:var(--bw-3)"></div>':'')
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-4) 0 0;line-height:1.55">'+ciEsc(r.method)+'</p>';
+}
+
+/* Which form field each extracted field fills. Anything not named here is
+   read and shown, and filled in by hand — a mapping nobody wrote is not a
+   mapping to guess at. */
+var EX_TO_FORM={
+  ctx:{certificateNumber:"ct-number",heat:"ct-heat",lot:"ct-lot",producer:"ct-producer",
+       distributor:"ct-distributor",specification:"ct-spec",specificationRevision:"ct-specrev",
+       condition:"ct-condition",form:"ct-form",pagesDeclared:"ct-pagesdec"},
+  scx:{thickness:"sc-bt",width:"sc-bw",length:"sc-bl",material:"sc-grade"}
+};
+
+function exApply(which){
+  var msg=document.getElementById(which+"-apply");
+  var r=_exState[which];
+  if(!msg||!r)return;
+  var rows=window.BW.reviewTable(r);
+  var map=EX_TO_FORM[which]||{};
+  var filled=[],skipped=[],unmapped=[];
+
+  rows.forEach(function(row){
+    if(row.best.state!=="confirmed"){skipped.push(row.label);return;}
+    var id=map[row.field];
+    if(!id){unmapped.push(row.label);return;}
+    var el=document.getElementById(id);
+    if(!el){unmapped.push(row.label);return;}
+    el.value=row.best.value;
+    filled.push(row.label);
+  });
+
+  if(which==="ctx"){
+    var obs=rows.filter(function(row){return row.field.indexOf("chem.")===0||["UTS","yield","elongation","hardness"].indexOf(row.field)>=0;})
+      .filter(function(row){return row.best.state==="confirmed";});
+    if(obs.length&&typeof _ctObs!=="undefined"){
+      obs.forEach(function(row){
+        var property=row.field.indexOf("chem.")===0?row.field.slice(5):row.field;
+        _ctObs.push([property,row.best.value,row.best.unit||"",String(row.best.page),row.best.quote,true]);
+        filled.push(row.label);
+      });
+      if(typeof ctRenderRows==="function")ctRenderRows();
+    }
+  }
+
+  var k=window.BW.readiness(r,{
+    required:which==="ctx"?["heat","specification"]:["material","thickness","width","length"],
+    quantityConfirmed:which==="scx"&&String((document.getElementById("sc-qty")||{}).value||"").trim()!==""
+  });
+
+  msg.innerHTML='<p style="font-size:12.5px;margin:0;line-height:1.7;color:var(--bw-body)">'
+    +(filled.length?'<span style="color:var(--bw-success)">Filled in: '+ciEsc(filled.join(", "))+'.</span> ':'')
+    +(skipped.length?'<span style="color:var(--bw-muted)">Not confirmed, so not used: '+ciEsc(skipped.join(", "))+'.</span> ':'')
+    +(unmapped.length?'<span style="color:var(--bw-muted)">Read but has no field on this form, so enter it by hand: '+ciEsc(unmapped.join(", "))+'.</span>':'')
+    +'</p>'
+    +'<p style="font-size:12.5px;margin:var(--bw-2) 0 0;line-height:1.6;color:var(--bw-'+(k.ready?"success":"warning")+')">'
+    +ciEsc(k.ready?"This reading supports an order-ready recommendation.":"This supports "+k.allows+". "+k.why)+'</p>';
+}
+
+function exBind(page){
+  if(page.dataset.exBound)return;
+  page.dataset.exBound="1";
+  page.addEventListener("change",function(e){
+    var t=e.target;
+    if(!t||!t.dataset)return;
+    if(t.type==="file"&&/-file$/.test(t.id||"")){exRead(t.id.replace(/-file$/,""),t);return;}
+    if(t.dataset.exConfirm!==undefined){
+      var which=t.dataset.ex,r=_exState[which];
+      if(!r)return;
+      var rows=window.BW.reviewTable(r);
+      var row=rows[Number(t.dataset.exConfirm)];
+      if(!row)return;
+      /* Confirming replaces the candidate in place, so the state the table
+         renders from is the state the apply step reads. */
+      var next=r.candidates.map(function(c){
+        return c===row.best?(t.checked?window.BW.confirmCandidate(c,"this browser"):Object.assign({},c,{state:"proposed",confirmedBy:null})):c;
+      });
+      _exState[which]=Object.assign({},r,{candidates:next});
+    }
+  });
+  page.addEventListener("input",function(e){
+    var t=e.target;
+    if(!t||!t.dataset||t.dataset.exRow===undefined)return;
+    var which=t.dataset.ex,r=_exState[which];
+    if(!r)return;
+    var rows=window.BW.reviewTable(r);
+    var row=rows[Number(t.dataset.exRow)];
+    if(!row)return;
+    /* An edited value is the person's, not the document's. It keeps the page
+       and the quote it came from, and loses its confirmation — what was
+       checked against the document was the old value. */
+    var next=r.candidates.map(function(c){
+      return c===row.best?Object.assign({},c,{value:t.value,state:"proposed",confirmedBy:null,edited:true}):c;
+    });
+    _exState[which]=Object.assign({},r,{candidates:next});
+  });
+  page.addEventListener("click",function(e){
+    var t=e.target&&e.target.closest?e.target.closest("[data-ex-act]"):null;
+    if(t&&t.dataset.exAct==="apply")exApply(t.dataset.ex);
+  });
 }
 
 function ctRenderRows(){
@@ -6812,6 +7056,8 @@ async function send(id,text){
   import { quote as makeQuote, compareQuotes, questionsFor, SCOPE } from "./src/calc/sourcing.mjs";
   import { length as scLength, density as scDensity, boxVolume, formatLength, formatMass, formatArea,
            LENGTH_UNITS, DENSITY_UNITS } from "./src/calc/units.mjs";
+  import { extractDocument, confirmCandidate, readiness, reviewTable,
+           CONFIDENCE as EX_CONFIDENCE, TARGET as EX_TARGET } from "./src/intake/extract-document.mjs";
   import { lotRecord, lotFromReview, millPerformance, rank as millRank, uniqueLots,
            DECISION as MILL_DECISION, RESPONSIBILITY, SCOPE as MILL_SCOPE,
            DEFAULT_MINIMUM_LOTS, FILTERS as MILL_FILTERS } from "./src/calc/mill.mjs";
@@ -6854,6 +7100,7 @@ async function send(id,text){
                 scLength, scDensity, boxVolume, formatLength, formatMass, formatArea, LENGTH_UNITS, DENSITY_UNITS,
                 ctQuantity, ctRequirement, ctObservation, ctCertificate, checkCertificate, recordReview, lotKey,
                 CT_RESULT, CT_OVERALL, CT_KIND, CT_DISPOSITION, CT_RULES,
+                extractDocument, confirmCandidate, readiness, reviewTable, EX_CONFIDENCE, EX_TARGET,
                 lotRecord, lotFromReview, millPerformance, millRank, uniqueLots,
                 MILL_DECISION, RESPONSIBILITY, MILL_SCOPE, DEFAULT_MINIMUM_LOTS, MILL_FILTERS,
                 saveLot, loadLots, deleteLot, clearLots, exportLots, lotStoreStatus,
