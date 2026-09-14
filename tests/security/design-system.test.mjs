@@ -184,12 +184,14 @@ describe("the application shell", () => {
     }
   });
 
-  test("it appears only where there is room, and the top nav yields to it", () => {
+  test("it appears only where there is room, and the top bar yields to it entirely", () => {
     assert.match(css, /\.bw-side\{display:none\}/, "narrow screens keep the existing mobile menu untouched");
     const desktop = css.slice(css.indexOf("@media(min-width:1080px){"));
-    assert.match(desktop, /#desknav\{display:none\}/, "two navigations at once would be a duplicate");
-    assert.match(desktop, /header\{padding-left:236px\}/);
+    // The bar held a nav already hidden as a duplicate and a second copy of
+    // the wordmark the sidebar now carries. Nothing was left in it to show.
+    assert.match(desktop, /header\{display:none\}/, "a bar containing only a duplicate logo still costs 57px");
     assert.match(desktop, /main\{padding-left:236px\}/);
+    assert.match(desktop, /footer\{padding-left:236px\}/);
   });
 
   test("the active destination is marked for a screen reader, not only in colour", () => {
@@ -206,7 +208,17 @@ describe("the application shell", () => {
   test("the nav is built from LINKS, so it cannot advertise a route that does not exist", () => {
     const render = html.slice(html.indexOf("function renderNav()"), html.indexOf("document.addEventListener(\"click\""));
     assert.match(render, /side\.innerHTML=/);
-    assert.equal((render.match(/LINKS\.map/g) || []).length, 2, "one source of truth for destinations");
+    // The sidebar groups the destinations rather than listing them, so it no
+    // longer maps LINKS directly. LINKS is still the one source of truth:
+    // the grouping may only rearrange what is already there.
+    assert.match(render, /LINKS\.map/, "the top nav still derives from LINKS");
+    assert.match(render, /labels\[x\[0\]\]=x\[1\]/, "the sidebar takes its labels from LINKS too");
+
+    const keys = [...html.match(/const LINKS=\[(.*?)\];/s)[1].matchAll(/\["([a-z-]+)",/g)].map((m) => m[1]);
+    const grouped = [...html.match(/const NAV_GROUPS=\[(.*?)\n\];/s)[1].matchAll(/"([a-z-]+)"/g)]
+      .map((m) => m[1]);
+    assert.deepEqual([...grouped].sort(), [...keys].sort(),
+      "the sidebar groups reach every destination exactly once, and invent none");
   });
 
   test("every destination in LINKS has an icon", () => {

@@ -121,14 +121,14 @@
     display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:236px;z-index:60;
     background:var(--bw-sidebar);border-right:1px solid var(--bw-border);padding:var(--bw-5) var(--bw-3);overflow-y:auto;
   }
-  header{padding-left:236px}
   main{padding-left:236px}
   /* The footer was left behind when the shell gained a sidebar, so it drew
      underneath it. Below 1400px that covered the footer logo outright. */
   footer{padding-left:236px}
-  /* One navigation, not two. The top nav is the mobile and narrow-desktop
-     affordance; where the sidebar exists it would only be a duplicate. */
-  #desknav{display:none}
+  /* One navigation, not two, and one wordmark. The top bar is the mobile
+     and narrow-desktop affordance; beside the sidebar it held a duplicate
+     nav and a second copy of the logo, and nothing else. */
+  header{display:none}
 }
 /* The same lockup the header and footer carry, not a second wordmark set
    in type. Sized by width because the mark, not the cap height, is what the
@@ -138,6 +138,10 @@
 .bw-side-brand:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px;border-radius:var(--bw-r-sm)}
 .bw-side-tag{font-size:var(--bw-t-meta);color:var(--bw-subtle);padding:0 var(--bw-3);margin-bottom:var(--bw-6);line-height:1.45}
 .bw-side-nav{display:flex;flex-direction:column;gap:2px}
+/* A group heading, not a link. Eleven destinations read as a list to get
+   through; four groups read as a place to look. */
+.bw-side-group{font-size:var(--bw-t-meta);letter-spacing:.08em;text-transform:uppercase;color:var(--bw-subtle);padding:0 var(--bw-3);margin:var(--bw-5) 0 var(--bw-2)}
+.bw-side-nav > .bw-side-group:first-child{margin-top:0}
 .bw-side-link{
   display:flex;align-items:center;gap:var(--bw-3);width:100%;text-align:left;
   font-family:'Inter',sans-serif;font-size:var(--bw-t-body);color:var(--bw-muted);
@@ -348,7 +352,7 @@ input.bwin:focus, textarea.bwin:focus, select.bwin:focus{border-color:var(--lime
 .flip-tpl.flipped .tpl-front{opacity:0;pointer-events:none}
 .tpl-back-wrap{position:relative;width:100%;height:100%;background:#fff;border-radius:15px}
 .tpl-preview-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center;display:block;background:#fff;border-radius:15px}
-.tpl-back-bar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:8px;padding:12px;background:linear-gradient(to top,rgba(12,12,12,.95),rgba(12,12,12,.7) 65%,transparent)}
+.tpl-back-bar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:8px;padding:12px;background:linear-gradient(to top,rgba(11,16,20,.95),rgba(11,16,20,.7) 65%,transparent)}
 /* spreadsheet previews are landscape — sit the wide image at the top of the white page (like a real sheet) instead of letterboxed dead-centre, and signal "this is a different file type" */
 .flip-tpl.is-xlsx .tpl-preview-img{object-position:center top}
 .flip-tpl.is-xlsx.flipped{min-height:360px}
@@ -421,14 +425,14 @@ button,[role="button"],a.btn{min-height:24px;min-width:24px}
     transition-duration:.001ms !important;scroll-behavior:auto !important}
   .ticker{flex-wrap:wrap;white-space:normal}
 }
-header{position:sticky;top:0;z-index:50;background:rgba(12,12,12,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header{position:sticky;top:0;z-index:50;background:rgba(11,16,20,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .nav-in{display:flex;align-items:center;height:60px;gap:8px}
 .desk-only{display:flex;align-items:center;margin-left:auto}.mob-only{display:none;margin-left:auto}
 #mobmenu{display:none;border-top:1px solid var(--line);padding:12px;flex-direction:column}
 #mobmenu .navlink{text-align:left;padding:12px}
-.hero{padding:84px 0 60px;border-bottom:1px solid var(--line);background:radial-gradient(800px 400px at 80% -10%,rgba(214,255,0,.07),transparent)}
+.hero{padding:52px 0 40px;border-bottom:1px solid var(--line);background:radial-gradient(800px 400px at 80% -10%,rgba(214,255,0,.07),transparent)}
 .hero-flex{display:flex;gap:48px;align-items:center}
-.hero-h{font-size:58px;font-weight:700;line-height:1.04}
+.hero-h{font-size:46px;font-weight:700;line-height:1.06}
 .chatbox{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;width:100%}
 .chat-head{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
 .chat-log{height:300px;overflow-y:auto;padding:16px;font-size:14px;line-height:1.55;color:#CFCFCF}
@@ -444,7 +448,7 @@ header{position:sticky;top:0;z-index:50;background:rgba(12,12,12,.85);backdrop-f
 .check span{color:var(--lime)}
 .page{display:none}.page.on{display:block}
 footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
-@media (max-width:860px){.grid3,.grid2{grid-template-columns:1fr}.hero-h{font-size:42px}.hero-flex{flex-direction:column}}
+@media (max-width:860px){.grid3,.grid2{grid-template-columns:1fr}.hero-h{font-size:36px}.hero-flex{flex-direction:column}}
 @media (max-width:760px){.desk-only{display:none}.mob-only{display:block}}
 .bw-loader{padding:4px 0;position:relative}
 .bw-loader-eta{display:block;color:var(--muted);font-size:11px;margin-top:6px;text-align:right;max-width:340px}
@@ -482,9 +486,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   <section class="hero" style="position:relative;overflow:hidden">
     <canvas id="hero-net" style="position:absolute;inset:0;width:100%;height:100%;opacity:.85"></canvas>
     <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(11,16,20,0) 0%,rgba(11,16,20,.85) 78%)"></div>
-    <div class="wrap fade" style="position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;padding:46px 0">
+    <div class="wrap fade" style="position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;padding:24px 0">
       <div class="eyebrow" style="margin-bottom:14px">Independent procurement technology research</div>
-      <h1 class="hero-h">A supplier wants more.<br><span style="color:var(--lime)">Prove what's justified.</span></h1>
+      <h1 class="hero-h" style="max-width:15ch">A supplier wants more.<br><span style="color:var(--lime)">Prove what's justified.</span></h1>
       <p style="color:var(--muted);font-size:17px;line-height:1.6;margin:20px 0 28px;max-width:600px">When a supplier asks for a price increase or a surcharge, BuyrWorld structures the request, separates what the evidence supports from what it does not, quantifies the exposure and prepares a response you can put in front of an approver.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
         <button class="btn btn-lime cta-grow" style="font-size:16px;padding:15px 28px" onclick="go('tool-defender')">Review a supplier claim</button>
@@ -1286,7 +1290,18 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <script>
 
 // ---------- Navigation ----------
-const LINKS=[["home","Home"],["dash","Workspace"],["inbox","Inbox"],["parts","Parts"],["ai","Buyr AI"],["tools","AI Tools"],["market","Market Intel"],["templates","Resources"],["academy","Academy"],["blog","Blog"],["contact","Project"]];
+const LINKS=[["home","Home"],["dash","Workspace"],["inbox","Inbox"],["parts","Parts"],["tools","Tools"],["ai","Buyr AI"],["market","Market Intel"],["academy","Academy"],["templates","Templates"],["blog","Blog"],["contact","About"]];
+/* The sidebar groups the same destinations by the job they belong to. A
+   heading of null is a destination that belongs to no group — Home, and
+   the page about the project. Every key here must exist in LINKS, which
+   renderNav asserts rather than silently dropping. */
+const NAV_GROUPS=[
+  [null,["home"]],
+  ["Your work",["dash","inbox","parts"]],
+  ["Analysis",["tools","ai","market"]],
+  ["Learning",["academy","templates","blog"]],
+  [null,["contact"]]
+];
 let page="home";
 function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="tool-quotes"&&typeof qnBind==="function")qnBind();if(p==="parts"&&typeof ptBind==="function")ptBind();if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function"){defBindAlts();if(typeof defShadowBind==="function")defShadowBind();}if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
   // Without this, activating a nav item changes the page but leaves focus where
@@ -1329,19 +1344,26 @@ function renderNav(){
     return '<button class="navlink'+(on?" on":"")+'"'+(on?' aria-current="page"':"")+' data-go="'+attrEsc(k)+'">'+ciEsc(l)+'</button>';
   }).join("");
   document.getElementById("desknav").innerHTML=links
-    +'<button class="btn btn-lime" style="padding:8px 16px;font-size:13px;margin-left:8px" data-go="ai">Start free</button>';
+    +'<button class="btn btn-lime" style="padding:8px 16px;font-size:13px;margin-left:8px" data-go="ai">Ask Buyr AI</button>';
   document.getElementById("mobmenu").innerHTML=links;
 
   var side=document.getElementById("bw-side");
   if(side){
+    var labels={};LINKS.forEach(function(x){labels[x[0]]=x[1];});
+    var item=function(k){
+      var l=labels[k];
+      if(!l)throw new Error("NAV_GROUPS names a destination that is not in LINKS: "+k);
+      var on=page===k;
+      return '<button class="bw-side-link" data-go="'+attrEsc(k)+'"'+(on?' aria-current="page"':"")+'>'
+        +navIcon(k)+'<span>'+ciEsc(l)+'</span></button>';
+    };
     side.innerHTML='<button class="bw-side-brand" data-go="home" aria-label="BuyrWorld — home">'
       +'<img src="/buyrworld-logo.png" alt="" width="560" height="156"></button>'
       +'<div class="bw-side-tag">Evidence in. Commercial position out.</div>'
       +'<nav class="bw-side-nav" aria-label="Sections">'
-      +LINKS.map(function(x){
-        var k=x[0],l=x[1],on=page===k;
-        return '<button class="bw-side-link" data-go="'+attrEsc(k)+'"'+(on?' aria-current="page"':"")+'>'
-          +navIcon(k)+'<span>'+ciEsc(l)+'</span></button>';
+      +NAV_GROUPS.map(function(g){
+        var head=g[0]?'<div class="bw-side-group">'+ciEsc(g[0])+'</div>':"";
+        return head+g[1].map(item).join("");
       }).join("")
       +'</nav>'
       +'<div class="bw-side-foot">Synthetic demonstration data throughout. Nothing here is a real supplier, price or contract.</div>';

@@ -153,6 +153,7 @@ describe("the page script boots", () => {
     ["blog-list", "the blog index"],
     ["blog-filter", "the blog category filter"],
     ["desknav", "the desktop navigation"],
+    ["bw-side", "the sidebar navigation"],
   ]) {
     test(`${what} (#${id}) is populated`, () => {
       const el = elements.get(id);
@@ -161,4 +162,24 @@ describe("the page script boots", () => {
         `#${id} is empty, so ${what} renders blank on the live site`);
     });
   }
+
+  /* The sidebar is now built from two arrays rather than one, so the thing
+     worth checking is that the grouping reaches every destination. Static
+     analysis can compare the arrays; only running it proves the markup. */
+  test("the sidebar renders every destination, under its group", () => {
+    const markup = elements.get("bw-side").innerHTML;
+    const links = [...markup.matchAll(/data-go="([a-z-]+)"/g)].map((m) => m[1]);
+    const inLinks = [...body.match(/const LINKS=\[(.*?)\];/s)[1].matchAll(/\["([a-z-]+)",/g)].map((m) => m[1]);
+    assert.deepEqual([...links].sort(), [...inLinks, "home"].sort(),
+      "the rendered sidebar does not match LINKS (home appears twice: the wordmark is also a way home)");
+    for (const heading of ["Your work", "Analysis", "Learning"]) {
+      assert.ok(markup.includes(heading), `the "${heading}" group heading did not render`);
+    }
+  });
+
+  test("the wordmark renders as the shared asset, not as type", () => {
+    const markup = elements.get("bw-side").innerHTML;
+    assert.ok(markup.includes('<img src="/buyrworld-logo.png"'));
+    assert.equal(markup.includes("Buyr<span>World</span>"), false);
+  });
 });

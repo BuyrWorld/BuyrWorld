@@ -39,13 +39,16 @@ describe("nothing is drawn underneath the sidebar", () => {
     assert.ok(rule.includes("background:var(--bw-sidebar)"), "the sidebar is no longer opaque");
   });
 
-  test("every top-level landmark is indented past it", () => {
+  test("every top-level landmark is either indented past it or not drawn at all", () => {
     // The bug was an omission, so the test is over the whole set rather than
-    // over the one member that was missing.
+    // over the one member that was missing. A landmark satisfies this two
+    // ways: it starts to the right of the sidebar, or the sidebar replaced it.
     const q = shellQuery();
     for (const landmark of ["header", "main", "footer"]) {
-      assert.ok(q.includes(`${landmark}{padding-left:${SIDEBAR}px}`),
-        `${landmark} is not cleared of the sidebar, so it draws underneath it`);
+      const cleared = q.includes(`${landmark}{padding-left:${SIDEBAR}px}`);
+      const hidden = q.includes(`${landmark}{display:none}`);
+      assert.ok(cleared || hidden,
+        `${landmark} is neither cleared of the sidebar nor hidden, so it draws underneath it`);
     }
   });
 
@@ -120,7 +123,7 @@ describe("one palette, not two", () => {
     // sidebar and the page ground are the same family two steps apart; what
     // actually differed were three surfaces still carrying the old neutral.
     const screen = html.slice(0, html.indexOf("function ciShell("));
-    for (const stale of ["#161616", "rgba(17,17,17", "#0C0C0C"]) {
+    for (const stale of ["#161616", "rgba(17,17,17", "rgba(12,12,12", "#0C0C0C"]) {
       assert.equal(screen.includes(stale), false, `${stale} still sits beside the blue-grey palette`);
     }
   });
@@ -133,5 +136,69 @@ describe("one palette, not two", () => {
   test("the browser chrome is told the page ground, not the old one", () => {
     const bg = html.match(/--bw-bg:(#[0-9A-Fa-f]{6})/)[1];
     assert.match(html, new RegExp(`<meta name="theme-color" content="${bg}">`, "i"));
+  });
+});
+
+describe("one list of eleven becomes four groups", () => {
+  const linkKeys = [...html.match(/const LINKS=\[(.*?)\];/s)[1].matchAll(/\["([a-z-]+)","([^"]+)"\]/g)]
+    .map((m) => ({ key: m[1], label: m[2] }));
+
+  test("the labels no longer describe each other", () => {
+    // "Buyr AI" and "AI Tools" sat next to each other and named the same
+    // thing twice; "Resources" and "Project" named nothing in particular.
+    const labels = linkKeys.map((l) => l.label);
+    assert.ok(!labels.includes("AI Tools"), "two destinations still both lead with AI");
+    assert.ok(!labels.includes("Resources"), "Resources says nothing about what is behind it");
+    assert.ok(!labels.includes("Project"), "Project says nothing about what is behind it");
+    assert.deepEqual([...new Set(labels)].length, labels.length, "two destinations share a label");
+  });
+
+  test("no destination was dropped in the regrouping", () => {
+    // Relabelling is safe; losing a route is not. The keys are the routes.
+    assert.deepEqual(
+      linkKeys.map((l) => l.key).sort(),
+      ["academy", "ai", "blog", "contact", "dash", "home", "inbox", "market", "parts", "templates", "tools"],
+    );
+  });
+
+  test("a group heading is a heading, not a link", () => {
+    assert.match(html, /class="bw-side-group">'\+ciEsc\(g\[0\]\)/);
+    assert.equal(/class="bw-side-group"[^>]*data-go/.test(html), false,
+      "a heading that navigates is a link wearing the wrong clothes");
+  });
+
+  test("the grouping is rejected at runtime if it names a route that does not exist", () => {
+    // A silent drop would remove a destination from the product with no error.
+    assert.match(html, /NAV_GROUPS names a destination that is not in LINKS/);
+  });
+
+  test("every group heading earns its place", () => {
+    const groups = html.match(/const NAV_GROUPS=\[(.*?)\n\];/s)[1];
+    const named = [...groups.matchAll(/\["([^"]+)",\[([^\]]*)\]\]/g)];
+    assert.ok(named.length >= 3, "fewer than three named groups is not a grouping");
+    for (const [, heading, members] of named) {
+      const count = (members.match(/"/g) || []).length / 2;
+      assert.ok(count >= 2, `"${heading}" groups ${count} destination — a group of one is a label`);
+    }
+  });
+});
+
+describe("the fold", () => {
+  test("the hero is smaller than the four ways in", () => {
+    // It still has to say what the product is. It no longer has to be the
+    // whole first screen of a laptop before anything actionable appears.
+    const hero = html.match(/\.hero\{padding:(\d+)px 0 (\d+)px/);
+    assert.ok(Number(hero[1]) + Number(hero[2]) <= 100, "the hero padding is back above 100px");
+    const h = Number(html.match(/\.hero-h\{font-size:(\d+)px/)[1]);
+    assert.ok(h <= 48, `the hero headline is ${h}px`);
+  });
+
+  test("the headline is set to a measure rather than the full column", () => {
+    assert.match(html, /<h1 class="hero-h" style="max-width:\d+ch">/);
+  });
+
+  test("what to do next still sits on the home page", () => {
+    assert.match(html, /What do you need today\?/);
+    assert.match(html, /id="pillars"/);
   });
 });
