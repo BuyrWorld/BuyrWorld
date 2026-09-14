@@ -24,6 +24,9 @@ import {
   RESULT as CT_RESULT, OVERALL as CT_OVERALL, KIND as CT_KIND,
   DISPOSITION as CT_DISPOSITION, RULES_VERSION as CT_RULES,
 } from "../../src/calc/certificate.mjs";
+/* A thickness on the page is entered in millimetres and converted by the
+   same exact length parser the material planner uses. */
+import { length as scLength } from "../../src/calc/units.mjs";
 
 const html = readFileSync("index.html", "utf8");
 
@@ -43,13 +46,14 @@ const EXAMPLE_OBS = [
   ["hardness", "201", "HV", "3", "HV10 201", true],
 ];
 const EXAMPLE_REQS = [
-  ["C", "", "0.200", "%", true, "SYN-SPEC-100", "C", "7.2", "numeric", ""],
-  ["S", "", "0.030", "%", true, "SYN-SPEC-100", "C", "7.2", "numeric", ""],
-  ["P", "", "0.030", "%", true, "SYN-SPEC-100", "C", "7.2", "numeric", ""],
-  ["UTS", "450", "", "MPa", true, "SYN-SPEC-100", "C", "8.1", "numeric", ""],
-  ["hardness", "", "210", "HB", true, "SYN-SPEC-100", "C", "8.4", "numeric", ""],
-  ["condition", "", "", "", true, "SYN-DRW-4471", "B", "note 3", "text", "normalised"],
-  ["surface finish", "", "", "", true, "SYN-DRW-4471", "B", "note 5", "interpretation", ""],
+  ["C", "", "0.200", "%", true, "SYN-SPEC-100", "C", "7.2", "numeric", "", "", ""],
+  ["S", "", "0.030", "%", true, "SYN-SPEC-100", "C", "7.2", "numeric", "", "", ""],
+  ["P", "", "0.030", "%", true, "SYN-SPEC-100", "C", "7.2", "numeric", "", "", ""],
+  ["UTS", "450", "", "MPa", true, "SYN-SPEC-100", "C", "8.1", "numeric", "", "plate", "25"],
+  ["UTS", "430", "", "MPa", true, "SYN-SPEC-100", "C", "8.2", "numeric", "", "plate", ""],
+  ["hardness", "", "210", "HB", true, "SYN-SPEC-100", "C", "8.4", "numeric", "", "", ""],
+  ["condition", "", "", "", true, "SYN-DRW-4471", "B", "note 3", "text", "normalised", "", ""],
+  ["surface finish", "", "", "", true, "SYN-DRW-4471", "B", "note 5", "interpretation", "", "", ""],
 ];
 
 function run({ obs = EXAMPLE_OBS, reqs = EXAMPLE_REQS, header = {} } = {}) {
@@ -58,7 +62,7 @@ function run({ obs = EXAMPLE_OBS, reqs = EXAMPLE_REQS, header = {} } = {}) {
     "ct-producer": "Northgate Steelworks (synthetic)", "ct-issuer": "Northgate Steelworks (synthetic)",
     "ct-distributor": "", "ct-heat": "H-77213", "ct-lot": "L-4",
     "ct-form": "plate", "ct-condition": "normalised",
-    "ct-spec": "SYN-SPEC-100", "ct-specrev": "C", "ct-pages": "3", "ct-pagesdec": "3",
+    "ct-spec": "SYN-SPEC-100", "ct-specrev": "C", "ct-pages": "3", "ct-pagesdec": "3", "ct-thickness": "12",
     ...header,
   };
   const out = { innerHTML: "" };
@@ -67,7 +71,7 @@ function run({ obs = EXAMPLE_OBS, reqs = EXAMPLE_REQS, header = {} } = {}) {
     window: {
       BW: {
         ctQuantity, ctRequirement, ctObservation, ctCertificate, checkCertificate, recordReview, lotKey,
-        CT_RESULT, CT_OVERALL, CT_KIND, CT_DISPOSITION, CT_RULES,
+        CT_RESULT, CT_OVERALL, CT_KIND, CT_DISPOSITION, CT_RULES, scLength,
       },
     },
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
@@ -77,7 +81,7 @@ function run({ obs = EXAMPLE_OBS, reqs = EXAMPLE_REQS, header = {} } = {}) {
     _ctObs: obs.map((r) => [...r]),
     _ctReqs: reqs.map((r) => [...r]),
   };
-  const src = ["ctv", "ctRun", "ctResultHTML"].map(fnSource).join("\n");
+  const src = ["ctv", "ctAppliesTo", "ctRun", "ctResultHTML"].map(fnSource).join("\n");
   vm.createContext(sandbox);
   new vm.Script(src + "\n;ctRun();").runInContext(sandbox);
   return out.innerHTML;
@@ -334,5 +338,56 @@ describe("escaping", () => {
 
   test("nothing raw reaches the markup", () => {
     assert.equal(/\[object Object\]|undefined|NaN/.test(run()), false);
+  });
+});
+
+describe("a limit that does not apply is not a pass", () => {
+  test("the thickness-scoped limit applies to 12mm plate and the other one does too", () => {
+    // The example carries two UTS limits: one for plate up to 25mm and one
+    // for plate generally. At 12mm both apply, which is the ordinary case.
+    const out = run();
+    assert.equal(/Did not apply/.test(out), false);
+    assert.match(out, /8 of 8 requirement\(s\) applied/);
+  });
+
+  test("at 50mm the thickness-scoped limit drops out, and says why", () => {
+    const out = run({ header: { "ct-thickness": "50" } });
+    assert.match(out, /Did not apply/);
+    assert.match(out, /thicker than the range this limit covers/);
+    assert.match(out, /7 of 8 requirement\(s\) applied/);
+  });
+
+  test("a form-scoped limit drops out on another form", () => {
+    const out = run({ header: { "ct-form": "bar" } });
+    assert.match(out, /Did not apply/);
+    assert.match(out, /it applies to plate, and this is bar/);
+  });
+
+  test("what did not apply is listed apart from what went wrong", () => {
+    const out = run({ header: { "ct-thickness": "50" } });
+    // A requirement that never applied is not a finding about this material,
+    // and putting it among them would read as a problem.
+    const whyStart = out.indexOf("Why, in each case");
+    const didNotApply = out.indexOf("Did not apply");
+    assert.ok(whyStart > 0 && didNotApply > whyStart, "the two lists must be separate sections");
+    const why = out.slice(whyStart, didNotApply);
+    assert.equal(/not applicable/.test(why), false);
+  });
+
+  test("the count of checks done excludes what did not apply", () => {
+    // Counting an inapplicable limit as a check inflates how much was done.
+    const all = run();
+    const some = run({ header: { "ct-thickness": "50" } });
+    assert.match(all, /8 of 8/);
+    assert.match(some, /7 of 8/);
+  });
+
+  test("leaving both applicability fields blank means the limit applies", () => {
+    const out = run({
+      obs: [["C", "0.18", "%", "2", "", true]],
+      reqs: [["C", "", "0.200", "%", true, "SYN-SPEC-100", "C", "7.2", "numeric", "", "", ""]],
+    });
+    assert.match(out, /1 of 1 requirement\(s\) applied/);
+    assert.equal(/Did not apply/.test(out), false);
   });
 });

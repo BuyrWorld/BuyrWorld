@@ -1238,6 +1238,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
               <label class="bw-field">Lot<input class="bwin" id="ct-lot" placeholder="L-4"></label>
               <label class="bw-field">Product form<input class="bwin" id="ct-form" placeholder="plate"></label>
               <label class="bw-field">Condition<input class="bwin" id="ct-condition" placeholder="normalised"></label>
+              <label class="bw-field">Thickness (mm)<input class="bwin" id="ct-thickness" inputmode="decimal" placeholder="12"></label>
             </div>
             <div class="bw-fields">
               <label class="bw-field">Specification it states<input class="bwin" id="ct-spec" placeholder="SYN-SPEC-100"></label>
@@ -3857,7 +3858,7 @@ function scBind(){
       else if(a==="example")ctExample();
       else if(a==="clear")ctClear();
       else if(a==="add-obs"){_ctObs.push(["","","%","1","",false]);ctRenderRows();}
-      else if(a==="add-req"){_ctReqs.push(["","","","%",true,"","","","numeric",""]);ctRenderRows();}
+      else if(a==="add-req"){_ctReqs.push(["","","","%",true,"","","","numeric","","",""]);ctRenderRows();}
       else if(a==="remove-obs"){_ctObs.splice(Number(ct.dataset.ctObs),1);ctRenderRows();}
       else if(a==="remove-req"){_ctReqs.splice(Number(ct.dataset.ctReq),1);ctRenderRows();}
       return;
@@ -4036,6 +4037,8 @@ function ctReqRow(a,i){
     +ctField(a[5],i,5,"Document","SYN-SPEC-100","req")
     +ctField(a[6],i,6,"Revision","C","req")
     +ctField(a[7],i,7,"Clause","7.2","req")
+    +ctField(a[10],i,10,"Applies to form","any","req")
+    +ctField(a[11],i,11,"Up to thickness (mm)","any","req")
     +'<label class="bw-field" style="flex:1;min-width:140px">Kind'
     +'<select class="bwin" data-ct-req="'+i+'" data-ct-field="8" aria-label="Kind of requirement">'
     +'<option value="numeric"'+(a[8]==="numeric"||!a[8]?' selected':'')+'>a limit</option>'
@@ -4050,6 +4053,20 @@ function ctReqRow(a,i){
     +'<span>Mandatory</span></label>'
     +'<button class="bw-act bw-act-text" data-ct-act="remove-req" data-ct-req="'+i+'" aria-label="Remove this requirement">&times; Remove</button>'
     +'</div></div>';
+}
+
+/* Turn the two free-text applicability fields into the shape the engine
+   wants. Both empty means the requirement applies to everything, which is
+   the common case and must stay the easy one. */
+function ctAppliesTo(a){
+  var out={};
+  var form=String(a[10]||"").trim();
+  if(form&&form.toLowerCase()!=="any")out.forms=form.split(",").map(function(x){return x.trim();}).filter(Boolean);
+  var thick=String(a[11]||"").trim();
+  if(thick&&thick.toLowerCase()!=="any"){
+    out.thicknessMaxUm=window.BW.scLength(thick,"mm","The thickness this limit applies up to").um;
+  }
+  return out;
 }
 
 function ctRenderRows(){
@@ -4086,7 +4103,7 @@ function ctExample(){
   set("ct-number","SYN-CERT-0001");set("ct-rev","1");set("ct-supersedes","");
   set("ct-producer","Northgate Steelworks (synthetic)");set("ct-issuer","Northgate Steelworks (synthetic)");set("ct-distributor","");
   set("ct-heat","H-77213");set("ct-lot","L-4");set("ct-form","plate");set("ct-condition","normalised");
-  set("ct-spec","SYN-SPEC-100");set("ct-specrev","C");set("ct-pages","3");set("ct-pagesdec","3");
+  set("ct-spec","SYN-SPEC-100");set("ct-specrev","C");set("ct-pages","3");set("ct-pagesdec","3");set("ct-thickness","12");
   _ctObs=[
     ["C","0.18","%","2","C 0.18",true],
     ["S","<0.005","%","2","S <0.005",true],
@@ -4095,20 +4112,21 @@ function ctExample(){
     ["hardness","201","HV","3","HV10 201",true]
   ];
   _ctReqs=[
-    ["C","","0.200","%",true,"SYN-SPEC-100","C","7.2","numeric",""],
-    ["S","","0.030","%",true,"SYN-SPEC-100","C","7.2","numeric",""],
-    ["P","","0.030","%",true,"SYN-SPEC-100","C","7.2","numeric",""],
-    ["UTS","450","","MPa",true,"SYN-SPEC-100","C","8.1","numeric",""],
-    ["hardness","","210","HB",true,"SYN-SPEC-100","C","8.4","numeric",""],
-    ["condition","","","",true,"SYN-DRW-4471","B","note 3","text","normalised"],
-    ["surface finish","","","",true,"SYN-DRW-4471","B","note 5","interpretation",""]
+    ["C","","0.200","%",true,"SYN-SPEC-100","C","7.2","numeric","","",""],
+    ["S","","0.030","%",true,"SYN-SPEC-100","C","7.2","numeric","","",""],
+    ["P","","0.030","%",true,"SYN-SPEC-100","C","7.2","numeric","","",""],
+    ["UTS","450","","MPa",true,"SYN-SPEC-100","C","8.1","numeric","","plate","25"],
+    ["UTS","430","","MPa",true,"SYN-SPEC-100","C","8.2","numeric","","plate",""],
+    ["hardness","","210","HB",true,"SYN-SPEC-100","C","8.4","numeric","","",""],
+    ["condition","","","",true,"SYN-DRW-4471","B","note 3","text","normalised","",""],
+    ["surface finish","","","",true,"SYN-DRW-4471","B","note 5","interpretation","","",""]
   ];
   ctRenderRows();
 }
 
 function ctClear(){
   ["ct-number","ct-rev","ct-supersedes","ct-producer","ct-issuer","ct-distributor","ct-heat","ct-lot",
-   "ct-form","ct-condition","ct-spec","ct-specrev","ct-pages","ct-pagesdec"].forEach(function(id){
+   "ct-form","ct-condition","ct-thickness","ct-spec","ct-specrev","ct-pages","ct-pagesdec"].forEach(function(id){
     var e=document.getElementById(id); if(e)e.value="";
   });
   _ctObs=[];_ctReqs=[];ctRenderRows();
@@ -4147,6 +4165,7 @@ function ctRun(){
         max:(kind==="numeric"&&String(a[2]).trim())?B.ctQuantity(a[2],unit,String(a[0]).trim()+" maximum"):undefined,
         expected:kind==="text"?String(a[9]||"").trim():undefined,
         mandatory:Boolean(a[4]),
+        appliesTo:ctAppliesTo(a),
         source:{document:String(a[5]).trim(),revision:String(a[6]).trim(),clause:String(a[7]).trim()}
       });
     });
@@ -4164,6 +4183,7 @@ function ctRun(){
       statedRevision:ctv("ct-specrev"),
       form:ctv("ct-form"),
       condition:ctv("ct-condition"),
+      thicknessUm:ctv("ct-thickness")?B.scLength(ctv("ct-thickness"),"mm","Certificate thickness").um:null,
       pagesProvided:parseInt(ctv("ct-pages").replace(/[^0-9]/g,"")||"0",10),
       pagesDeclared:pagesDec===""?null:parseInt(pagesDec.replace(/[^0-9]/g,"")||"0",10),
       observations:observations,
@@ -4204,7 +4224,7 @@ function ctResultHTML(c){
       +'<td style="color:var(--bw-muted);font-size:12px">'+ciEsc(f.source.document)+' rev '+ciEsc(f.source.revision)+(f.source.clause?' &middot; '+ciEsc(f.source.clause):'')+'</td></tr>';
   }).join("");
 
-  var why=c.findings.filter(function(f){return f.result!==R.MEETS;}).map(function(f){
+  var why=c.findings.filter(function(f){return f.result!==R.MEETS&&f.result!==R.NOT_APPLICABLE;}).map(function(f){
     return '<li><b style="color:var(--bw-text)">'+ciEsc(f.property)+'</b> &mdash; '+ciEsc(f.why)
       +' <span style="color:var(--bw-muted);font-size:11.5px">('+ciEsc(f.rule)+')</span></li>';
   }).join("");
@@ -4236,6 +4256,14 @@ function ctResultHTML(c){
       +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+issues+'</ul>':'')
     +(conflicts?'<div class="eyebrow" style="margin:var(--bw-5) 0 6px">Requirements that disagree with each other</div>'
       +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+conflicts+'</ul>':'')
+    +(c.findings.some(function(f){return f.result===R.NOT_APPLICABLE;})
+      ? '<div class="eyebrow" style="margin:var(--bw-5) 0 6px">Did not apply</div>'
+        +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+        +c.findings.filter(function(f){return f.result===R.NOT_APPLICABLE;}).map(function(f){
+          return '<li><b style="color:var(--bw-text)">'+ciEsc(f.property)+'</b> &mdash; '+ciEsc(f.why)+'</li>';
+        }).join("")+'</ul>'
+      : '')
+    +'<p style="font-size:12.5px;color:var(--bw-muted);margin:var(--bw-4) 0 0">'+c.checked+' of '+c.findings.length+' requirement(s) applied to this material and were checked.</p>'
     +(c.repeatOfKnownLot?'<p style="font-size:12.5px;color:var(--bw-warning);margin:var(--bw-4) 0 0">This is the same lot as a certificate already recorded. Re-uploading or revising a certificate does not make a second lot.</p>':'')
     +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-5) 0 0;line-height:1.55">'+ciEsc(c.method)+'</p>'
     +'<p style="font-size:12px;color:var(--bw-body);margin:var(--bw-3) 0 0;line-height:1.55;border-top:1px solid var(--bw-border);padding-top:var(--bw-3)"><b style="color:var(--bw-text)">'+ciEsc(c.disclaimer)+'</b></p>'
