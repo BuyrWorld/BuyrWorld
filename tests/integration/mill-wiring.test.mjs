@@ -19,6 +19,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import {
   lotRecord, lotFromReview, millPerformance, rank as millRank, uniqueLots,
   DECISION as MILL_DECISION, RESPONSIBILITY, SCOPE as MILL_SCOPE,
@@ -29,7 +31,7 @@ import {
 } from "../../src/services/lot-store.mjs";
 import { recordReview, RULES_VERSION, OVERALL } from "../../src/calc/certificate.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 function fnSource(name) {
   const start = html.indexOf(`function ${name}(`);

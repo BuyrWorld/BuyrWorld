@@ -18,6 +18,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import {
   ratioFromPercent, ratioToPercentString, money, moneyFromDecimal, moneyToDecimalString,
 } from "../../src/calc/exact.mjs";
@@ -29,7 +31,7 @@ import {
   assumptions as scAssumptions, CONSUMES, COST_ELEMENTS,
 } from "../../src/calc/should-cost.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 /** One named function's source, read forward so the slice cannot run backwards. */
 function fnSource(name) {

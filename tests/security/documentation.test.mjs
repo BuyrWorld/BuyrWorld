@@ -18,9 +18,11 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+import { pageSource } from "../helpers/page.mjs";
+
 const security = readFileSync("docs/SECURITY_REVIEW.md", "utf8");
 const state = readFileSync("docs/CURRENT_STATE.md", "utf8");
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 /** Every module under src/, by path. */
 function modules(dir = "src", out = []) {

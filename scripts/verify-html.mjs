@@ -7,7 +7,7 @@
  * unclosed div silently breaks a whole page section, and a nav link to a
  * deleted page throws on click.
  */
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync } from "node:fs";
 import { Script } from "node:vm";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -25,6 +25,23 @@ function checkModuleSyntax(code, label) {
 
 const html = readFileSync("index.html", "utf8");
 const problems = [];
+
+/* The application lives in its own files now, so the page can drop
+   unsafe-inline. Everything below that used to read the inline script reads
+   both instead.
+
+   This is not tidying. When the scripts moved out, this check went from
+   scanning two blocks and eleven navigation targets to scanning zero of each
+   — and went on reporting that the page was structurally sound. A check that
+   has stopped looking has to fail, not pass, which is what the two guards at
+   the bottom are for. */
+const EXTERNAL = ["app.js", "mount.mjs"];
+for (const file of EXTERNAL) {
+  if (!existsSync(file)) problems.push(`index.html loads ${file}, which is not here`);
+  else if (!html.includes(`src="/${file}"`)) problems.push(`${file} exists but index.html does not load it`);
+}
+/* Markup plus the code it loads: what the browser ends up with. */
+const page = html + "\n" + EXTERNAL.filter(existsSync).map((file) => readFileSync(file, "utf8")).join("\n");
 
 /* --- 1. Every inline script must parse --- */
 let blocks = 0;
@@ -48,6 +65,20 @@ while ((m = re.exec(html))) {
     }
   }
 }
+for (const file of EXTERNAL.filter(existsSync)) {
+  const src = readFileSync(file, "utf8");
+  blocks++;
+  if (file.endsWith(".mjs")) {
+    const err = checkModuleSyntax(src, file.replace(/\W/g, "_"));
+    if (err) problems.push(`${file} does not parse: ${err}`);
+  } else {
+    try {
+      new Script(src);
+    } catch (e) {
+      problems.push(`${file} does not parse: ${e.message}`);
+    }
+  }
+}
 rmSync(scratch, { recursive: true, force: true });
 
 /* --- 2. div balance --- */
@@ -57,20 +88,23 @@ if (open !== close) problems.push(`div imbalance: ${open} open vs ${close} close
 
 /* --- 3. Every navigation target must resolve to a real page --- */
 const pages = new Set([...html.matchAll(/id="page-([a-z0-9-]+)"/g)].map((x) => x[1]));
-const linksDecl = (html.match(/const LINKS=\[[\s\S]*?\]\];/) || [""])[0];
+const linksDecl = (page.match(/const LINKS=\[[\s\S]*?\]\];/) || [""])[0];
 const navTargets = [...linksDecl.matchAll(/\["([a-z0-9-]+)"/g)].map((x) => x[1]);
-const goTargets = [...new Set([...html.matchAll(/go\('([a-z0-9-]+)'\)/g)].map((x) => x[1]))];
+const goTargets = [...new Set([...page.matchAll(/go\('([a-z0-9-]+)'\)/g)].map((x) => x[1]))];
 
 for (const t of navTargets) if (!pages.has(t)) problems.push(`nav link "${t}" has no page section`);
 for (const t of goTargets) if (!pages.has(t)) problems.push(`go('${t}') has no page section`);
 
 /* --- 4. Nothing should reference a deleted asset --- */
 for (const asset of ["founder.jpg", "buyrworld-phase2.zip", "api/logs"]) {
-  if (html.includes(asset)) problems.push(`reference to removed asset: ${asset}`);
+  if (page.includes(asset)) problems.push(`reference to removed asset: ${asset}`);
 }
 
+if (blocks === 0) problems.push("no script was checked at all — this check has stopped looking");
+if (navTargets.length === 0) problems.push("no navigation target was found — this check has stopped looking");
+
 console.log(
-  `Checked ${blocks} inline script block(s), ${open} divs, ` +
+  `Checked ${blocks} script(s), ${open} divs, ` +
   `${navTargets.length} nav targets, ${goTargets.length} go() targets, ${pages.size} pages.`
 );
 

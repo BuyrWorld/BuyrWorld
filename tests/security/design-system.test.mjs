@@ -15,7 +15,9 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const html = readFileSync("index.html", "utf8");
+import { pageSource } from "../helpers/page.mjs";
+
+const html = pageSource();
 /** The stylesheet only: the rest of the file is markup and script. */
 const css = html.slice(html.indexOf(":root{"), html.indexOf("</style>"));
 

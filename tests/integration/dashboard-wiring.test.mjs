@@ -17,6 +17,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import { costBridge, formatPercent } from "../../src/calc/cost-bridge.mjs";
 import { recordOutcome } from "../../src/calc/outcome.mjs";
 import { portfolio } from "../../src/calc/portfolio.mjs";
@@ -24,7 +26,7 @@ import { learningCorpus, whatWorks, captureGaps } from "../../src/calc/learning.
 import { scanOpportunities } from "../../src/calc/radar.mjs";
 import { ratioFromPercent as pc, moneyFromDecimal, moneyToDecimalString } from "../../src/calc/exact.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 const DRIVERS = [{ id: "steel", label: "Steel bar", weight: pc("40"), indexMovement: pc("10") }];
 const bridge = () => costBridge({

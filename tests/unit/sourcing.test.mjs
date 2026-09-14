@@ -11,6 +11,8 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+
+import { pageSource } from "../helpers/page.mjs";
 import { quote, compareQuotes, questionsFor, SCOPE } from "../../src/calc/sourcing.mjs";
 import { fxRate } from "../../src/calc/fx.mjs";
 import { moneyFromDecimal, moneyToDecimalString as str } from "../../src/calc/exact.mjs";
@@ -252,7 +254,7 @@ describe("money stays exact", () => {
 });
 
 describe("the normalisation panel is wired", () => {
-  const html = readFileSync("index.html", "utf8");
+  const html = pageSource();
   const fnSource = (name) => {
     const start = html.indexOf(`function ${name}(`);
     if (start < 0) throw new Error(`${name} not found`);

@@ -1,5 +1,7 @@
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+
+import { pageSource } from "../helpers/page.mjs";
 import {
   part, savePart, loadPart, loadParts, deletePart, clearParts,
   storeStatus, exportParts, importParts, forComparison,
@@ -221,7 +223,7 @@ describe("the seam to the comparison engine", () => {
 });
 
 describe("the parts page is wired", () => {
-  const html = readFileSync("index.html", "utf8");
+  const html = pageSource();
 
   test("the route, nav entry and icon all exist", () => {
     assert.match(html, /<div class="page" id="page-parts">/);

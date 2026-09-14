@@ -12,12 +12,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import { mapExposure, costShock, shareFrom, parseAmount } from "../../src/calc/shock.mjs";
 import { parseSpendCsv } from "../../src/calc/spend.mjs";
 import { formatPercent } from "../../src/calc/cost-bridge.mjs";
 import { money, scaleDiv, moneyToDecimalString } from "../../src/calc/exact.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 /** Sliders with a name, an exposure in minor units, and a position. */
 function makeSliders(rows) {

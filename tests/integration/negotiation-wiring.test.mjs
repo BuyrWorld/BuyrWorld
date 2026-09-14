@@ -12,6 +12,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import { costBridge, formatPercent } from "../../src/calc/cost-bridge.mjs";
 import { assessEvidence, evidence, EVIDENCE_KIND } from "../../src/calc/evidence.mjs";
 import { prepareNegotiation, CREDIBILITY } from "../../src/calc/negotiation.mjs";
@@ -19,7 +21,7 @@ import { supplierHistory } from "../../src/calc/supplier-history.mjs";
 import { recordOutcome } from "../../src/calc/outcome.mjs";
 import { ratioFromPercent as pc, moneyFromDecimal, moneyToDecimalString } from "../../src/calc/exact.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 describe("the panel is wired into the page", () => {
   test("the engine is imported and mounted", () => {

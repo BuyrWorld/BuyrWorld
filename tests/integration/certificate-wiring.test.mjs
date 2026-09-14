@@ -18,6 +18,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import {
   quantity as ctQuantity, requirement as ctRequirement, observation as ctObservation,
   certificate as ctCertificate, checkCertificate, recordReview, lotKey,
@@ -28,7 +30,7 @@ import {
    same exact length parser the material planner uses. */
 import { length as scLength } from "../../src/calc/units.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 function fnSource(name) {
   const start = html.indexOf(`function ${name}(`);

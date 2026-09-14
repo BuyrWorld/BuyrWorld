@@ -13,11 +13,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import {
   newCase, saveCase, loadCase, listCases, deleteCase, storeStatus, STATUS,
 } from "../../src/services/case-store.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 /**
  * The source of one named function.

@@ -2,9 +2,11 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
+import { pageSource } from "../helpers/page.mjs";
+
 const vercel = JSON.parse(readFileSync("vercel.json", "utf8"));
 const chat = readFileSync("api/chat.js", "utf8");
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 const headersFor = (source) => {
   const rule = vercel.headers.find((h) => h.source === source);
@@ -63,10 +65,21 @@ describe("security headers", () => {
     assert.equal(csp.includes("stripe.com"), false);
   });
 
-  test("the calculation modules are served as JavaScript", () => {
-    const m = headersFor("/src/(.*).mjs");
+  test("every module is served as JavaScript, wherever it sits", () => {
+    // The rule used to cover /src/ only. The mount moved to the site root when
+    // the scripts came out of index.html, and a module served as the wrong
+    // type is refused by the browser outright.
+    const m = headersFor("/(.*).mjs");
     assert.match(m["Content-Type"], /text\/javascript/,
       "a wrong MIME type makes the browser refuse the module entirely");
+  });
+
+  test("the rule reaches the mount at the root, not just src/", () => {
+    const rules = JSON.parse(readFileSync("vercel.json", "utf8")).headers.map((h) => h.source);
+    const covers = (path) =>
+      rules.some((r) => new RegExp("^" + r.replace(/\(\.\*\)/g, ".*") + "$").test(path));
+    assert.ok(covers("/mount.mjs"), "mount.mjs is not covered by any content-type rule");
+    assert.ok(covers("/src/calc/exact.mjs"), "the calculation modules lost their rule");
   });
 });
 

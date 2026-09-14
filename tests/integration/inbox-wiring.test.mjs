@@ -12,9 +12,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import { classify, nextActions, DOC_KIND } from "../../src/intake/classify.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 const LETTER = `Dear Customer,
 

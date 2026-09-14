@@ -2,6 +2,8 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import * as bridge from "../../src/calc/cost-bridge.mjs";
 import * as exact from "../../src/calc/exact.mjs";
 import * as indexSeries from "../../src/calc/index-series.mjs";
@@ -10,7 +12,7 @@ import * as sampleData from "../../src/data/sample-indices.mjs";
 import * as aiAdapter from "../../src/services/ai/adapter.mjs";
 import * as extractMod from "../../src/services/ai/extract-claim.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 /**
  * The page reaches the calculation engine through a single `window.BW` object

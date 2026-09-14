@@ -2,7 +2,9 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const html = readFileSync("index.html", "utf8");
+import { pageSource } from "../helpers/page.mjs";
+
+const html = pageSource();
 
 /** Pull a named function's source out of index.html so it can be exercised. */
 function grab(name) {

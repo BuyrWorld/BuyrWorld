@@ -18,9 +18,11 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import { inkBounds } from "../helpers/png.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 /** The declaration block of the desktop-shell media query. */
 function shellQuery() {

@@ -1,6 +1,8 @@
 import { test, describe } from "node:test";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
+
+import { pageSource } from "../helpers/page.mjs";
 import { labelFor, assumptionsToVerify, LABEL, LEGEND } from "../../src/calc/provenance.mjs";
 import { costBridge } from "../../src/calc/cost-bridge.mjs";
 import { assessEvidence, evidence, EVIDENCE_KIND as K } from "../../src/calc/evidence.mjs";
@@ -201,7 +203,7 @@ describe("the decision pack shows it", () => {
 });
 
 describe("the calculator shows it too", () => {
-  const html = readFileSync("index.html", "utf8");
+  const html = pageSource();
 
   test("driver rows carry a provenance chip", () => {
     assert.match(html, /function provChip\(p\)/);

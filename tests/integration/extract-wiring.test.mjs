@@ -17,12 +17,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import {
   extractDocument, confirmCandidate, readiness, reviewTable,
   CONFIDENCE as EX_CONFIDENCE, TARGET as EX_TARGET,
 } from "../../src/intake/extract-document.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 function fnSource(name) {
   const start = html.indexOf(`function ${name}(`);

@@ -12,6 +12,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import { costBridge } from "../../src/calc/cost-bridge.mjs";
 import { recordOutcome } from "../../src/calc/outcome.mjs";
 import { learningCorpus, whatWorks, captureGaps } from "../../src/calc/learning.mjs";
@@ -19,7 +21,7 @@ import { formatPercent } from "../../src/calc/cost-bridge.mjs";
 import { ratioFromPercent as pc, moneyFromDecimal, moneyToDecimalString } from "../../src/calc/exact.mjs";
 import { supplierId } from "../../src/domain/ids.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 describe("the capture records what makes a note teachable", () => {
   test("an argument row carries evidence requested and supplier response", () => {

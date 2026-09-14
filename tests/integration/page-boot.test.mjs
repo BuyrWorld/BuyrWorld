@@ -16,7 +16,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const html = readFileSync("index.html", "utf8");
+import { pageSource } from "../helpers/page.mjs";
+
+const html = pageSource();
 
 /** The page's own script: the last non-module inline <script> in the document. */
 function pageScript() {

@@ -18,6 +18,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import { ratioFromPercent, ratioToPercentString, moneyFromDecimal } from "../../src/calc/exact.mjs";
 import { BASIS } from "../../src/calc/should-cost.mjs";
 import { MATERIAL_GAP, buildUpShares, compareToBuildUp, questionsFrom } from "../../src/calc/build-up.mjs";
@@ -26,7 +28,7 @@ import {
   deleteEstimate, storeStatus as estimateStoreStatus,
 } from "../../src/services/estimate-store.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 function fnSource(name) {
   const start = html.indexOf(`function ${name}(`);

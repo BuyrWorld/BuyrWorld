@@ -13,11 +13,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
+import { pageSource } from "../helpers/page.mjs";
+
 import {
   alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL,
 } from "../../src/calc/batna.mjs";
 
-const html = readFileSync("index.html", "utf8");
+const html = pageSource();
 
 /** One named function's source, found forward so the slice cannot run backwards. */
 function fnSource(name) {
