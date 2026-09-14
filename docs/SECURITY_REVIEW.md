@@ -89,3 +89,137 @@ separate decision for the owner:
   registered office remain on the legal page. That is corporate rather than
   personal information, and removing a real company's legal identity from a live
   site is not a change to make automatically — **flagged for owner review**.
+
+---
+
+# Data handling
+
+*Added 14 September 2026, after five browser-local stores and a document reader
+had been built since the original review. That review examined a product that
+kept nothing between visits and uploaded documents only to have them summarised.
+Neither is true any more, and the most sensitive thing the product now holds —
+a private supplier-quality record — did not exist when it was written.*
+
+Everything below states what the code does. Nothing here is a policy, a legal
+position or a commitment; those are the owner's to make, and this document does
+not invent them.
+
+## What is kept, and where
+
+Five stores, all in `localStorage` in one browser profile on one machine. There
+is no account, no server-side copy and no synchronisation, so a record exists on
+exactly one device until somebody exports it.
+
+| Key | Module | Holds | Per-record cap |
+|---|---|---|---|
+| `bw.cases.v1` | `case-store.mjs` | Analysed claims: supplier, part, the figures, status | 256KB |
+| `bw.outcomes.v1` | `outcome-store.mjs` | What was agreed on a closed case | — |
+| `bw.parts.v1` | `part-store.mjs` | The parts library and its comparison attributes | — |
+| `bw.lots.v1` | `lot-store.mjs` | **Reviewed lots**: producer, site, distributor, heat, lot, decision, nonconformities and who they were attributed to, reviewer and reasoning | 32KB |
+| `bw.estimates.v1` | `estimate-store.mjs` | Saved cost build-ups: what each element came to and how strong the figure was | 64KB |
+
+`bw.probe` is written and removed immediately to test whether storage works at
+all. It holds nothing.
+
+**`bw.lots.v1` is the one to think hardest about.** It is a supplier-quality
+record naming producers, the issues confirmed against them, who was held
+responsible, and the reviewer who decided. `mill.mjs` tells a reader on screen
+that it is "private to this browser". That is accurate, and this is the first
+document to say so.
+
+## What leaves the browser
+
+Three things, and it is worth being exact about which.
+
+**1. Prompts to `/api/chat`.** Three call sites: the AI tools, the web-grounded
+tools and the Buyr AI chat. Whatever prompt the tool assembled goes with them,
+and for the quote comparator that includes the text of uploaded quotation files.
+Document text is wrapped in an explicit untrusted fence and declared to be data
+rather than instructions, and the fence marker is stripped from the content
+first so a document cannot close it.
+
+`api/chat.js` logs metadata only — request id, timestamp, tool, model, turn
+count, character counts, latency, status, error class. No message text reaches a
+log on any path. That was the original review's critical finding and it is
+closed in code; the Upstash purge listed under **Outstanding owner actions**
+above is the half that still needs doing.
+
+Everything sent to that endpoint is assembled in `src/services/ai/`, which is
+the only part of the product that speaks to a model. `grounding.mjs` rejects any
+field whose verbatim span does not appear in the document it was supposedly read
+from, and every field it returns is marked `ai-inferred` and cannot enter
+arithmetic until a person confirms it. That is an integrity control rather than a
+privacy one, but it is where the boundary is, so it is worth knowing it is one
+place and not several.
+
+**2. Library scripts from cdnjs**: exceljs, jsPDF, mammoth, xlsx and pdf.js.
+These are fetched, not sent to — no document goes with the request. The pdf.js
+worker is the exception worth naming, because it is fetched and then *executed*:
+`verifiedWorkerURL()` refuses to load an unpinned worker, fetches with
+`credentials: "omit"`, hashes the bytes with SHA-512 and compares them against a
+pinned digest before running them. A worker that fails the check is not run.
+
+**3. Files the user saves.** The decision pack, the quote comparison document,
+the jsPDF exports, and each store's `export…()` function. An export is plain
+JSON or HTML on the user's disk, outside anything this application controls.
+`exportLots()` in particular produces the full supplier-quality record.
+
+**No store is ever sent anywhere.** No load function from any of the five
+appears in any request body — checked by grep, not by memory. The stores are
+read to render screens and to build documents the user saves, and that is all.
+
+## What never touches the network at all
+
+The newest and most sensitive parts of the product are also the most isolated,
+which is not a coincidence — both follow from choosing rules over a model.
+
+- **Should Cost Expert**, all three modes: material planning, certificate
+  checking and mill performance. No model call, no endpoint.
+- **Document extraction** (`extract-document.mjs`). A PDF is read into text in
+  the browser by pdf.js and matched against written rules. There is no OCR
+  service, no extraction endpoint and no prompt, so there is nothing to leak —
+  and nothing to inject, because a drawing note saying "ignore the above" is a
+  drawing containing that sentence and matches no rule.
+- **Inbox classification** (`classify.mjs`). Deterministic for the same reasons.
+- **The build-up comparison** and every calculation in `src/calc/`.
+
+A user can therefore run the entire should-cost, certificate and mill workflow
+with the network unavailable, and nothing about those documents will have left
+the machine.
+
+## What this means in practice
+
+Stated plainly because the code cannot state it:
+
+- **A shared or public machine keeps the record.** There is no sign-out, because
+  there is no account. Everything above stays in that browser profile until the
+  site's data is cleared.
+- **Clearing site data destroys it irrecoverably.** There is no server copy and
+  no undo. The export functions exist for this reason and nothing prompts anyone
+  to use them.
+- **Private browsing keeps nothing.** The stores will appear to work and will be
+  empty on the next visit.
+- **A second device starts empty.** Sharing a record means exporting a file and
+  moving it.
+- **An export is an ordinary file.** Once saved it is subject to whatever
+  protects that disk, which is not this application.
+- **A browser that blocks site data is handled, not hidden.** Every store
+  reports `available: false` rather than appearing to save; a write refused by
+  storage returns the error rather than failing silently.
+
+## What has not been assessed
+
+Named so the gaps are not mistaken for clean results.
+
+- **No penetration test, dependency audit or threat model** has been performed
+  against any of this.
+- **The five cdnjs libraries carry no integrity check except the pdf.js worker.**
+  The `<script>` loads have no `integrity` attribute; a compromised CDN response
+  would execute. The worker path shows what closing this would look like.
+- **`unsafe-inline` remains in the script-src CSP**, with 132 inline handlers
+  still to migrate. Measured and ratcheting down; see `CLAUDE.md`.
+- **Nothing has been reviewed by anyone but the author and this tool.**
+- **Retention, lawful basis, controller and processor roles, and any obligation
+  arising from holding supplier-quality data are not addressed here.** They are
+  questions for a qualified person and are deliberately left open rather than
+  guessed at.

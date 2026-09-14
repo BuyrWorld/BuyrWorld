@@ -96,3 +96,125 @@ driver, a formula and a source.
 The weaknesses listed above under "Known weaknesses carried forward" are closed
 except one: the page still carries 130 inline event handlers, which is why the
 CSP cannot yet drop `'unsafe-inline'`. See `IMPLEMENTATION_PLAN.md`.
+
+---
+
+# Where it got to
+
+*Recorded 14 September 2026. The section above describes what was inherited and
+what the first phases changed; it knew four modules. Thirty-six more have been
+built since, and a state document that describes a different product is worse
+than none, because it is believed.*
+
+Every figure below came from the working tree on the date above.
+
+| Thing | Baseline | Now |
+|---|---|---|
+| `index.html` | 522,447 bytes | 641,283 bytes |
+| Tracked files | 18 | 141 |
+| Modules under `src/` | 0 | 41 |
+| Test files | 0 | 60 |
+| Tests | 0 | 1,784, all passing |
+| Inline event handlers | — | 132, capped by test and only allowed to fall |
+| Verification steps | 0 | 6, all passing |
+
+## The calculation layer — `src/calc/`
+
+Exact throughout: money is integer minor units on BigInt, ratios are scaled by
+1e9, and `tests/security/no-floats.test.mjs` fails on any floating-point
+construct not written down with a reason.
+
+**The arithmetic itself.** `exact.mjs` is the money and ratio primitives.
+`index-series.mjs` resolves index movement from a contractual base with a lag.
+`fx.mjs` converts only with a dated, sourced rate and splits a currency effect
+from a cost effect. `provenance.mjs` labels every figure supplied, derived or
+assumed.
+
+**Reviewing a claim.** `cost-bridge.mjs` decomposes what a supplier asks for
+into what the evidence warrants and what it does not. `evidence.mjs` grades the
+assertions behind it. `negotiation.mjs` turns a finished case into a position,
+`batna.mjs` asks whether the supplier could actually be replaced, and
+`shadow.mjs` recommends the next move during the conversation itself.
+`decision-pack.mjs` assembles all of it into a document somebody can sign, and
+`src/render/decision-pack-html.mjs` renders it.
+
+**Looking across cases.** `supplier-history.mjs` reads outcomes back by
+supplier, `portfolio.mjs` aggregates them into the resisted rate,
+`learning.mjs` derives what has actually worked with its sample size always
+attached, and `radar.mjs` reads the whole corpus and says what is worth asking
+about — firing only where real data exists and never totalling its findings.
+
+**Sourcing and parts.** `sourcing.mjs` normalises quotes, keeps two rankings
+apart and refuses to name a winner. `comparable.mjs` compares parts on what
+they are rather than what they are called. `spend.mjs` is the spend analysis;
+`shock.mjs` the cost-shock model; `outcome.mjs` the recorded result of a case.
+
+**Should Cost Expert**, the largest single addition. `units.mjs` holds physical
+quantities as exact integers and refuses a number with no unit.
+`should-cost.mjs` turns a required number of accepted parts into a purchase
+quantity and a cost over it. `certificate.mjs` compares a certificate against
+requirements from identified documents, treating every reported value as the
+range it covers. `mill.mjs` builds a private record of how reviewed lots turned
+out, with no composite score anywhere in it.
+
+**The join.** `build-up.mjs` puts a supplier's claimed cost structure beside an
+independent build-up and prices the difference in points of the increase being
+asked for. It is the first thing here that lets a claim be argued in anything
+other than the supplier's own numbers.
+
+## The model layer — `src/services/ai/`
+
+The only part of the product that talks to a language model, kept behind one
+interface so the rest never does. `adapter.mjs` has two implementations, a
+mock for tests and an HTTP transport for the browser. `grounding.mjs` is the
+check every extractor shares: a field arrives with the verbatim span it was
+read from, and a span that does not appear in the document is rejected — an
+invented quote is detectable where an invented figure is not.
+`extract-claim.mjs`, `extract-contract.mjs` and `extract-quotes.mjs` are the
+three extractors built on it. Everything they produce is marked `ai-inferred`
+and cannot enter arithmetic until a person confirms it.
+
+`src/data/sample-indices.mjs` holds the synthetic index series the
+demonstrations use.
+
+## Intake — `src/intake/`
+
+`classify.mjs` routes a pasted or uploaded document to the tool that fits it,
+across eight kinds, by rule rather than by model. `extract-document.mjs` reads
+drawings and certificates the same way: every value comes back with the page and
+the exact characters it was matched from, proposed and unconfirmed.
+
+Neither makes a network call. That is why a document instructing them is just a
+document containing that sentence.
+
+## Domain and storage — `src/domain/`, `src/services/`
+
+`ids.mjs`, `entities.mjs` and `registry.mjs` are the commercial memory spine:
+stable identity derived on write, explicit and reversible merges, no migration.
+See `DOMAIN_MODEL.md`.
+
+Five `localStorage` stores: `case-store.mjs`, `outcome-store.mjs`, `part-store.mjs`, `lot-store.mjs` and `estimate-store.mjs`. Each
+withholds rather than misreads a record written by another build. What they hold
+and what that means is documented in `SECURITY_REVIEW.md` under **Data
+handling**; that section is the one to read before anything else here.
+
+## What is true of all of it
+
+- **Code calculates, the model explains.** No percentage or money figure shown
+  to a user comes from a language model.
+- **A value without a quote is not evidence**, and an `ai-inferred` value cannot
+  enter arithmetic until a person confirms it.
+- **Refusals are load-bearing.** No percentage below an evidence threshold, no
+  unit that does not convert exactly, no share of a partial subtotal, no ranking
+  across unlike material, no total across radar findings.
+
+## What is still not true
+
+- **Nobody has used it.** One synthetic claim in `fixtures/`, and a portfolio
+  that honestly reports a corpus of zero. Every judgement in the list above
+  rests on an assumption about what a buyer does that no buyer has tested.
+- **Nobody has looked at it in a browser at 360px.** The breakpoint arithmetic
+  is checked statically; that is not the same thing.
+- **The Upstash purge is outstanding.** See `SECURITY_REVIEW.md`.
+- **No scanned document can be read**, and there is no CAD parser. Both are
+  stated on the page rather than implied away.
