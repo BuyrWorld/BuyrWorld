@@ -1546,7 +1546,7 @@ const NAV_GROUPS=[
   [null,["contact"]]
 ];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="shouldcost"&&typeof scBind==="function")scBind();if(p==="tool-quotes"&&typeof qnBind==="function")qnBind();if(p==="parts"&&typeof ptBind==="function")ptBind();if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function"){defBindAlts();if(typeof defShadowBind==="function")defShadowBind();}if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
+function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="shouldcost"&&typeof scBind==="function")scBind();if(p==="tool-quotes"&&typeof qnBind==="function")qnBind();if(p==="parts"&&typeof ptBind==="function")ptBind();if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function"){defBindAlts();if(typeof defShadowBind==="function")defShadowBind();if(typeof bcBindDefender==="function")bcBindDefender();}if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
   // Without this, activating a nav item changes the page but leaves focus where
   // it was, so a screen reader stays on the old content.
   var m=document.getElementById("main"); if(m)m.focus({preventScroll:true});}
@@ -3583,6 +3583,7 @@ function qnBind(){
 
 // [name, yieldPercent, fixedPieces, consumes]
 var _scStages=[["Laser cut","98","0","input"],["Form","95","4","input"]];
+var _scLast=null;
 
 function scStageRow(a,i){
   var f=function(k,label,ph,mode){
@@ -3735,6 +3736,7 @@ function scRun(){
     cost=B.costPlan(plan,scCostEntries(),{currency:scVal("sc-cur")||"GBP",amortiseTooling:Boolean(amort&&amort.checked)});
   }catch(e){ out.innerHTML=scPlanHTML(plan,u)+scErr(String(e.message||e)); return; }
 
+  _scLast={plan:plan,cost:cost};
   out.innerHTML=scPlanHTML(plan,u)+scCostHTML(plan,cost)+scAssumptionsHTML(plan,cost);
 }
 
@@ -3927,6 +3929,8 @@ function scBind(){
       else if(a==="remove-req"){_ctReqs.splice(Number(ct.dataset.ctReq),1);ctRenderRows();}
       return;
     }
+    var bc=e.target&&e.target.closest?e.target.closest("[data-bc-act]"):null;
+    if(bc&&bc.dataset.bcAct==="save"){bcSave();return;}
     var t=e.target&&e.target.closest?e.target.closest("[data-sc-act]"):null;
     if(!t)return;
     var act=t.dataset.scAct;
@@ -3934,6 +3938,7 @@ function scBind(){
     else if(act==="example")scExample();
     else if(act==="clear")scClear();
     else if(act==="add-stage"){_scStages.push(["","","0","input"]);scRenderStages();}
+    else if(act==="save"){bcSave();}
     else if(act==="remove-stage"){_scStages.splice(Number(t.dataset.scStage),1);scRenderStages();}
   });
 }
@@ -4051,6 +4056,7 @@ function scCostHTML(plan,cost){
       +'<div class="bw-metric-value">'+ciEsc(B.formatPercent(cost.materialShare))+'</div>'
       +'<div class="bw-metric-sub">of the recurring cost</div></div>':'')
     +'</div>'
+    +bcSaveHTML(cost)
     +(gaps?'<div class="eyebrow" style="margin:var(--bw-5) 0 6px">No figure yet</div>'
       +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+gaps+'</ul>':'')
     +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-4) 0 0;line-height:1.5">'+ciEsc(cost.method)+'</p>'
@@ -4783,6 +4789,166 @@ function ctSwitch(mode){
   if(mode==="mill")mlRun(false);
 }
 
+/* ---------------------------------------------------------------- join ---
+   A saved build-up, and a claim tested against it. Every figure here comes
+   out of build-up.mjs; the page chooses the mapping and renders. */
+
+var _bcMap={};      // driverId -> cost element id, chosen by hand
+var _bcPicked="";   // which saved build-up the defender is comparing against
+
+function bcSaveHTML(cost){
+  if(!cost||!cost.ok)return"";
+  return '<div style="border-top:1px solid var(--bw-border);margin-top:var(--bw-5);padding-top:var(--bw-4)">'
+    +'<div class="eyebrow" style="margin:0 0 6px">Keep this build-up</div>'
+    +'<p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Saved here, it can be used on the claim reviewer to test what a supplier says their cost structure is. '
+    +(cost.complete
+      ? 'Only the result is kept, not the working &mdash; a figure you argued with last month should still be that figure.'
+      : '<b style="color:var(--bw-warning)">This estimate still has gaps, so it will save but cannot be compared against a claim.</b> A share of a partial subtotal is a number about the wrong total.')
+    +'</p>'
+    +'<div class="bw-fields">'
+    +'<label class="bw-field">Call it<input class="bwin" id="bc-name" placeholder="Bracket BRK-A-102"></label>'
+    +'<label class="bw-field">Part<input class="bwin" id="bc-part" placeholder="BRK-A-102"></label>'
+    +'<label class="bw-field">Supplier<input class="bwin" id="bc-supplier" placeholder="if it is for one"></label>'
+    +'</div>'
+    +'<button class="bw-act bw-act-secondary" data-bc-act="save" style="margin-top:var(--bw-3)">Save this build-up</button>'
+    +'<div id="bc-save-msg" style="margin-top:var(--bw-3)"></div>'
+    +'</div>';
+}
+
+function bcSave(){
+  var msg=document.getElementById("bc-save-msg");
+  if(!msg||!window.BW||!_scLast)return;
+  var B=window.BW;
+  var name=String((document.getElementById("bc-name")||{}).value||"").trim();
+  if(!name){msg.innerHTML='<p style="color:var(--bw-danger);font-size:12.5px;margin:0">Give it a name you will recognise on the other page.</p>';return;}
+  var id=name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"build-up";
+  var rec,saved;
+  try{
+    rec=B.estimateFrom(_scLast.plan,_scLast.cost,{
+      id:id,name:name,
+      part:String((document.getElementById("bc-part")||{}).value||"").trim(),
+      supplier:String((document.getElementById("bc-supplier")||{}).value||"").trim()
+    });
+    saved=B.saveEstimate(rec);
+  }catch(e){
+    msg.innerHTML='<p style="color:var(--bw-danger);font-size:12.5px;margin:0">'+ciEsc(String(e.message||e))+'</p>';
+    return;
+  }
+  if(!saved.ok){msg.innerHTML='<p style="color:var(--bw-danger);font-size:12.5px;margin:0">'+ciEsc(saved.error)+'</p>';return;}
+  msg.innerHTML='<p style="color:var(--bw-success);font-size:12.5px;margin:0;line-height:1.6">Saved as <b>'+ciEsc(name)+'</b>'
+    +(saved.replaced?' (replacing the build-up already under that name)':'')
+    +'. It is on the claim reviewer now, under &ldquo;Their cost structure&rdquo;.'
+    +(rec.complete?'':' <span style="color:var(--bw-warning)">It has gaps, so it cannot be compared until they are filled.</span>')
+    +'</p>';
+}
+
+/* ---- the defender side ---- */
+
+function bcCompareHTML(r){
+  if(!window.BW||!window.BW.loadEstimates||!r||!r.contributions)return"";
+  var B=window.BW,saved=B.loadEstimates();
+
+  var head='<div style="border-top:1px solid var(--bw-border);margin-top:var(--bw-4);padding-top:var(--bw-3)">'
+    +'<div class="eyebrow" style="margin:0 0 6px">Their cost structure, against your own build-up</div>';
+  var foot='</div>';
+
+  if(saved.length===0){
+    return head+'<p style="font-size:12.5px;color:var(--bw-muted);margin:0;line-height:1.6">No build-up has been saved yet. Work one out on <b style="color:var(--bw-text)">Should Cost Expert</b> and save it, and this will test whether the weights above are consistent with it. Until then this claim can only be argued in the supplier&#39;s own numbers.</p>'+foot;
+  }
+
+  var options=saved.map(function(e){
+    return '<option value="'+attrEsc(e.id)+'"'+(e.id===_bcPicked?' selected':'')+'>'+ciEsc(e.name)+(e.part?' — '+ciEsc(e.part):'')+(e.complete?'':' (has gaps)')+'</option>';
+  }).join("");
+
+  var picker='<label class="bw-field" style="display:block;margin-bottom:var(--bw-3)">Compare against'
+    +'<select class="bwin" id="bc-pick"><option value="">choose a saved build-up</option>'+options+'</select></label>';
+
+  if(!_bcPicked)return head+picker+foot;
+
+  var record=B.loadEstimate(_bcPicked);
+  if(!record)return head+picker+foot;
+  var cost=B.asCostPlan(record);
+  var shares=B.buildUpShares(cost);
+
+  if(!shares.ok){
+    return head+picker
+      +'<p style="font-size:12.5px;color:var(--bw-warning);margin:0;line-height:1.6">'+ciEsc(shares.why)+'</p>'+foot;
+  }
+
+  /* The mapping. One select per driver, listing the lines this build-up has. */
+  var lineOptions=shares.shares.map(function(l){return {id:l.id,label:l.label};});
+  var mapRows=r.contributions.map(function(c){
+    return '<label class="bw-field" style="flex:1;min-width:190px">'+ciEsc(c.label)
+      +'<select class="bwin" data-bc-driver="'+attrEsc(c.id)+'" aria-label="Which build-up line answers '+attrEsc(c.label)+'">'
+      +'<option value="">not in this build-up</option>'
+      +lineOptions.map(function(l){
+        return '<option value="'+attrEsc(l.id)+'"'+(_bcMap[c.id]===l.id?' selected':'')+'>'+ciEsc(l.label)+'</option>';
+      }).join("")
+      +'</select></label>';
+  }).join("");
+
+  var mapping='<p style="font-size:12.5px;color:var(--bw-muted);margin:0 0 var(--bw-2);line-height:1.6">Say which line answers which driver. <b style="color:var(--bw-text)">Nothing guesses this</b> &mdash; which cost element a supplier meant is a judgement about their claim, and guessing it would be guessing the argument.</p>'
+    +'<div style="display:flex;gap:var(--bw-3);flex-wrap:wrap;margin-bottom:var(--bw-3)">'+mapRows+'</div>';
+
+  var C=B.compareToBuildUp({bridge:r,cost:cost,map:_bcMap});
+  if(!C.ok)return head+picker+mapping+'<p style="font-size:12.5px;color:var(--bw-warning);margin:0">'+ciEsc(C.why)+'</p>'+foot;
+
+  var P=B.formatPercent;
+  var rows=C.rows.map(function(row){
+    return '<tr'+(row.material?' style="background:var(--bw-warning-soft)"':'')+'>'
+      +'<td>'+ciEsc(row.driver)+'</td>'
+      +'<td class="n">'+ciEsc(P(row.claimedWeight))+'</td>'
+      +'<td class="n">'+ciEsc(P(row.buildUpShare))+'<div style="font-size:11px;color:var(--bw-muted)">'+ciEsc(row.element)+'</div></td>'
+      +'<td class="n">'+(row.difference===0n?'&mdash;':ciEsc(P(row.difference)))+'</td>'
+      +'<td class="n">'+(row.material&&row.atClaimedMovement>0n?ciEsc(P(row.atClaimedMovement)):'<span style="color:var(--bw-muted)">&mdash;</span>')+'</td>'
+      +'<td><span class="bw-status bw-status--'+(row.buildUpQuality==="quote-backed"?"evidenced":row.buildUpQuality==="user-reviewed"?"supplied":"assumed")+'">'+ciEsc(row.buildUpQuality||"")+'</span></td>'
+      +'</tr>';
+  }).join("");
+
+  var questions=B.questionsFrom(C).slice(0,5).map(function(q){
+    return '<li>'+ciEsc(q.question)+'</li>';
+  }).join("");
+
+  var gaps=C.unmappedDrivers.map(function(d){
+    return '<li><b style="color:var(--bw-text)">'+ciEsc(d.label)+'</b> &mdash; '+ciEsc(d.why)+'</li>';
+  }).join("");
+
+  return head+picker+mapping
+    +'<p style="font-size:var(--bw-t-body);color:var(--bw-body);margin:0 0 var(--bw-3);line-height:1.6">'+ciEsc(C.statement)+'</p>'
+    +(rows?'<div class="bw-table-wrap"><table class="bw-table">'
+      +'<thead><tr><th>Driver</th><th class="n">They claim</th><th class="n">Your build-up</th><th class="n">Difference</th><th class="n">Worth</th><th>Build-up basis</th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></div>':'')
+    +(questions?'<div class="eyebrow" style="margin:var(--bw-4) 0 6px">Ask them</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+questions+'</ul>':'')
+    +(gaps?'<div class="eyebrow" style="margin:var(--bw-4) 0 6px">Your build-up does not model these</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+gaps+'</ul>':'')
+    +(C.caveat?'<p style="font-size:12px;color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.55">'+ciEsc(C.caveat)+'</p>':'')
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.5">'+ciEsc(C.method)+'</p>'
+    +foot;
+}
+
+function bcRefresh(){
+  if(!_defResult)return;
+  var out=document.getElementById("def-out");
+  if(out)out.innerHTML=defRender(_defResult,String((document.getElementById("def-currency")||{value:"GBP"}).value||"GBP").toUpperCase());
+}
+
+function bcBindDefender(){
+  var page=document.getElementById("page-tool-defender");
+  if(!page||page.dataset.bcBound)return;
+  page.dataset.bcBound="1";
+  page.addEventListener("change",function(e){
+    var t=e.target;
+    if(!t)return;
+    if(t.id==="bc-pick"){_bcPicked=t.value;_bcMap={};bcRefresh();return;}
+    if(t.dataset&&t.dataset.bcDriver!==undefined){
+      if(t.value)_bcMap[t.dataset.bcDriver]=t.value;
+      else delete _bcMap[t.dataset.bcDriver];
+      bcRefresh();
+    }
+  });
+}
+
 function defHistoryHTML(){
   if(!window.BW.supplierHistory||!window.BW.loadOutcomes)return"";
   var el=document.getElementById("def-supplier");
@@ -4921,7 +5087,7 @@ function defNegotiationHTML(r,cur){
     +'<p style="font-size:13px;color:#CFCFCF;margin:0 0 8px">In dispute: <b style="color:#FF5C5C">'+money(N.anchors.inDispute)+'</b> a year ('+P(N.anchors.inDisputeChange)+'). Everything below the target is arithmetic both sides can check.</p>'
     +hard+challenges+ladder
     +'<p style="font-size:12.5px;color:var(--muted);margin:10px 0 0">Deferral instead of money &mdash; '+defer+'.</p>'
-    +rebut+walk+defBatnaHTML()+defShadowHTML(r)
+    +rebut+walk+bcCompareHTML(r)+defBatnaHTML()+defShadowHTML(r)
     +'<p style="color:var(--muted);font-size:11.5px;margin:12px 0 0;line-height:1.6">'+ciEsc(N.openingPosition.rule)+'</p>'
     +'</div>';
 }
@@ -7056,6 +7222,9 @@ async function send(id,text){
   import { quote as makeQuote, compareQuotes, questionsFor, SCOPE } from "./src/calc/sourcing.mjs";
   import { length as scLength, density as scDensity, boxVolume, formatLength, formatMass, formatArea,
            LENGTH_UNITS, DENSITY_UNITS } from "./src/calc/units.mjs";
+  import { MATERIAL_GAP, buildUpShares, compareToBuildUp, questionsFrom } from "./src/calc/build-up.mjs";
+  import { estimateFrom, asCostPlan, saveEstimate, loadEstimates, loadEstimate,
+           deleteEstimate, storeStatus as estimateStoreStatus } from "./src/services/estimate-store.mjs";
   import { extractDocument, confirmCandidate, readiness, reviewTable,
            CONFIDENCE as EX_CONFIDENCE, TARGET as EX_TARGET } from "./src/intake/extract-document.mjs";
   import { lotRecord, lotFromReview, millPerformance, rank as millRank, uniqueLots,
@@ -7100,6 +7269,8 @@ async function send(id,text){
                 scLength, scDensity, boxVolume, formatLength, formatMass, formatArea, LENGTH_UNITS, DENSITY_UNITS,
                 ctQuantity, ctRequirement, ctObservation, ctCertificate, checkCertificate, recordReview, lotKey,
                 CT_RESULT, CT_OVERALL, CT_KIND, CT_DISPOSITION, CT_RULES,
+                MATERIAL_GAP, buildUpShares, compareToBuildUp, questionsFrom,
+                estimateFrom, asCostPlan, saveEstimate, loadEstimates, loadEstimate, deleteEstimate, estimateStoreStatus,
                 extractDocument, confirmCandidate, readiness, reviewTable, EX_CONFIDENCE, EX_TARGET,
                 lotRecord, lotFromReview, millPerformance, millRank, uniqueLots,
                 MILL_DECISION, RESPONSIBILITY, MILL_SCOPE, DEFAULT_MINIMUM_LOTS, MILL_FILTERS,

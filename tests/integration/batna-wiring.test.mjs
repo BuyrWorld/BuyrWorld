@@ -81,7 +81,11 @@ describe("it is wired in", () => {
   });
 
   test("the panel renders inside the negotiation plan", () => {
-    assert.match(html, /\+rebut\+walk\+defBatnaHTML\(\)/);
+    // Pinned to the call rather than to its neighbours: the plan has gained
+    // panels four times, and each time this failed for no reason but order.
+    assert.match(html, /\+defBatnaHTML\(\)/);
+    const plan = html.slice(html.indexOf("+rebut+walk"), html.indexOf("+rebut+walk") + 200);
+    assert.ok(plan.includes("defBatnaHTML()"), "the BATNA panel left the negotiation plan");
   });
 
   test("capture sits in the sourcing position section, where it belongs", () => {
@@ -252,7 +256,11 @@ describe("the shadow negotiator is wired in", () => {
   });
 
   test("it renders inside the negotiation plan, after the BATNA panel", () => {
-    assert.match(html, /\+rebut\+walk\+defBatnaHTML\(\)\+defShadowHTML\(r\)/);
+    // The order still matters — what to do next belongs after what you can
+    // fall back on — but the two need not be adjacent.
+    const plan = html.slice(html.indexOf("+rebut+walk"), html.indexOf("+rebut+walk") + 200);
+    assert.ok(plan.includes("defShadowHTML(r)"), "the shadow negotiator left the negotiation plan");
+    assert.ok(plan.indexOf("defBatnaHTML()") < plan.indexOf("defShadowHTML(r)"));
   });
 
   test("the offer field is named for a screen reader", () => {

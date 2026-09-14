@@ -81,7 +81,7 @@ function run(fields = {}, { stages, checked = false, costs = {}, amortise = fals
     _scCosts: costs,
   };
   const src = ["scVal", "scInt", "scErr", "scRun", "scRow", "scPlanHTML", "scLayoutHTML",
-               "scCostEntries", "scCostHTML", "scAssumptionsHTML"].map(fnSource).join("\n");
+               "scCostEntries", "scCostHTML", "scAssumptionsHTML", "bcSaveHTML"].map(fnSource).join("\n");
   vm.createContext(sandbox);
   new vm.Script(src + "\n;scRun();").runInContext(sandbox);
   return out.innerHTML;
