@@ -272,14 +272,17 @@ describe("bars", () => {
 describe("the page is honest about what this release is", () => {
   const page = html.slice(html.indexOf('id="page-shouldcost"'), html.indexOf("<!-- ============ WORKSPACE"));
 
-  test("it says there is no drawing extraction, rather than implying there is", () => {
-    assert.match(page, /there is no drawing extraction in this build/);
+  test("it says there is no document extraction, rather than implying there is", () => {
+    assert.match(page, /There is no document extraction in this build/);
     assert.match(page, /does not contain recoverable 3D geometry/);
+    assert.match(page, /no dimension or certificate value here was recovered from one/);
   });
 
-  test("the two unbuilt releases are named as unbuilt", () => {
-    assert.match(page, /are the next two releases and are not built/);
-    assert.match(page, /not to suggest they exist/);
+  test("the release that is still unbuilt is named as unbuilt", () => {
+    assert.match(page, /is the next release and is not built/);
+    assert.match(page, /not to suggest it exists/);
+    // And the one that just shipped is no longer described that way.
+    assert.equal(/Check a material certificate<\/b> and <b>view mill performance<\/b> are the next/.test(page), false);
   });
 
   test("nothing on the page claims a real supplier, price or certificate", () => {

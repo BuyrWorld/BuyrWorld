@@ -1102,10 +1102,16 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
     <div class="bw-panel" style="border-color:var(--bw-border-strong);margin-bottom:var(--bw-4)">
       <div class="bw-panel-head"><div class="bw-panel-title">What this release does, and what it does not</div></div>
-      <p style="color:var(--bw-body);font-size:var(--bw-t-body);margin:0;line-height:1.6"><b style="color:var(--bw-text)">Estimate material and cost</b> &mdash; working, below. Everything is entered by hand: <b style="color:var(--bw-text)">there is no drawing extraction in this build</b>, and nothing on this page reads a PDF, a photograph or a CAD file. A 2D drawing does not contain recoverable 3D geometry, and no dimension here was recovered from one.</p>
-      <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6"><b>Check a material certificate</b> and <b>view mill performance</b> are the next two releases and are not built. They are named here so the shape of the module is visible, not to suggest they exist.</p>
+      <p style="color:var(--bw-body);font-size:var(--bw-t-body);margin:0;line-height:1.6">Everything is entered by hand. <b style="color:var(--bw-text)">There is no document extraction in this build</b> &mdash; nothing on this page reads a PDF, a photograph or a CAD file. A 2D drawing does not contain recoverable 3D geometry, and no dimension or certificate value here was recovered from one.</p>
+      <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6"><b>View mill performance</b> is the next release and is not built. It is named here so the shape of the module is visible, not to suggest it exists.</p>
     </div>
 
+    <div role="tablist" aria-label="What you are doing" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--bw-5)">
+      <button class="bw-act bw-act-primary" id="sc-tab-material" role="tab" aria-selected="true" aria-controls="sc-mode-material" data-sc-mode="material">Estimate material and cost</button>
+      <button class="bw-act bw-act-secondary" id="sc-tab-cert" role="tab" aria-selected="false" aria-controls="sc-mode-cert" data-sc-mode="cert">Check a material certificate</button>
+    </div>
+
+    <div id="sc-mode-material" role="tabpanel" aria-labelledby="sc-tab-material">
     <div class="bw-grid bw-grid-2" style="align-items:start">
       <div>
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
@@ -1201,6 +1207,72 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     </div>
 
     <div id="sc-out" style="margin-top:var(--bw-6)"></div>
+    </div>
+
+    <div id="sc-mode-cert" role="tabpanel" aria-labelledby="sc-tab-cert" hidden>
+      <div class="bw-panel" style="border-color:var(--bw-border-strong);margin-bottom:var(--bw-4)">
+        <div class="bw-panel-head"><div class="bw-panel-title">What a certificate check is, and is not</div></div>
+        <p style="color:var(--bw-body);font-size:var(--bw-t-body);margin:0;line-height:1.6">This compares the values written on a certificate against the requirements written in a specification, a drawing and a purchase order. <b style="color:var(--bw-text)">That is a comparison of two documents.</b> It does not establish that the material is what the certificate says it is, that it is in the stated condition, that the right heat arrived, or that any of it is fit for the job &mdash; and <b style="color:var(--bw-text)">nothing here can release material for manufacture or installation</b>.</p>
+        <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6">No limit is supplied for you. This has no opinion about what any grade requires: every requirement below comes from a document you identify by revision and clause, because revisions change limits.</p>
+      </div>
+
+      <div class="bw-grid bw-grid-2" style="align-items:start">
+        <div>
+          <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+            <div class="bw-panel-head"><div class="bw-panel-title">1 &middot; The certificate</div></div>
+            <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+              <label class="bw-field">Certificate number<input class="bwin" id="ct-number" placeholder="SYN-CERT-0001"></label>
+              <label class="bw-field">Revision<input class="bwin" id="ct-rev" placeholder="1"></label>
+              <label class="bw-field">Supersedes<input class="bwin" id="ct-supersedes" placeholder="leave blank if none"></label>
+            </div>
+            <div class="eyebrow" style="margin:var(--bw-4) 0 6px">Three identities, not one</div>
+            <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+              <label class="bw-field">Producer (the mill)<input class="bwin" id="ct-producer" placeholder="leave blank if not named"></label>
+              <label class="bw-field">Issuer<input class="bwin" id="ct-issuer" placeholder="Northgate Steelworks"></label>
+              <label class="bw-field">Distributor<input class="bwin" id="ct-distributor" placeholder="if supplied through one"></label>
+            </div>
+            <p style="font-size:11.5px;color:var(--bw-muted);margin:0 0 var(--bw-3);line-height:1.5">A distributor's paperwork error is not a mill's. Where the certificate does not name the producer, leave it blank &mdash; the result will say the lot cannot be attributed rather than crediting whoever's letterhead it is on.</p>
+            <div class="eyebrow" style="margin:var(--bw-4) 0 6px">The material</div>
+            <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+              <label class="bw-field">Heat / cast<input class="bwin" id="ct-heat" placeholder="H-77213"></label>
+              <label class="bw-field">Lot<input class="bwin" id="ct-lot" placeholder="L-4"></label>
+              <label class="bw-field">Product form<input class="bwin" id="ct-form" placeholder="plate"></label>
+              <label class="bw-field">Condition<input class="bwin" id="ct-condition" placeholder="normalised"></label>
+            </div>
+            <div class="bw-fields">
+              <label class="bw-field">Specification it states<input class="bwin" id="ct-spec" placeholder="SYN-SPEC-100"></label>
+              <label class="bw-field">Revision it states<input class="bwin" id="ct-specrev" placeholder="C"></label>
+              <label class="bw-field">Pages provided<input class="bwin" id="ct-pages" inputmode="numeric" placeholder="3"></label>
+              <label class="bw-field">Pages it declares<input class="bwin" id="ct-pagesdec" inputmode="numeric" placeholder="3"></label>
+            </div>
+          </div>
+
+          <div class="bw-panel">
+            <div class="bw-panel-head"><div class="bw-panel-title">2 &middot; What the certificate reports</div></div>
+            <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Enter each value <b style="color:var(--bw-text)">exactly as it is written</b>, inequality symbols and trailing zeros included. <code>&lt;0.005</code> is not 0.005, and <code>0.03</code> is not <code>0.030</code> &mdash; both differences change the answer. Tick a row only once you have checked it against the document.</p>
+            <div id="ct-obs"></div>
+            <button class="bw-act bw-act-secondary" data-ct-act="add-obs" style="margin-top:var(--bw-3)">+ Add a reported value</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+            <div class="bw-panel-head"><div class="bw-panel-title">3 &middot; What the documents require</div></div>
+            <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Each limit carries the document and <b style="color:var(--bw-text)">the exact revision</b> it came from. Where two documents ask for different things, both are checked and the conflict is reported &mdash; picking the tighter one looks responsible and is still a decision about somebody's drawing that nobody authorised.</p>
+            <div id="ct-reqs"></div>
+            <button class="bw-act bw-act-secondary" data-ct-act="add-req" style="margin-top:var(--bw-3)">+ Add a requirement</button>
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="bw-act bw-act-primary" data-ct-act="run">Compare &rarr;</button>
+            <button class="bw-act bw-act-secondary" data-ct-act="example">Load synthetic example</button>
+            <button class="bw-act bw-act-text" data-ct-act="clear">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="ct-out" style="margin-top:var(--bw-6)"></div>
+    </div>
   </div></section>
 </div>
 
@@ -3776,6 +3848,20 @@ function scBind(){
     if(e.target&&e.target.id==="sc-form")scFormLabels();
   });
   page.addEventListener("click",function(e){
+    var m=e.target&&e.target.closest?e.target.closest("[data-sc-mode]"):null;
+    if(m){ctSwitch(m.dataset.scMode);return;}
+    var ct=e.target&&e.target.closest?e.target.closest("[data-ct-act]"):null;
+    if(ct){
+      var a=ct.dataset.ctAct;
+      if(a==="run")ctRun();
+      else if(a==="example")ctExample();
+      else if(a==="clear")ctClear();
+      else if(a==="add-obs"){_ctObs.push(["","","%","1","",false]);ctRenderRows();}
+      else if(a==="add-req"){_ctReqs.push(["","","","%",true,"","","","numeric",""]);ctRenderRows();}
+      else if(a==="remove-obs"){_ctObs.splice(Number(ct.dataset.ctObs),1);ctRenderRows();}
+      else if(a==="remove-req"){_ctReqs.splice(Number(ct.dataset.ctReq),1);ctRenderRows();}
+      return;
+    }
     var t=e.target&&e.target.closest?e.target.closest("[data-sc-act]"):null;
     if(!t)return;
     var act=t.dataset.scAct;
@@ -3904,6 +3990,267 @@ function scCostHTML(plan,cost){
       +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+gaps+'</ul>':'')
     +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-4) 0 0;line-height:1.5">'+ciEsc(cost.method)+'</p>'
     +'</div>';
+}
+
+/* ----------------------------------------------------------- certificate ---
+   Release 2. Every comparison is made in certificate.mjs; this collects what
+   was written and renders what came back. */
+
+// [property, valueAsWritten, unit, page, quote, confirmed]
+var _ctObs=[];
+// [property, min, max, unit, mandatory, document, revision, clause, kind, expected]
+var _ctReqs=[];
+
+function ctField(v,i,k,label,ph,attr){
+  return '<label class="bw-field" style="flex:1;min-width:92px">'+ciEsc(label)
+    +'<input class="bwin" value="'+attrEsc(v||"")+'" data-ct-'+attr+'="'+i+'" data-ct-field="'+k+'" '
+    +'placeholder="'+attrEsc(ph)+'" aria-label="'+attrEsc(label)+'"></label>';
+}
+
+function ctObsRow(a,i){
+  return '<div style="border:1px solid var(--bw-border);border-radius:var(--bw-r-sm);padding:10px 12px;margin-bottom:8px">'
+    +'<div style="display:flex;gap:var(--bw-3);flex-wrap:wrap">'
+    +ctField(a[0],i,0,"Property","C","obs")
+    +ctField(a[1],i,1,"As written","<0.005","obs")
+    +ctField(a[2],i,2,"Unit","%","obs")
+    +ctField(a[3],i,3,"Page","1","obs")
+    +ctField(a[4],i,4,"Quoted text","C 0.18","obs")
+    +'</div>'
+    +'<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px">'
+    +'<label class="bw-field" style="display:flex;align-items:center;gap:7px;margin:0">'
+    +'<input type="checkbox" style="width:auto;margin:0" data-ct-obs="'+i+'" data-ct-field="5"'+(a[5]?' checked':'')+' aria-label="I have checked this value against the document">'
+    +'<span>Checked against the document</span></label>'
+    +'<button class="bw-act bw-act-text" data-ct-act="remove-obs" data-ct-obs="'+i+'" aria-label="Remove this reported value">&times; Remove</button>'
+    +'</div></div>';
+}
+
+function ctReqRow(a,i){
+  return '<div style="border:1px solid var(--bw-border);border-radius:var(--bw-r-sm);padding:10px 12px;margin-bottom:8px">'
+    +'<div style="display:flex;gap:var(--bw-3);flex-wrap:wrap">'
+    +ctField(a[0],i,0,"Property","C","req")
+    +ctField(a[1],i,1,"Minimum","","req")
+    +ctField(a[2],i,2,"Maximum","0.200","req")
+    +ctField(a[3],i,3,"Unit","%","req")
+    +'</div>'
+    +'<div style="display:flex;gap:var(--bw-3);flex-wrap:wrap;margin-top:8px">'
+    +ctField(a[5],i,5,"Document","SYN-SPEC-100","req")
+    +ctField(a[6],i,6,"Revision","C","req")
+    +ctField(a[7],i,7,"Clause","7.2","req")
+    +'<label class="bw-field" style="flex:1;min-width:140px">Kind'
+    +'<select class="bwin" data-ct-req="'+i+'" data-ct-field="8" aria-label="Kind of requirement">'
+    +'<option value="numeric"'+(a[8]==="numeric"||!a[8]?' selected':'')+'>a limit</option>'
+    +'<option value="text"'+(a[8]==="text"?' selected':'')+'>an exact stated condition</option>'
+    +'<option value="interpretation"'+(a[8]==="interpretation"?' selected':'')+'>needs engineering judgement</option>'
+    +'</select></label>'
+    +(a[8]==="text"?ctField(a[9],i,9,"Expected","normalised","req"):"")
+    +'</div>'
+    +'<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px">'
+    +'<label class="bw-field" style="display:flex;align-items:center;gap:7px;margin:0">'
+    +'<input type="checkbox" style="width:auto;margin:0" data-ct-req="'+i+'" data-ct-field="4"'+(a[4]?' checked':'')+' aria-label="This requirement is mandatory">'
+    +'<span>Mandatory</span></label>'
+    +'<button class="bw-act bw-act-text" data-ct-act="remove-req" data-ct-req="'+i+'" aria-label="Remove this requirement">&times; Remove</button>'
+    +'</div></div>';
+}
+
+function ctRenderRows(){
+  var pairs=[["ct-obs",_ctObs,ctObsRow,"obs","No reported values yet. A comparison needs something to compare."],
+             ["ct-reqs",_ctReqs,ctReqRow,"req","No requirements yet. Nothing here supplies a limit for you."]];
+  pairs.forEach(function(pair){
+    var host=document.getElementById(pair[0]);
+    if(!host)return;
+    host.innerHTML=pair[1].length
+      ? pair[1].map(pair[2]).join("")
+      : '<p style="font-size:12.5px;color:var(--bw-muted);margin:0">'+ciEsc(pair[4])+'</p>';
+    if(!host.dataset.delegated){
+      host.dataset.delegated="1";
+      var kind=pair[3];
+      var sync=function(e){
+        var t=e.target;
+        if(!t||!t.dataset)return;
+        var idx=kind==="obs"?t.dataset.ctObs:t.dataset.ctReq;
+        if(idx===undefined||t.dataset.ctField===undefined)return;
+        var row=(kind==="obs"?_ctObs:_ctReqs)[Number(idx)];
+        if(!row)return;
+        var f=Number(t.dataset.ctField);
+        row[f]=t.type==="checkbox"?t.checked:t.value;
+        if(kind==="req"&&f===8)ctRenderRows();
+      };
+      host.addEventListener("input",sync);
+      host.addEventListener("change",sync);
+    }
+  });
+}
+
+function ctExample(){
+  var set=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+  set("ct-number","SYN-CERT-0001");set("ct-rev","1");set("ct-supersedes","");
+  set("ct-producer","Northgate Steelworks (synthetic)");set("ct-issuer","Northgate Steelworks (synthetic)");set("ct-distributor","");
+  set("ct-heat","H-77213");set("ct-lot","L-4");set("ct-form","plate");set("ct-condition","normalised");
+  set("ct-spec","SYN-SPEC-100");set("ct-specrev","C");set("ct-pages","3");set("ct-pagesdec","3");
+  _ctObs=[
+    ["C","0.18","%","2","C 0.18",true],
+    ["S","<0.005","%","2","S <0.005",true],
+    ["P","0.03","%","2","P 0.03",true],
+    ["UTS","468","MPa","3","Rm 468 N/mm2",true],
+    ["hardness","201","HV","3","HV10 201",true]
+  ];
+  _ctReqs=[
+    ["C","","0.200","%",true,"SYN-SPEC-100","C","7.2","numeric",""],
+    ["S","","0.030","%",true,"SYN-SPEC-100","C","7.2","numeric",""],
+    ["P","","0.030","%",true,"SYN-SPEC-100","C","7.2","numeric",""],
+    ["UTS","450","","MPa",true,"SYN-SPEC-100","C","8.1","numeric",""],
+    ["hardness","","210","HB",true,"SYN-SPEC-100","C","8.4","numeric",""],
+    ["condition","","","",true,"SYN-DRW-4471","B","note 3","text","normalised"],
+    ["surface finish","","","",true,"SYN-DRW-4471","B","note 5","interpretation",""]
+  ];
+  ctRenderRows();
+}
+
+function ctClear(){
+  ["ct-number","ct-rev","ct-supersedes","ct-producer","ct-issuer","ct-distributor","ct-heat","ct-lot",
+   "ct-form","ct-condition","ct-spec","ct-specrev","ct-pages","ct-pagesdec"].forEach(function(id){
+    var e=document.getElementById(id); if(e)e.value="";
+  });
+  _ctObs=[];_ctReqs=[];ctRenderRows();
+  var o=document.getElementById("ct-out"); if(o)o.innerHTML="";
+}
+
+function ctv(id){var e=document.getElementById(id);return e?String(e.value).trim():"";}
+
+function ctRun(){
+  var out=document.getElementById("ct-out");
+  if(!out||!window.BW||!window.BW.checkCertificate)return;
+  var B=window.BW;
+
+  var check;
+  try{
+    var observations=_ctObs.filter(function(a){return String(a[0]).trim();}).map(function(a){
+      var hasValue=String(a[1]).trim()!=="";
+      var unit=String(a[2]).trim();
+      return B.ctObservation({
+        property:String(a[0]).trim(),
+        value:(hasValue&&unit)?B.ctQuantity(a[1],unit,String(a[0]).trim()):null,
+        text:String(a[1]).trim()||null,
+        source:{file:"entered by hand",page:parseInt(String(a[3]).replace(/[^0-9]/g,"")||"1",10),quote:String(a[4]).trim()},
+        confirmed:Boolean(a[5])
+      });
+    });
+
+    var requirements=_ctReqs.filter(function(a){return String(a[0]).trim();}).map(function(a,i){
+      var kind=a[8]||"numeric";
+      var unit=String(a[3]).trim();
+      return B.ctRequirement({
+        id:"r"+i,
+        property:String(a[0]).trim(),
+        kind:kind,
+        min:(kind==="numeric"&&String(a[1]).trim())?B.ctQuantity(a[1],unit,String(a[0]).trim()+" minimum"):undefined,
+        max:(kind==="numeric"&&String(a[2]).trim())?B.ctQuantity(a[2],unit,String(a[0]).trim()+" maximum"):undefined,
+        expected:kind==="text"?String(a[9]||"").trim():undefined,
+        mandatory:Boolean(a[4]),
+        source:{document:String(a[5]).trim(),revision:String(a[6]).trim(),clause:String(a[7]).trim()}
+      });
+    });
+
+    var pagesDec=ctv("ct-pagesdec");
+    var cert=B.ctCertificate({
+      number:ctv("ct-number")||"(unnumbered)",
+      revision:ctv("ct-rev"),
+      producer:ctv("ct-producer"),
+      issuer:ctv("ct-issuer"),
+      distributor:ctv("ct-distributor"),
+      heat:ctv("ct-heat"),
+      lot:ctv("ct-lot"),
+      statedSpecification:ctv("ct-spec"),
+      statedRevision:ctv("ct-specrev"),
+      form:ctv("ct-form"),
+      condition:ctv("ct-condition"),
+      pagesProvided:parseInt(ctv("ct-pages").replace(/[^0-9]/g,"")||"0",10),
+      pagesDeclared:pagesDec===""?null:parseInt(pagesDec.replace(/[^0-9]/g,"")||"0",10),
+      observations:observations,
+      supersedes:ctv("ct-supersedes")
+    });
+
+    check=B.checkCertificate(cert,requirements);
+  }catch(e){
+    out.innerHTML='<div class="bw-panel" style="border-color:var(--bw-danger)"><p style="color:var(--bw-danger);font-size:var(--bw-t-body);margin:0;line-height:1.6">'+ciEsc(String(e.message||e))+'</p></div>';
+    return;
+  }
+  out.innerHTML=ctResultHTML(check);
+}
+
+/* The result. Five columns, exactly as the comparison produces them. */
+function ctResultHTML(c){
+  var R=window.BW.CT_RESULT,O=window.BW.CT_OVERALL;
+  var chipFor=function(r){
+    return r===R.MEETS?"evidenced"
+      :r===R.DOES_NOT_MEET?"high"
+      :r===R.MISSING_EVIDENCE?"medium"
+      :r===R.REVIEW_REQUIRED?"review":"derived";
+  };
+  var overallChip=c.overall===O.MEETS_CHECKED?"evidenced"
+    :c.overall===O.POTENTIAL_NONCONFORMANCE?"high"
+    :c.overall===O.INCOMPLETE_EVIDENCE?"medium":"review";
+
+  var rows=c.findings.map(function(f){
+    var ev=f.evidence&&f.evidence.length
+      ? f.evidence.map(function(e){
+          return ciEsc(e.text||"")+' <span style="color:var(--bw-muted);font-size:11.5px">p'+ciEsc(String(e.page))+(e.confirmed?"":", unchecked")+'</span>';
+        }).join("<br>")
+      : '<span style="color:var(--bw-muted)">&mdash;</span>';
+    return '<tr><td>'+ciEsc(f.property)+(f.mandatory?'':' <span class="bw-status bw-status--derived">informative</span>')+'</td>'
+      +'<td>'+ciEsc(f.required)+'</td>'
+      +'<td>'+ev+'</td>'
+      +'<td><span class="bw-status bw-status--'+chipFor(f.result)+'">'+ciEsc(f.result)+'</span></td>'
+      +'<td style="color:var(--bw-muted);font-size:12px">'+ciEsc(f.source.document)+' rev '+ciEsc(f.source.revision)+(f.source.clause?' &middot; '+ciEsc(f.source.clause):'')+'</td></tr>';
+  }).join("");
+
+  var why=c.findings.filter(function(f){return f.result!==R.MEETS;}).map(function(f){
+    return '<li><b style="color:var(--bw-text)">'+ciEsc(f.property)+'</b> &mdash; '+ciEsc(f.why)
+      +' <span style="color:var(--bw-muted);font-size:11.5px">('+ciEsc(f.rule)+')</span></li>';
+  }).join("");
+
+  var issues=c.documentIssues.map(function(d){
+    return '<li><b style="color:var(--bw-text)">'+ciEsc(d.what)+'</b> &mdash; '+ciEsc(d.detail)+'</li>';
+  }).join("");
+
+  var conflicts=c.conflicts.map(function(k){
+    return '<li><b style="color:var(--bw-text)">'+ciEsc(k.property)+'</b> &mdash; '
+      +k.requirements.map(function(r){return ciEsc(r.source.document)+' rev '+ciEsc(r.source.revision)+': '+ciEsc(r.limit);}).join(' &middot; ')
+      +'<br><span style="color:var(--bw-muted)">'+ciEsc(k.why)+'</span></li>';
+  }).join("");
+
+  return '<div class="bw-panel">'
+    +'<div class="bw-panel-head"><div class="bw-panel-title">The comparison</div>'
+    +'<span class="bw-status bw-status--'+overallChip+'">'+ciEsc(c.overall)+'</span></div>'
+    +(c.headline
+      ? '<div style="border:1px solid var(--bw-'+(c.headline.kind==="nonconformance"?"danger":"warning")+');border-radius:var(--bw-r-sm);padding:12px 14px;margin-bottom:var(--bw-4);background:var(--bw-'+(c.headline.kind==="nonconformance"?"danger":"warning")+'-soft)">'
+        +'<b style="color:var(--bw-text)">'+ciEsc(c.headline.text)+'</b></div>'
+      : '')
+    +'<p style="font-size:var(--bw-t-body);color:var(--bw-body);margin:0 0 var(--bw-4);line-height:1.6">'+ciEsc(c.statement)+'</p>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Requirement</th><th>Required</th><th>Certificate evidence</th><th>Result</th><th>Source</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +(why?'<div class="eyebrow" style="margin:var(--bw-5) 0 6px">Why, in each case</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+why+'</ul>':'')
+    +(issues?'<div class="eyebrow" style="margin:var(--bw-5) 0 6px">The document itself</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+issues+'</ul>':'')
+    +(conflicts?'<div class="eyebrow" style="margin:var(--bw-5) 0 6px">Requirements that disagree with each other</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'+conflicts+'</ul>':'')
+    +(c.repeatOfKnownLot?'<p style="font-size:12.5px;color:var(--bw-warning);margin:var(--bw-4) 0 0">This is the same lot as a certificate already recorded. Re-uploading or revising a certificate does not make a second lot.</p>':'')
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-5) 0 0;line-height:1.55">'+ciEsc(c.method)+'</p>'
+    +'<p style="font-size:12px;color:var(--bw-body);margin:var(--bw-3) 0 0;line-height:1.55;border-top:1px solid var(--bw-border);padding-top:var(--bw-3)"><b style="color:var(--bw-text)">'+ciEsc(c.disclaimer)+'</b></p>'
+    +'</div>';
+}
+
+function ctSwitch(mode){
+  var mat=document.getElementById("sc-mode-material"),cert=document.getElementById("sc-mode-cert");
+  var tm=document.getElementById("sc-tab-material"),tc=document.getElementById("sc-tab-cert");
+  if(!mat||!cert)return;
+  var onCert=mode==="cert";
+  mat.hidden=onCert; cert.hidden=!onCert;
+  if(tm){tm.setAttribute("aria-selected",String(!onCert));tm.className="bw-act "+(onCert?"bw-act-secondary":"bw-act-primary");}
+  if(tc){tc.setAttribute("aria-selected",String(onCert));tc.className="bw-act "+(onCert?"bw-act-primary":"bw-act-secondary");}
+  if(onCert)ctRenderRows();
 }
 
 function defHistoryHTML(){
@@ -6179,6 +6526,10 @@ async function send(id,text){
   import { quote as makeQuote, compareQuotes, questionsFor, SCOPE } from "./src/calc/sourcing.mjs";
   import { length as scLength, density as scDensity, boxVolume, formatLength, formatMass, formatArea,
            LENGTH_UNITS, DENSITY_UNITS } from "./src/calc/units.mjs";
+  import { quantity as ctQuantity, requirement as ctRequirement, observation as ctObservation,
+           certificate as ctCertificate, checkCertificate, recordReview, lotKey,
+           RESULT as CT_RESULT, OVERALL as CT_OVERALL, KIND as CT_KIND, DISPOSITION as CT_DISPOSITION,
+           RULES_VERSION as CT_RULES } from "./src/calc/certificate.mjs";
   import { stage as scStage, routeInput, sheetLayout, barLayout, planMaterial, costPlan,
            assumptions as scAssumptions, BASIS, CONFIDENCE, CONSUMES, COST_ELEMENTS } from "./src/calc/should-cost.mjs";
   import { part as makePart, savePart, loadParts, deletePart, storeStatus as partStoreStatus,
@@ -6210,6 +6561,8 @@ async function send(id,text){
                 nextMoves, recordRound, MOVE,
                 makeQuote, compareQuotes, questionsFor, SCOPE,
                 scLength, scDensity, boxVolume, formatLength, formatMass, formatArea, LENGTH_UNITS, DENSITY_UNITS,
+                ctQuantity, ctRequirement, ctObservation, ctCertificate, checkCertificate, recordReview, lotKey,
+                CT_RESULT, CT_OVERALL, CT_KIND, CT_DISPOSITION, CT_RULES,
                 scStage, routeInput, sheetLayout, barLayout, planMaterial, costPlan, scAssumptions,
                 BASIS, CONFIDENCE, CONSUMES, COST_ELEMENTS,
                 makePart, savePart, loadParts, deletePart, partStoreStatus, forComparison,
