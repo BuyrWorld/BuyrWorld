@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 43 |
-| Test files | 0 | 73 |
+| Modules under `src/` | 0 | 44 |
+| Test files | 0 | 74 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -192,6 +192,18 @@ document containing that sentence.
 `ids.mjs`, `entities.mjs` and `registry.mjs` are the commercial memory spine:
 stable identity derived on write, explicit and reversible merges, no migration.
 See `DOMAIN_MODEL.md`.
+
+`src/studio/requirements.mjs` holds what a part has to satisfy: dimensional
+and general tolerances, geometric controls, surface texture, finishes and
+their masked areas, edge conditions, processes, and inspection. It needs no
+geometry, which is the point — a buyer knows the finish long before anyone
+has modelled the part. Limits are exact integer nanometres rather than the
+micrometres `units.mjs` uses, because a micrometre cannot hold one thou.
+Citing a specification records a citation and nothing more: there is no table
+of standards in this repository, so a requirement leaning on a specification
+whose clause text nobody supplied stays `unverified`. Conflicting
+requirements are reported and never resolved, because choosing between two
+tolerances is an engineering decision.
 
 `src/studio/scenario.mjs` is the model behind both Should-Cost Studio entry
 paths. Upload drawing and No drawing — enter details manually converge on it,

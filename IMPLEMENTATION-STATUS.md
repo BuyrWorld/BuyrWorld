@@ -142,6 +142,30 @@ with its own review flow.
 
 Checks: all 6 passed, 2,102 tests.
 
+### v4 C1 — engineering requirements · DONE
+
+Roadmap exit gate: "Scoped/versioned records save and reopen." Its stated
+value is entering tolerances, finishes and specs **even without geometry**,
+and that qualifier is the design — nothing in this module needs a model.
+
+- `src/studio/requirements.mjs` — eight kinds of requirement, four scopes,
+  exact tolerances, attachment tracking, conflict detection, a schedule, and
+  persistence
+- `tests/unit/requirements.test.mjs` — 61 tests
+
+Two findings from the tests. Micrometres cannot hold one thou (0.001 in is
+25.4 um), so deviations count in nanometres — units.mjs stays in micrometres,
+correctly, because it measures parts rather than deviations. And a record
+could not be stored at all, because every limit is a BigInt and
+JSON.stringify throws on those; it uses the tagging format
+outcome-store.mjs already established.
+
+C2 (parametric builder), C3 (review export) and C4 (AI-assisted edits) are
+**not** started. All three need a deterministic geometry kernel, which this
+repository does not have and which is not something to improvise.
+
+Checks: all 6 passed, 2,163 tests.
+
 ## Decisions
 
 - **The pack's reference implementations are not adopted.** `material-planning.mjs`
