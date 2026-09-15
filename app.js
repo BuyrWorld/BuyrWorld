@@ -117,7 +117,7 @@ function fileChosen(input, labelId) {
 }
 
 /** One driver row's field. The row index and the column arrive as strings. */
-function defRowSet(i, col) { _defRows[Number(i)][Number(col)] = this.value; }
+function defRowSet(i, col) { _defRows[Number(i)][Number(col)] = this.value; defRowEdited(i); }
 function defRowSetRender(i, col) { defRowSet.call(this, i, col); defRenderDrivers(); }
 
 /** The like control, which only ever toggled a class on itself. */
@@ -873,6 +873,22 @@ const DEF_DEFAULT_DRIVERS=[
   ["Energy","8","12","direct","","","",""]
 ];
 let _defRows=DEF_DEFAULT_DRIVERS.map(function(r){return r.slice();});
+
+/* Where each driver row's numbers came from, parallel to _defRows.
+   Parallel rather than extra columns because a row is plain strings that the
+   form writes into, and provenance is a fact about where a string came from
+   rather than about what it says. No entry means a person typed it, which is
+   the common case and stays the cheap one. */
+let _defRowSource=[];
+
+function defRowFrom(i){
+  return _defRowSource[i] || {provenance:"user-entered",confirmedBy:null};
+}
+
+/* Editing a value makes the row the person's, whatever it was before. What a
+   model proposed and what somebody typed over it are different facts, and the
+   second is the one that ends up in the calculation. */
+function defRowEdited(i){ _defRowSource[Number(i)]=null; }
 let _defResult=null;
 
 function defRenderDrivers(){
@@ -901,10 +917,11 @@ function defRenderDrivers(){
       +'</div>';
   }).join("")+'<div style="color:var(--muted);font-size:11.5px">Weight = share of unit cost. Stated movement is taken on trust; an index-derived one is not.</div>';
 }
-function defAddDriver(){_defRows.push(["","","","direct","","","",""]);defRenderDrivers();}
-function defRemoveDriver(i){_defRows.splice(i,1);defRenderDrivers();}
+function defAddDriver(){_defRows.push(["","","","direct","","","",""]);_defRowSource.push(null);defRenderDrivers();}
+function defRemoveDriver(i){_defRows.splice(i,1);_defRowSource.splice(i,1);defRenderDrivers();}
 function defSet(id,v){var el=document.getElementById(id); if(el)el.value=v;}
 function defLoadExample(){
+  _defRowSource=[];
   _defRows=[
     ["Material","42","10","index","2025-01","2025-06","2026-06","3"],
     ["Labour","18","5","direct","","","",""],
@@ -930,9 +947,15 @@ function defCalc(){
       var hasWeight=String(r[1]).trim()!=="";
       return hasWeight && (r[3]==="index" ? String(r[6]||"").trim()!=="" : String(r[2]).trim()!=="");
     }).map(function(r,i){
+      /* The provenance the row actually carries, not a constant. This is what
+         makes assertUsable() in cost-bridge.mjs able to fire: it refuses to
+         calculate with an ai-inferred value that nobody has confirmed, and
+         until now it was never handed one. */
+      var from=defRowFrom(i);
       var base={id:"d"+i,label:(r[0]||("Driver "+(i+1))).trim(),
                 weight:window.BW.pc(String(r[1]).trim()),
-                provenance:"user-entered"};
+                provenance:from.provenance,
+                confirmedBy:from.confirmedBy};
       if(r[3]==="index"){
         base.index={
           series:window.BW.SAMPLE_INDEX,
@@ -1025,7 +1048,7 @@ function defRestore(data){
     el.value=Object.prototype.hasOwnProperty.call(f,el.id)?f[el.id]:"";
   });
   if(data&&Array.isArray(data.drivers)){
-    try{ _defRows=JSON.parse(JSON.stringify(data.drivers)); }catch(e){}
+    try{ _defRows=JSON.parse(JSON.stringify(data.drivers)); _defRowSource=[]; }catch(e){}
     if(typeof defRenderDrivers==="function")defRenderDrivers();
   }
 }
@@ -3921,6 +3944,14 @@ function defApplyExtract(){
               d.weightPercent?d.weightPercent.value:"",
               d.movementPercent?d.movementPercent.value:"",
               "direct","","","",""];
+    });
+    /* These came from a model, and the engine is entitled to know. A driver is
+       only as confirmed as its least confirmed number, so every figure that is
+       present has to have been ticked before the row counts as confirmed. */
+    _defRowSource=r.drivers.map(function(d){
+      var present=["weightPercent","movementPercent"].filter(function(k){return d[k];});
+      var all=present.length>0&&present.every(function(k){return d[k].confirmedBy;});
+      return {provenance:"ai-inferred",confirmedBy:all?d[present[0]].confirmedBy:null};
     });
     defRenderDrivers();
   }

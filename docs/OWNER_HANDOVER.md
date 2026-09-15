@@ -101,7 +101,7 @@ decision pack → outcome. Should Cost Expert runs end to end too: a drawing or
 certificate read, a material plan costed, a certificate checked, a decision
 recorded, and that decision becoming one lot in a producer's record.
 
-**The checks.** 1,846 tests across 62 files, 21 ProcureBench evaluation cases,
+**The checks.** 1,883 tests across 64 files, 21 ProcureBench evaluation cases,
 18 extraction cases, and six verification steps, all run automatically on every
 push.
 
