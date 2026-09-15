@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 45 |
-| Test files | 0 | 77 |
+| Modules under `src/` | 0 | 46 |
+| Test files | 0 | 78 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -204,6 +204,16 @@ of standards in this repository, so a requirement leaning on a specification
 whose clause text nobody supplied stays `unverified`. Conflicting
 requirements are reported and never resolved, because choosing between two
 tolerances is an engineering decision.
+
+`src/studio/geometry.mjs` is a deliberately small parametric part: a
+rectangular block, through-holes and rectangular pockets, and nothing that
+would let anyone mistake it for a CAD replacement. Dimensions are integer
+micrometres. The block and a rectangular pocket have exact volumes; a round
+hole does not, because its volume contains pi — so a part with holes reports
+a volume *interval* whose bounds provably contain the truth, rather than a
+rounded figure presented as a measurement. Feature ids survive deletion,
+which is what lets `requirements.mjs` detect a detached requirement instead
+of handing the tolerance written for one hole to a different one.
 
 `src/studio/review-export.mjs` prepares a package to hand to somebody
 technical. It contains no solid model and no dimensioned drawing, because

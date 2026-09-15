@@ -203,6 +203,25 @@ says so.
 
 Checks: all 6 passed, 2,244 tests.
 
+### v4 C2 — the bounded Part Builder · engine DONE, UI not yet
+
+- `src/studio/geometry.mjs` — block, through-holes, rectangular pockets,
+  validation, stable ids, bounded volume, mass, undo
+- `tests/unit/geometry.test.mjs` — 39 tests
+
+Scope is deliberately small and the module says so: no freeform surface, no
+fillet, no revolve. What it does have is exact integer dimensions, volume
+that is exact for rectangular features and a provable interval where a hole
+puts pi into the arithmetic, and feature ids that survive deletion.
+
+That last one is why this was worth building now. C1 attaches requirements to
+feature ids and detects a detached one — but the page passed an empty feature
+list, so DETACHED had tests and could never occur in the product. The third
+instance of that pattern this month.
+
+Still to do: the Part Builder interface, and passing the real feature list to
+`scRenderRequirements`. C4 (AI-assisted edits) remains unstarted.
+
 ## Decisions
 
 - **The pack's reference implementations are not adopted.** `material-planning.mjs`
