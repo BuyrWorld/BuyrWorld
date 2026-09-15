@@ -2411,6 +2411,15 @@ var _scUnknown = {};
    is the common case and stays the cheap one. */
 var _scSource = {};
 
+/* When each field was last touched by a person. This is what makes a late
+   extraction recognisable as late: compareExtraction asks whether the field
+   was edited after the document read began, and with no timestamp the answer
+   is always no. Absent means untouched since the page loaded. */
+var _scEdited = {};
+
+/** Record that a person has just changed a field. */
+function scTouched(id){ if(SC_FIELD_HELP[id]) _scEdited[id]=new Date().toISOString(); }
+
 function scFieldName(id){ return SC_FIELD_HELP[id] ? SC_FIELD_HELP[id].name : null; }
 
 /** What to show beside a field, in the pack's vocabulary. */
@@ -2495,6 +2504,9 @@ function scRenderFieldStates(){
 function scDontKnow(id){
   if(!SC_FIELD_HELP[id]) return;
   if(_scUnknown[id]) delete _scUnknown[id]; else _scUnknown[id]=true;
+  /* Saying you cannot answer is answering, so it counts as an edit and a
+     later extraction cannot quietly overrule it. */
+  scTouched(id);
   scRenderFieldStates();
   var input=document.getElementById(id);
   if(input && !_scUnknown[id] && typeof input.focus==="function") input.focus();
@@ -2537,7 +2549,7 @@ function scFormScenario(){
     var name=SC_FIELD_HELP[id].name;
     var el=document.getElementById(id);
     if(_scUnknown[id]){
-      s=B.withField(s,name,{unknown:true});
+      s=B.withField(s,name,{unknown:true, at:_scEdited[id]||null});
       continue;
     }
     var v=el?String(el.value).trim():"";
@@ -2548,7 +2560,8 @@ function scFormScenario(){
     s=B.withField(s,name,{
       value:v,
       unit: SC_FIELD_HELP[id].isLength ? (scVal("sc-unit")||"mm") : null,
-      source:_scSource[id]||B.SC_SOURCE.MANUAL
+      source:_scSource[id]||B.SC_SOURCE.MANUAL,
+      at:_scEdited[id]||null
     });
   }
   return s;
@@ -2561,7 +2574,7 @@ function scApplyScenario(s){
 
   _scScenarioId=s.id;
   _scRevision=s.revision||1;
-  _scUnknown={}; _scSource={};
+  _scUnknown={}; _scSource={}; _scEdited={};
 
   var unit=document.getElementById("sc-unit");
   if(unit&&s.unit)unit.value=s.unit;
@@ -2613,7 +2626,7 @@ function scSaveDraft(){
 /** Start again, keeping nothing. */
 function scNewDraft(){
   _scScenarioId=null; _scRevision=0;
-  _scUnknown={}; _scSource={};
+  _scUnknown={}; _scSource={}; _scEdited={};
   scClear();
   scRenderFieldStates();
   scDraftStatus("Started a new scenario. The one you were on is still saved.");
@@ -2670,6 +2683,175 @@ function scRenderDrafts(){
   }).join("");
 
   host.innerHTML='<ul class="bw-drafts">'+rows+'</ul>';
+}
+
+
+/* ------------------------------------- a drawing that arrives after typing */
+
+/* The comparison waiting on a decision, and the moment the read started.
+   The time is what decides a stale proposal: if a field was edited while the
+   document was being read, the person has seen it more recently than the
+   reader has, and their value stands. */
+var _scCompare = null;
+var _scReadStartedAt = null;
+
+/** Note when a document read begins, so late results can be recognised. */
+function scReadStarted(){ _scReadStartedAt = new Date().toISOString(); }
+
+/**
+ * Compare what was read against what is on the form.
+ *
+ * Nothing is written here. The result is a list of decisions for a person to
+ * make, which is the whole difference between this and what it replaces.
+ */
+function scCompareDrawing(rows){
+  var B=window.BW;
+  if(!B||!B.compareExtraction) return null;
+
+  var map=EX_TO_FORM.scx||{};
+  var candidates={};
+  var unusable=[];
+
+  rows.forEach(function(row){
+    var id=map[row.field];
+    if(!id||!SC_FIELD_HELP[id]) return;
+    if(row.best.state!=="confirmed"){ unusable.push(row.label); return; }
+    candidates[SC_FIELD_HELP[id].name]={
+      value:row.best.value,
+      unit:row.best.unit||scVal("sc-unit")||"mm",
+      from:{document:"the drawing",page:row.best.page}
+    };
+  });
+
+  var current=scFormScenario();
+  if(!current) return null;
+
+  var c=B.compareExtraction(current, candidates, _scReadStartedAt);
+  _scCompare={comparison:c, scenario:current, unusable:unusable};
+  return _scCompare;
+}
+
+/** The scenario field name back to the input it lives in. */
+function scIdForField(name){
+  for(var id in SC_FIELD_HELP) if(SC_FIELD_HELP[id].name===name) return id;
+  return null;
+}
+
+/** Accept one proposal. Everything else is left exactly as it was. */
+function scAcceptOne(name){
+  var B=window.BW;
+  if(!_scCompare||!B||!B.acceptCandidates) return;
+  var next=B.acceptCandidates(_scCompare.scenario,_scCompare.comparison,[name],null);
+  var id=scIdForField(name);
+  var f=next.fields[name];
+  if(id&&f){
+    var el=document.getElementById(id);
+    if(el){ el.value=f.value===null?"":f.value; el.disabled=false; }
+    delete _scUnknown[id];
+    /* Accepted is reviewed: a person looked at the proposal and said yes, so
+       it stops being a candidate and becomes theirs — including the edit
+       time, so a second read cannot quietly overrule the acceptance. */
+    delete _scSource[id];
+    scTouched(id);
+  }
+  _scCompare.scenario=next;
+  scRenderFieldStates();
+  scRenderComparison();
+}
+
+/** Keep what is on the form, and stop offering the proposal. */
+function scKeepOne(name){
+  if(!_scCompare) return;
+  var c=_scCompare.comparison;
+  var drop=function(list){ return list.filter(function(x){ return x.name!==name; }); };
+  _scCompare.comparison={
+    fill:drop(c.fill), conflict:drop(c.conflict),
+    stale:c.stale, same:c.same, applied:c.applied
+  };
+  scRenderComparison();
+}
+
+/** Take every empty-field proposal at once. They overwrite nothing. */
+function scAcceptEmpty(){
+  if(!_scCompare) return;
+  var names=_scCompare.comparison.fill.map(function(x){ return x.name; });
+  for(var i=0;i<names.length;i++) scAcceptOne(names[i]);
+}
+
+function scDismissComparison(){ _scCompare=null; scRenderComparison(); }
+
+/** One row of the decision list. */
+function scCompareRow(item, kind){
+  var B=window.BW;
+  var label=B&&B.scLabelOf?B.scLabelOf(item.name):item.name;
+  var now=item.current&&item.current.value!==null?item.current.value:(item.current&&item.current.unknown?"not known":"empty");
+  var proposed=item.proposal.value;
+  return '<li class="bw-cmp bw-cmp--'+kind+'">'
+    +'<div class="bw-cmp-what"><b>'+ciEsc(label)+'</b>'
+    +(item.why?' <span class="bw-cmp-why">'+ciEsc(item.why)+'</span>':'')+'</div>'
+    +'<div class="bw-cmp-vals">'
+    +'<span class="bw-cmp-now">On the form: <b>'+ciEsc(String(now))+'</b></span>'
+    +'<span class="bw-cmp-new">The drawing says: <b>'+ciEsc(String(proposed))+'</b></span>'
+    +'</div>'
+    +(kind==="stale" ? '<div class="bw-cmp-note">You changed this while the drawing was being read, so it was left alone.</div>'
+      : '<div class="bw-cmp-acts">'
+        +'<button type="button" class="bw-act bw-act-secondary bw-act--sm" data-do="scAcceptOne" data-a="'
+        +attrEsc(ciEsc(item.name))+'">Use the drawing&rsquo;s</button>'
+        +'<button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scKeepOne" data-a="'
+        +attrEsc(ciEsc(item.name))+'">Keep mine</button></div>')
+    +'</li>';
+}
+
+/** Draw the decisions, or nothing when there are none. */
+function scRenderComparison(){
+  var host=document.getElementById("sc-compare");
+  if(!host) return;
+  if(!_scCompare){ host.innerHTML=""; return; }
+
+  var c=_scCompare.comparison;
+  var parts=[];
+
+  if(c.conflict.length){
+    parts.push('<div class="bw-cmp-group"><div class="bw-cmp-head">'
+      +c.conflict.length+' value'+(c.conflict.length===1?'':'s')+' on the drawing '
+      +(c.conflict.length===1?'differs':'differ')+' from what you entered</div>'
+      +'<p class="bw-cmp-lead">Nothing has changed. Your values are still on the form.</p>'
+      +'<ul class="bw-cmps">'+c.conflict.map(function(x){return scCompareRow(x,"conflict");}).join("")+'</ul></div>');
+  }
+
+  if(c.fill.length){
+    parts.push('<div class="bw-cmp-group"><div class="bw-cmp-head">'
+      +c.fill.length+' empty field'+(c.fill.length===1?'':'s')+' the drawing can fill</div>'
+      +'<p class="bw-cmp-lead">These overwrite nothing. Anything you take is marked as needing a check.</p>'
+      +'<ul class="bw-cmps">'+c.fill.map(function(x){return scCompareRow(x,"fill");}).join("")+'</ul>'
+      +'<button type="button" class="bw-act bw-act-secondary bw-act--sm" data-do="scAcceptEmpty">'
+      +'Take all '+c.fill.length+'</button></div>');
+  }
+
+  if(c.stale.length){
+    parts.push('<div class="bw-cmp-group"><div class="bw-cmp-head">'
+      +c.stale.length+' edited while the drawing was being read</div>'
+      +'<ul class="bw-cmps">'+c.stale.map(function(x){return scCompareRow(x,"stale");}).join("")+'</ul></div>');
+  }
+
+  if(c.same.length){
+    parts.push('<p class="bw-cmp-agree">'+c.same.length+' value'+(c.same.length===1?'':'s')
+      +' on the drawing '+(c.same.length===1?'agrees':'agree')+' with what you entered.</p>');
+  }
+
+  if(_scCompare.unusable && _scCompare.unusable.length){
+    parts.push('<p class="bw-cmp-agree">Read but not confirmed, so not offered: '
+      +ciEsc(_scCompare.unusable.join(", "))+'.</p>');
+  }
+
+  if(!parts.length){
+    host.innerHTML='<p class="bw-cmp-agree">The drawing had nothing this form could use.</p>';
+    return;
+  }
+
+  host.innerHTML='<div class="bw-cmp-panel">'+parts.join("")
+    +'<button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scDismissComparison">Done comparing</button>'
+    +'</div>';
 }
 
 function scVal(id){var e=document.getElementById(id);return e?String(e.value).trim():"";}
@@ -2999,7 +3181,10 @@ function scBind(){
   /* A field goes from Missing to User confirmed the moment something is typed
      in it, so the badge has to follow the typing rather than the run. */
   page.addEventListener("input",function(e){
-    if(e.target&&e.target.id&&SC_FIELD_HELP[e.target.id])scRenderFieldStates();
+    if(e.target&&e.target.id&&SC_FIELD_HELP[e.target.id]){
+      scTouched(e.target.id);
+      scRenderFieldStates();
+    }
   });
   page.addEventListener("click",function(e){
     var m=e.target&&e.target.closest?e.target.closest("[data-sc-mode]"):null;
@@ -3483,6 +3668,10 @@ async function exRead(which,input){
   if(!out||!f)return;
 
   if(nameEl)nameEl.textContent=f.name+" — reading…";
+  /* The moment the read began. Anything edited after this has been seen by a
+     person more recently than by the reader, so a proposal for it is stale
+     however the results happen to come back. */
+  if(which==="scx"&&typeof scReadStarted==="function")scReadStarted();
   if(f.size>MAX_FILE_MB*1024*1024){
     if(nameEl)nameEl.textContent=f.name;
     out.innerHTML=exErr("That file is "+(f.size/1024/1024).toFixed(1)+"MB; the limit is "+MAX_FILE_MB+"MB.");
@@ -3580,6 +3769,29 @@ function exApply(which){
   var r=_exState[which];
   if(!msg||!r)return;
   var rows=window.BW.reviewTable(r);
+
+  /* A drawing read into the Studio compares rather than overwrites. This used
+     to walk the confirmed rows and assign straight into the inputs, so
+     somebody who typed their dimensions and then found the PDF lost what they
+     typed, silently and with no way back. The certificate reader keeps the
+     old path: it fills a different form with its own review flow, and moving
+     it here would be a second change hiding inside this one. */
+  if(which==="scx" && typeof scCompareDrawing==="function"){
+    var cmp=scCompareDrawing(rows);
+    if(cmp){
+      var c=cmp.comparison;
+      var waiting=c.conflict.length+c.fill.length;
+      scRenderComparison();
+      msg.innerHTML='<p style="font-size:12.5px;margin:0;line-height:1.7;color:var(--bw-body)">'
+        +(waiting
+          ? 'Nothing has been changed. '+waiting+' value'+(waiting===1?'':'s')+' '
+            +(waiting===1?'is':'are')+' waiting for you to choose, below the form.'
+          : 'Nothing on the drawing disagreed with what you have entered.')
+        +'</p>';
+      return;
+    }
+  }
+
   var map=EX_TO_FORM[which]||{};
   var filled=[],skipped=[],unmapped=[];
 
@@ -6350,6 +6562,10 @@ registerActions({
   scNewDraft: function () { scNewDraft(); },
   scOpenDraft: function (id) { scOpenDraft(id); },
   scDeleteDraft: function (id) { scDeleteDraft(id); },
+  scAcceptOne: function (name) { scAcceptOne(name); },
+  scKeepOne: function (name) { scKeepOne(name); },
+  scAcceptEmpty: function () { scAcceptEmpty(); },
+  scDismissComparison: function () { scDismissComparison(); },
   /* navigation */
   go: go, miGo: miGo, miCommodity: miCommodity, goAgent: goAgent,
   toggleMenu: toggleMenu,

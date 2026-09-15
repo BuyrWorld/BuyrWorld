@@ -93,6 +93,11 @@ function studio({ values = {}, unknown = {} } = {}) {
        unsaved work, which is a normal state rather than an error. */
     "var _scScenarioId=null;",
     "var _scRevision=0;",
+    /* When each field was last touched. scFormScenario stamps it onto every
+       field so a late extraction can be recognised as late — see
+       studio-conflicts.test.mjs, which is where that rule is exercised. */
+    "var _scEdited={};",
+    "function scTouched(id){ if(SC_FIELD_HELP[id]) _scEdited[id]=new Date().toISOString(); }",
     fnSource("scVal", app), fnSource("scEntry", app),
     fnSource("scFieldState", app), fnSource("scStateDot", app),
     fnSource("scRenderFieldStates", app),

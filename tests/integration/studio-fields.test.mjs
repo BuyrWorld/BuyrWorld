@@ -85,7 +85,12 @@ function form({ values = {}, unknown = {} } = {}) {
     [helpSource(), `var _scUnknown=${JSON.stringify(unknown)};`, "var _scSource={};",
       fnSource("scFieldName", app), fnSource("scFieldState", app), fnSource("scStateDot", app),
       fnSource("scAnnotate", app), fnSource("scRenderFieldStates", app),
-      fnSource("scDontKnow", app), fnSource("scUnknownFields", app)].join("\n"),
+      fnSource("scDontKnow", app), fnSource("scUnknownFields", app),
+      /* scDontKnow records the edit now, so a later extraction cannot quietly
+         overrule somebody saying they do not know. */
+      "var _scEdited={};",
+      "function scTouched(id){ if(SC_FIELD_HELP[id]) _scEdited[id]=new Date().toISOString(); }",
+    ].join("\n"),
     sandbox);
 
   return {

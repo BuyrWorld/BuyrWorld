@@ -41,7 +41,8 @@
            forComparison } from "./src/services/part-store.mjs";
   import { scenario, withField, readiness as scReadiness, stateOf as scStateOf,
            started as scStarted, SOURCE as SC_SOURCE, ENTRY as SC_ENTRY,
-           GOAL as SC_GOAL } from "./src/studio/scenario.mjs";
+           GOAL as SC_GOAL, compareExtraction, acceptCandidates,
+           labelOf as scLabelOf } from "./src/studio/scenario.mjs";
   import { newId as scNewId, saveScenario, loadScenarios, loadScenario,
            deleteScenario, storeStatus as scenarioStoreStatus } from "./src/services/studio-store.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
@@ -83,6 +84,7 @@
                 BASIS, CONFIDENCE, CONSUMES, COST_ELEMENTS,
                 makePart, savePart, loadParts, deletePart, partStoreStatus, forComparison,
                 scenario, withField, scReadiness, scStateOf, scStarted,
+                compareExtraction, acceptCandidates, scLabelOf,
                 SC_SOURCE, SC_ENTRY, SC_GOAL,
                 scNewId, saveScenario, loadScenarios, loadScenario, deleteScenario,
                 scenarioStoreStatus,

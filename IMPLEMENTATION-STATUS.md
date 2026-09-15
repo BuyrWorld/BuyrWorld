@@ -125,6 +125,23 @@ the work you were trying not to repeat.
 
 Checks: all 6 passed, 2,072 tests.
 
+### Slice 6 — a drawing that arrives after you have typed · DONE
+
+`exApply` overwrote. It walked the confirmed rows and assigned straight into
+the inputs, so somebody who typed their dimensions and then found the PDF
+lost what they typed, silently. The drawing path now compares.
+
+- `app.js` — `scCompareDrawing`, `scAcceptOne`, `scKeepOne`,
+  `scAcceptEmpty`, `scRenderComparison`, `scReadStarted`, `_scEdited`
+- `mount.mjs` — `compareExtraction`, `acceptCandidates`, `labelOf`
+- `index.html` — the decision panel, under the fields it concerns
+- `tests/integration/studio-conflicts.test.mjs` — 30 tests
+
+The certificate reader is deliberately untouched: it fills a different form
+with its own review flow.
+
+Checks: all 6 passed, 2,102 tests.
+
 ## Decisions
 
 - **The pack's reference implementations are not adopted.** `material-planning.mjs`
@@ -151,6 +168,7 @@ Checks: all 6 passed, 2,072 tests.
 
 ## Next slice
 
-Slice 6 — the later-upload conflict flow. `compareExtraction` and
-`acceptCandidates` are built and tested in the model; the page does not yet
-call them, so uploading a drawing after typing does not yet show conflicts.
+The pack's v3 Studio requirements are now implemented end to end. Next is
+either the v4 Part Builder (C1: requirements — tolerances, finishes and
+specification revisions — which needs no geometry engine), or a browser pass
+over the six slices, which nothing so far has had.
