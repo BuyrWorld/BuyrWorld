@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 44 |
-| Test files | 0 | 75 |
+| Modules under `src/` | 0 | 45 |
+| Test files | 0 | 77 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -204,6 +204,17 @@ of standards in this repository, so a requirement leaning on a specification
 whose clause text nobody supplied stays `unverified`. Conflicting
 requirements are reported and never resolved, because choosing between two
 tolerances is an engineering decision.
+
+`src/studio/review-export.mjs` prepares a package to hand to somebody
+technical. It contains no solid model and no dimensioned drawing, because
+this build has no geometry engine — and both are named in the package with
+the reason, rather than quietly absent. What it does contain is real: a
+requirement schedule to read, the same schedule as data, the open questions,
+and a manifest carrying the actual SHA-256 of the actual bytes. Every
+artifact is stamped DRAFT — FOR TECHNICAL REVIEW, wording that would read as
+a release is refused rather than trusted, and a package from this build is
+never "complete" — which is the honest answer while two formats are
+unavailable.
 
 `src/studio/scenario.mjs` is the model behind both Should-Cost Studio entry
 paths. Upload drawing and No drawing — enter details manually converge on it,

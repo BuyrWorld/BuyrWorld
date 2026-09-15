@@ -61,8 +61,20 @@ export function markupOnly() {
  * and fails nothing.
  */
 export function fnSource(name, source = pageSource()) {
-  const start = source.indexOf(`function ${name}(`);
+  let start = source.indexOf(`function ${name}(`);
   if (start < 0) throw new Error(`${name} not found in the page`);
-  const end = source.indexOf("\nfunction ", start + 1);
+
+  /* Take the `async` with it. Slicing from `function` drops the keyword, and
+     the extracted source then fails to parse the moment it contains an await —
+     with a syntax error that points at the await rather than at the missing
+     keyword, which is a confusing half-hour. */
+  if (source.slice(Math.max(0, start - 6), start) === "async ") start -= 6;
+
+  /* Forward, so the slice cannot run backwards: indexOf from the end finds the
+     wrong brace, and a backwards slice returns an empty string that matches
+     nothing and fails nothing. Both declaration forms end it. */
+  const plain = source.indexOf("\nfunction ", start + 1);
+  const asyncNext = source.indexOf("\nasync function ", start + 1);
+  const end = plain < 0 ? asyncNext : asyncNext < 0 ? plain : Math.min(plain, asyncNext);
   return source.slice(start, end < 0 ? source.length : end);
 }

@@ -3077,6 +3077,100 @@ function scRenderRequirements(){
   host.innerHTML='<ul class="bw-reqs">'+rows+'</ul>'+conflicts+next;
 }
 
+
+/* -------------------------------------------- export for technical review */
+
+/* The package most recently built, so the buttons that save a file are saving
+   the bytes whose hashes are on screen rather than rebuilding and producing a
+   different timestamp. */
+var _scPackage = null;
+
+/** Build the package and show what it contains — and what it does not. */
+async function scExportReview(){
+  var B=window.BW;
+  var host=document.getElementById("rev-out");
+  if(!host) return;
+  if(!B||!B.reviewSnapshot){
+    host.innerHTML=scErr("The engine did not load, so no review package can be prepared.");
+    return;
+  }
+
+  var part=scVal("sc-grade")||scVal("req-target")||"Untitled part";
+
+  try{
+    var snap=B.reviewSnapshot({
+      part:part,
+      partRevision:scVal("rev-partrev")||null,
+      units:scVal("sc-unit")||"mm",
+      preparedBy:scVal("rev-by")||null,
+      requirements:_scReqs,
+      features:[]
+    });
+    _scPackage=await B.buildReviewPackage(snap);
+  }catch(e){
+    _scPackage=null;
+    host.innerHTML=scErr(String(e.message||e));
+    return;
+  }
+  scRenderPackage();
+}
+
+function scRenderPackage(){
+  var host=document.getElementById("rev-out");
+  if(!host) return;
+  if(!_scPackage){ host.innerHTML=""; return; }
+
+  var m=_scPackage.manifest;
+
+  var files=m.files.map(function(f){
+    return '<li class="bw-rev-file">'
+      +'<button type="button" class="bw-rev-save" data-do="scSaveArtifact" data-a="'
+      +attrEsc(ciEsc(f.name))+'">'+ciEsc(f.name)+'</button>'
+      +'<span class="bw-rev-what">'+ciEsc(f.what||"")+'</span>'
+      +'<code class="bw-rev-hash" title="SHA-256">'+ciEsc(f.sha256.slice(0,16))+'…</code>'
+      +'</li>';
+  }).join("");
+
+  var absent=m.notIncluded.map(function(f){
+    return '<li><b>'+ciEsc(f.name)+'</b> &mdash; '+ciEsc(f.what)+'. '+ciEsc(f.why)+'</li>';
+  }).join("");
+
+  var omissions=m.omissions.map(function(o){
+    return '<li>'+ciEsc(o)+'</li>';
+  }).join("");
+
+  host.innerHTML=
+    '<div class="bw-rev">'
+    +'<div class="bw-rev-label">'+ciEsc(B_DRAFT_LABEL())+'</div>'
+    +'<p class="bw-rev-lead">Nothing has been sent. These are files to hand to somebody '
+    +'technical; saving them does not approve the part or record a review.</p>'
+    +'<div class="bw-rev-head">'+m.files.length+' file'+(m.files.length===1?'':'s')+'</div>'
+    +'<ul class="bw-rev-files">'+files+'</ul>'
+    +(absent?'<div class="bw-rev-head">Not included</div><ul class="bw-rev-absent">'+absent+'</ul>':'')
+    +(omissions?'<div class="bw-rev-head">'+(m.complete?'':'This package is incomplete')
+       +'</div><ul class="bw-rev-absent">'+omissions+'</ul>':'')
+    +'</div>';
+}
+
+function B_DRAFT_LABEL(){
+  var B=window.BW;
+  return (B&&B.DRAFT_LABEL)||"DRAFT — FOR TECHNICAL REVIEW";
+}
+
+/** Save one artifact. The bytes are the ones the manifest hashed. */
+function scSaveArtifact(name){
+  if(!_scPackage||!_scPackage.files[name]) return;
+  var text=_scPackage.files[name];
+  var type = /\.json$/.test(name) ? "application/json"
+           : /\.html$/.test(name) ? "text/html" : "text/markdown";
+  var blob=new Blob([text],{type:type+";charset=utf-8"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="BuyrWorld-review-"+name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 function scVal(id){var e=document.getElementById(id);return e?String(e.value).trim():"";}
 function scInt(id){var t=scVal(id).replace(/[^0-9]/g,"");return t===""?null:parseInt(t,10);}
 
@@ -6794,6 +6888,8 @@ registerActions({
   scAddRequirement: function () { scAddRequirement(); },
   scRemoveRequirement: function (id) { scRemoveRequirement(id); },
   scReqKindChanged: function () { scReqKindChanged(); },
+  scExportReview: function () { scExportReview(); },
+  scSaveArtifact: function (name) { scSaveArtifact(name); },
   /* navigation */
   go: go, miGo: miGo, miCommodity: miCommodity, goAgent: goAgent,
   toggleMenu: toggleMenu,

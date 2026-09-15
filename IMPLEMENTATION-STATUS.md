@@ -182,6 +182,27 @@ would imply the tool knows what they contain), and nothing pre-filled.
 
 Checks: all 6 passed, 2,194 tests.
 
+### v4 C3 — the technical-review package · DONE, within its limits
+
+Built under the roadmap condition: a requirements review sheet without a CAD
+file is allowed *"but must label that limitation and must not claim the CAD
+export feature complete."*
+
+- `src/studio/review-export.mjs` — snapshot, schedule (HTML and JSON),
+  review notes, manifest with real SHA-256, and a verifier
+- `app.js` / `index.html` — the panel, under the result
+- `tests/unit/review-export.test.mjs` — 35 tests
+- `tests/integration/review-export-wiring.test.mjs` — 15 tests
+
+Produced: the requirement schedule to read, the same as data, the open
+questions, and a manifest whose hashes are checkable against the bytes.
+
+**Not** produced, and named in the package with reasons: `model.step` and
+`drawing.pdf`. A package from this build is therefore never "complete", and
+says so.
+
+Checks: all 6 passed, 2,244 tests.
+
 ## Decisions
 
 - **The pack's reference implementations are not adopted.** `material-planning.mjs`

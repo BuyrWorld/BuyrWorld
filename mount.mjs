@@ -50,6 +50,9 @@
            requirement as reqRequirement, newRequirementId, attachments as reqAttachments,
            conflicts as reqConflicts, schedule as reqSchedule, labelOfKind as reqLabelOfKind,
            serialiseRequirements, deserialiseRequirements } from "./src/studio/requirements.mjs";
+  import { DRAFT_LABEL, snapshot as reviewSnapshot, buildPackage as buildReviewPackage,
+           verifyPackage as verifyReviewPackage, FORMATS as REVIEW_FORMATS }
+    from "./src/studio/review-export.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
@@ -97,6 +100,8 @@
                 reqTolerance, reqRequirement, newRequirementId, reqAttachments,
                 reqConflicts, reqSchedule, reqLabelOfKind,
                 serialiseRequirements, deserialiseRequirements,
+                DRAFT_LABEL, reviewSnapshot, buildReviewPackage, verifyReviewPackage,
+                REVIEW_FORMATS,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,
