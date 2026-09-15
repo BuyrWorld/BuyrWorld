@@ -141,7 +141,7 @@ describe("the page is wired to the store", () => {
 
   test("there is somewhere to put the list, and a control to save", () => {
     assert.match(html, /<div id="def-cases"/);
-    assert.match(html, /onclick="defSaveCase\(\)"/);
+    assert.match(html, /data-do="defSaveCase"/);
   });
 
   test("the list renders when the Defender is opened", () => {

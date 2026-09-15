@@ -141,15 +141,35 @@ describe("the escapers that guard model output", () => {
 });
 
 describe("the known CSP weakness is measured, not assumed away", () => {
-  test("the inline-handler count is recorded so progress is visible", () => {
-    const handlers = (html.match(/\son(click|input|change|load|error|submit)=/g) || []).length;
-    // This is the number that must reach zero before script-src can drop
-    // 'unsafe-inline'. It is asserted as a ceiling so it can only go down.
-    assert.ok(handlers > 0, "if this is zero, remove unsafe-inline from the CSP and delete this test");
-    // Ratcheted down as delegation replaces them. Adding two capture fields
-    // pushed this over 140 and the guard caught it; delegating the whole
-    // argument row took it to 138 instead of raising the ceiling.
-    assert.ok(handlers <= 132, `inline handlers have grown to ${handlers}; they should be shrinking, not rising`);
+  test("there are no inline handlers, and there is no way back to them", () => {
+    // This was a ratchet for months: a ceiling that could only fall, with a
+    // note saying that at zero the CSP directive should go. It reached zero,
+    // the directive went, and the ceiling became a floor. Every event
+    // attribute is counted now, not the six the old count knew about —
+    // onkeydown was never in it, and eight of them were hiding there.
+    const handlers = [...html.matchAll(/\son[a-z]+="/g)].map((m) => m[0].trim());
+    assert.deepEqual(handlers, [],
+      `inline handlers are back: ${[...new Set(handlers)].join(", ")}. ` +
+      `script-src has no 'unsafe-inline' any more, so these would not run.`);
+  });
+
+  test("script-src no longer allows inline script", () => {
+    const csp = JSON.parse(readFileSync("vercel.json", "utf8"))
+      .headers[0].headers.find((h) => h.key === "Content-Security-Policy").value;
+    const script = csp.match(/script-src[^;]*/)[0];
+    assert.equal(script.includes("'unsafe-inline'"), false,
+      "the directive is back, which makes every guard above decorative");
+    assert.equal(script.includes("'unsafe-eval'"), false);
+    assert.match(script, /'self'/);
+  });
+
+  test("style-src still allows it, and that is a separate problem", () => {
+    // 1,382 inline style attributes. Naming it stops the CSP reading as
+    // finished when half of it is.
+    const csp = JSON.parse(readFileSync("vercel.json", "utf8"))
+      .headers[0].headers.find((h) => h.key === "Content-Security-Policy").value;
+    assert.match(csp.match(/style-src[^;]*/)[0], /'unsafe-inline'/,
+      "if this has gone too, say so here rather than leaving a stale note");
   });
 
   test("no new inline <script> blocks have appeared", () => {

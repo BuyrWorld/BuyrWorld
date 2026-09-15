@@ -95,26 +95,33 @@ describe("colour contrast (WCAG 1.4.3)", () => {
 });
 
 describe("keyboard operation (WCAG 2.1.1)", () => {
-  test("nothing with a click handler is unreachable by keyboard", () => {
-    const clickable = [...html.matchAll(/<(\w+)([^>]*\sonclick=[^>]*)>/g)];
+  test("nothing with a click action is unreachable by keyboard", () => {
+    // The handlers are delegated now, so the attribute to look for is the
+    // one that names the action. The requirement is unchanged: a thing that
+    // can be clicked has to be reachable without a mouse.
+    const clickable = [...html.matchAll(/<(\w+)([^>]*\sdata-do=[^>]*)>/g)];
     const stranded = clickable.filter(([, tag, attrs]) =>
       !/^(button|a|input|select|textarea|summary)$/.test(tag) &&
       !/tabindex=/.test(attrs)
     );
     const report = stranded.map(([, tag, a]) => `  <${tag} ${a.slice(0, 70)}`).join("\n");
     assert.equal(stranded.length, 0,
-      `element(s) with onclick that a keyboard cannot reach:\n${report}\n` +
-      `Use a <button>, or add role="button" tabindex="0" onkeydown="cardKey(event)".`);
+      `element(s) with a click action that a keyboard cannot reach:\n${report}\n` +
+      `Use a <button>, or add role="button" tabindex="0" data-key="cardKey$event".`);
   });
 
   test("card buttons respond to Enter and Space, as a real button does", () => {
-    assert.match(html, /function cardKey\(e\)/);
+    assert.match(html, /function cardKey\(e,el\)/);
     assert.match(html, /e\.key!=="Enter"&&e\.key!==" "/);
-    assert.match(html, /e\.currentTarget\.click\(\)/);
+    // The card is passed in. Under delegation `e.currentTarget` is the
+    // document, and calling .click() on that does nothing at all — Enter
+    // would have stopped working on every card with no error anywhere.
+    assert.match(html, /\(el\|\|e\.currentTarget\)\.click\(\)/);
+    assert.match(html, /cardKey\(ev, this\)/, "the adapter must hand the card over");
   });
 
   test("every keyboard-operable card declares its role", () => {
-    const cards = [...html.matchAll(/<div([^>]*onkeydown="cardKey[^>]*)>/g)];
+    const cards = [...html.matchAll(/<div([^>]*data-key="cardKey[^>]*)>/g)];
     assert.ok(cards.length >= 3, "expected the agent, academy and blog cards");
     for (const [, attrs] of cards) {
       assert.match(attrs, /role="button"/, "a keyboard-operable div must say what it is");

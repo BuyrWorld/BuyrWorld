@@ -25,6 +25,8 @@ CRITICAL there means "enterprise trust blocker", not a confirmed breach.
 | HIGH | `/api/chat` had no origin check or rate limit | Origin allowlist plus a per-IP token bucket (12/minute), both checked before any model call. See the caveat below. |
 | MEDIUM | No security headers | `vercel.json` sets CSP, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy`. |
 
+| MEDIUM | `script-src` needed `'unsafe-inline'` | **Closed 14 September 2026.** The application moved out of index.html into `app.js` and `mount.mjs`, and all 140 inline event attributes became a delegated dispatcher with a lookup table — a table rather than a `window[name]` lookup, so a name that arrives in markup cannot choose which function runs. The directive is gone from `script-src`; it remains in `style-src`, where 1,382 inline `style` attributes are a separate problem. |
+
 ## Partially addressed
 
 **Prompt injection.** The claim-review path is structurally safe: the arithmetic
@@ -39,7 +41,6 @@ that labelling.
 | Sev | Issue | Note |
 |---|---|---|
 | HIGH | The rate limit is per warm instance, not global | It lives in module scope, so a distributed client gets one bucket per instance. Real limiting needs shared state. It raises the cost of casual abuse; it is not a defence against a determined one. |
-| MEDIUM | `script-src` still needs `'unsafe-inline'` | 120+ inline `onclick`-style handlers make a nonce impossible today. The other CSP directives are locked down; this one is honest rather than absent. A test asserts the handler count so the weakness stays visible. |
 | — | Spreadsheet formula injection | **Not applicable.** The audit listed this as a risk class, but this codebase has no CSV or XLSX export path — XLSX is read only, and exports are HTML-as-`.doc` and jsPDF. Re-check if a spreadsheet export is ever added. |
 | LOW | No dependency manifest, lockfile, scanning or CI | Nothing pins or audits the CDN versions. |
 
@@ -153,11 +154,18 @@ privacy one, but it is where the boundary is, so it is worth knowing it is one
 place and not several.
 
 **2. Library scripts from cdnjs**: exceljs, jsPDF, mammoth, xlsx and pdf.js.
-These are fetched, not sent to — no document goes with the request. The pdf.js
-worker is the exception worth naming, because it is fetched and then *executed*:
-`verifiedWorkerURL()` refuses to load an unpinned worker, fetches with
-`credentials: "omit"`, hashes the bytes with SHA-512 and compares them against a
-pinned digest before running them. A worker that fails the check is not run.
+These are fetched, not sent to — no document goes with the request.
+
+All of them are pinned. `loadScript()` looks the URL up in a SHA-512 map and
+**refuses outright if it is not there**, then sets `integrity` and
+`crossOrigin="anonymous"` so the browser verifies the bytes before executing
+them. Failing closed on an unknown URL is the part that matters: a library
+added later without a hash does not load rather than loading unverified.
+
+The pdf.js worker needs its own path, because a worker is fetched as data and
+then run: `verifiedWorkerURL()` refuses an unpinned worker, fetches with
+`credentials: "omit"`, hashes the bytes itself and compares them against the
+pinned digest before creating the blob URL. A worker that fails is not run.
 
 **3. Files the user saves.** The decision pack, the quote comparison document,
 the jsPDF exports, and each store's `export…()` function. An export is plain
@@ -213,11 +221,20 @@ Named so the gaps are not mistaken for clean results.
 
 - **No penetration test, dependency audit or threat model** has been performed
   against any of this.
-- **The five cdnjs libraries carry no integrity check except the pdf.js worker.**
-  The `<script>` loads have no `integrity` attribute; a compromised CDN response
-  would execute. The worker path shows what closing this would look like.
-- **`unsafe-inline` remains in the script-src CSP**, with 132 inline handlers
-  still to migrate. Measured and ratcheting down; see `CLAUDE.md`.
+- *(This entry was wrong and has been corrected. It said five of the six cdnjs
+  libraries had no integrity check, on the strength of grepping for an
+  `integrity=` attribute and finding none. There are none because nothing is
+  loaded by a static tag: `loadScript()` creates the element, sets
+  `integrity` from a SHA-512 map and `crossOrigin="anonymous"` so the browser
+  can check it, and refuses outright to load any URL that is not in the map.
+  All six are covered. The mistake is left visible rather than quietly edited
+  out, because a security document that silently changes its mind is not one
+  anybody should rely on.)*
+- **`unsafe-inline` is gone from `script-src`** as of 14 September 2026. The
+  application moved into `app.js` and `mount.mjs`, and all 140 inline event
+  attributes became a delegated dispatcher with a lookup table. It remains in
+  `style-src`, because 1,382 inline `style` attributes are a separate problem
+  and a CSP that is half done should not read as finished.
 - **Nothing has been reviewed by anyone but the author and this tool.**
 - **Retention, lawful basis, controller and processor roles, and any obligation
   arising from holding supplier-quality data are not addressed here.** They are

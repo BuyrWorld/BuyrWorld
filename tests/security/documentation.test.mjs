@@ -159,7 +159,8 @@ describe("what the review says never touches the network, does not", () => {
 describe("the one fetched script that is executed is checked first", () => {
   test("the review describes the control", () => {
     assert.match(security, /SHA-512/);
-    assert.match(security, /refuses to load an unpinned worker/);
+    assert.match(security, /refuses an unpinned worker/);
+    assert.match(security, /Failing closed on an unknown URL is the part that matters/);
   });
 
   test("the control is really there", () => {
@@ -170,10 +171,33 @@ describe("the one fetched script that is executed is checked first", () => {
     assert.match(src, /failed its integrity check and was not run/);
   });
 
-  test("the review admits the other five libraries are not checked", () => {
-    // Naming a gap is the point; a review that listed only the control would
-    // read as though the problem were solved.
-    assert.match(security, /carry no integrity check except the pdf\.js worker/);
+  test("every third-party script is pinned, and the review says so", () => {
+    // This test exists because the review once said the opposite. It claimed
+    // five of six libraries had no integrity check, on the strength of
+    // grepping index.html for an attribute that was never going to be there:
+    // nothing is loaded by a static tag. Checking the control instead of the
+    // spelling is the whole difference.
+    const app = readFileSync("app.js", "utf8");
+    const loader = app.slice(app.indexOf("function loadScript("));
+    assert.match(loader, /Refusing to load an unpinned third-party script/,
+      "loadScript must fail closed on a URL with no hash");
+    assert.match(loader, /s\.integrity=integrity/);
+    assert.match(loader, /crossOrigin="anonymous"/,
+      "without this the browser cannot check the hash at all");
+
+    const map = app.slice(app.indexOf("const SRI = {"), app.indexOf("function loadScript("));
+    const pinned = [...map.matchAll(/"(https:\/\/[^"]+)"/g)].map((m) => m[1]);
+    assert.ok(pinned.length >= 5, `the pin map has shrunk to ${pinned.length}`);
+    for (const url of new Set([...app.matchAll(/loadScript\("(https:\/\/[^"]+)"/g)].map((m) => m[1]))) {
+      assert.ok(pinned.includes(url), `${url} is loaded but carries no hash`);
+    }
+    assert.match(security, /All of them are pinned/);
+  });
+
+  test("the correction is left visible rather than edited out", () => {
+    // A security document that silently changes its mind is not one anybody
+    // should rely on.
+    assert.match(security, /This entry was wrong and has been corrected/);
   });
 });
 
@@ -212,10 +236,13 @@ describe("the state document knows what exists", () => {
     assert.equal(stated, actual, "the test-file count has drifted");
   });
 
-  test("the inline-handler figure matches the ratchet", () => {
-    const stated = Number((state.match(/Inline event handlers \| — \| (\d+),/) || [])[1]);
-    const actual = (html.match(/\son(click|input|change|load|error|submit)=/g) || []).length;
-    assert.equal(stated, actual);
+  test("the inline-handler figure matches what is there", () => {
+    const stated = Number((state.match(/Inline event handlers \| — \| (\d+)/) || [])[1]);
+    // Every event attribute, not the six the old ratchet counted. It never
+    // knew about onkeydown, and eight were hiding behind that.
+    const actual = (html.match(/\son[a-z]+="/g) || []).length;
+    assert.equal(stated, actual, "the state document and the page disagree");
+    assert.equal(actual, 0, "they agree, and they agree on zero");
   });
 
   test("it says plainly what is still not true", () => {

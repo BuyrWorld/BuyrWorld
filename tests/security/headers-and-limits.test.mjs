@@ -39,13 +39,17 @@ describe("security headers", () => {
       "if a form is ever added, form-action must be relaxed deliberately");
   });
 
-  test("script-src still needs unsafe-inline, and that is a known weakness", () => {
+  test("script-src does not allow inline script, and nothing needs it to", () => {
+    // This test used to assert the opposite and say "when this reaches zero,
+    // remove unsafe-inline". It reached zero: the application moved into
+    // app.js and mount.mjs, and all 140 event attributes became a delegated
+    // dispatcher. Both halves are asserted, because either one alone would
+    // make the page stop working rather than make it safer.
     const csp = h["Content-Security-Policy"];
-    // Documenting rather than pretending. 120+ inline handlers must go first.
-    assert.match(csp, /script-src [^;]*'unsafe-inline'/);
-    const inlineHandlers = (html.match(/on(click|input|change|load|error)=/g) || []).length;
-    assert.ok(inlineHandlers > 0,
-      "when this reaches zero, remove unsafe-inline and switch to a nonce");
+    assert.equal(/script-src [^;]*'unsafe-inline'/.test(csp), false);
+    assert.equal((html.match(/\son[a-z]+="/g) || []).length, 0,
+      "an inline handler with this CSP does not run at all");
+    assert.match(csp, /script-src [^;]*'self'/);
   });
 
   test("every third-party origin the page uses is allowed, and no more", () => {

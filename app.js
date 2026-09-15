@@ -26,10 +26,14 @@ function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);documen
   var m=document.getElementById("main"); if(m)m.focus({preventScroll:true});}
 // A div with a click handler is unreachable by keyboard. Enter and Space
 // activate a button, so the same two keys activate these cards.
-function cardKey(e){
+/* The card the key was pressed on, passed in rather than read off the
+   event: under delegation e.currentTarget is the document, and .click() on
+   that does nothing at all. Enter would have stopped working on every card
+   with no error anywhere. */
+function cardKey(e,el){
   if(e.key!=="Enter"&&e.key!==" "&&e.key!=="Spacebar")return;
   e.preventDefault();
-  e.currentTarget.click();
+  (el||e.currentTarget).click();
 }
 
 function toggleMenu(){const m=document.getElementById("mobmenu");m.style.display=m.style.display==="flex"?"none":"flex";}
@@ -88,6 +92,100 @@ function renderNav(){
   }
 }
 
+
+
+
+/* --------------------------------------------- actions that were expressions ---
+   Each of these was an inline attribute running two statements, reading
+   `this`, or closing over a loop variable. A name is what they should have
+   had; an attribute was never the right place for them. */
+
+/** Open the assistant, then run an agent once the page has switched. */
+function goAgent(which) { go("ai"); setTimeout(function () { runAgent(which); }, 200); }
+
+/** Market Intelligence, on a named commodity. */
+function miCommodity(name) {
+  miGo("comm");
+  var el = document.getElementById("mi-comm");
+  if (el) el.value = name;
+}
+
+/** A file input that also shows what was chosen. */
+function fileChosen(input, labelId) {
+  var el = document.getElementById(labelId);
+  if (el) el.textContent = input.files && input.files[0] ? input.files[0].name + " \u2713" : "";
+}
+
+/** One driver row's field. The row index and the column arrive as strings. */
+function defRowSet(i, col) { _defRows[Number(i)][Number(col)] = this.value; }
+function defRowSetRender(i, col) { defRowSet.call(this, i, col); defRenderDrivers(); }
+
+/** The like control, which only ever toggled a class on itself. */
+function likeToggle() { this.classList.toggle("liked"); }
+
+/** Send on Enter, which is a keyboard affordance rather than a handler. */
+function sendOnEnter(id, _b, ev) { if (ev && ev.key === "Enter") send(id); }
+
+/** Drop the quote files and everything rendered from them. */
+function clearQuoteFiles() {
+  quoteFiles = [];
+  var list = document.getElementById("q-list"); if (list) list.innerHTML = "";
+  var out = document.getElementById("q-out"); if (out) out.innerHTML = "";
+}
+
+/** The cost-shock sliders: their label, and their reset. */
+function simLabel(i) {
+  var el = document.getElementById("sim-v" + i);
+  if (el) el.textContent = this.value + "%";
+}
+function simReset() {
+  document.querySelectorAll("#mi-sim-controls input[type=range]").forEach(function (r) {
+    r.value = 0;
+    r.dispatchEvent(new Event("input"));
+  });
+  var out = document.getElementById("mi-sim-out"); if (out) out.innerHTML = "";
+}
+
+/* ======================================================= action dispatch ===
+   Markup names an action; this looks it up in a table and calls it. The table
+   is why this exists: `window[name]` would work and would leave a string that
+   arrived in markup able to choose which function runs, which is most of what
+   taking the code out of the markup was for.
+
+     data-do    run on click
+     data-chg   run on change
+     data-inp   run on input
+     data-key   run on keydown
+     data-a     first argument, always a string
+     data-b     second argument
+
+   An action on an <a> gets preventDefault, because the ones that were inline
+   all ended in "return false".
+*/
+var ACTIONS = Object.create(null);
+
+/** Register actions. Late, so everything it names is defined. */
+function registerActions(map) {
+  for (var name in map) ACTIONS[name] = map[name];
+}
+
+function runAction(el, ev) {
+  var name = el.getAttribute("data-do") || el.getAttribute("data-chg")
+          || el.getAttribute("data-inp") || el.getAttribute("data-key");
+  var fn = ACTIONS[name];
+  if (typeof fn !== "function") return;
+  if (el.tagName === "A") ev.preventDefault();
+  fn.call(el, el.getAttribute("data-a"), el.getAttribute("data-b"), ev);
+}
+
+[["click", "data-do"], ["change", "data-chg"], ["input", "data-inp"], ["keydown", "data-key"]]
+  .forEach(function (pair) {
+    document.addEventListener(pair[0], function (e) {
+      var el = e.target && e.target.closest ? e.target.closest("[" + pair[1] + "]") : null;
+      if (el) runAction(el, e);
+    });
+  });
+
 /* One listener for all three navigations. Attached once, at the document, so
    the markup rebuilt on every route change needs no reattachment — and a
    nine-item sidebar costs nothing against the inline-handler ceiling. */
@@ -112,14 +210,14 @@ const PILLARS=[
 ["Learn","Structured Academy pathways and a weekly blog — from first PO to category leadership and CIPS.","academy",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/>',"academy"],
 ["Method","Every figure is calculated in the open, labelled supplied, derived or assumed, and checked by tests.","about",'<path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9z"/><path d="M8.5 12.2l2.4 2.4 4.6-4.9"/>',"about"]];
 document.getElementById("pillars").innerHTML=PILLARS.map(([t,d,_ic,icon,dest])=>`
-<div class="card glow-hover" role="button" tabindex="0" onkeydown="cardKey(event)" style="cursor:pointer" onclick="go('${dest}')">
+<div class="card glow-hover" role="button" tabindex="0" data-key="cardKey$event" style="cursor:pointer" data-do="go" data-a="${dest}">
   <svg viewBox="0 0 24 24" aria-hidden="true" style="width:26px;height:26px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;margin-bottom:12px">${icon}</svg>
   <h3 style="font-size:18px;margin-bottom:8px">${t}</h3>
   <p style="color:var(--muted);font-size:13.5px;line-height:1.55">${d}</p>
   <span style="color:var(--lime);font-family:'Space Grotesk';font-weight:600;font-size:13px;display:inline-block;margin-top:12px">Go →</span>
 </div>`).join("");
 document.getElementById("features").innerHTML=FEATURES.map(([t,d,dest,icon])=>`
-<div class="flip" role="button" tabindex="0" onkeydown="cardKey(event)" onclick="go('${dest}')">
+<div class="flip" role="button" tabindex="0" data-key="cardKey$event" data-do="go" data-a="${dest}">
   <div class="flip-inner">
     <div class="flip-face flip-front"><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><h3 style="font-size:17px">${t}</h3></div>
     <div class="flip-face flip-back"><p style="color:#CFCFCF;font-size:14px;line-height:1.6">${d}</p>
@@ -130,7 +228,7 @@ document.getElementById("features").innerHTML=FEATURES.map(([t,d,dest,icon])=>`
 // Reference structures shown as sample previews. Illustrative and synthetic:
 // no real sourcing event, supplier or price is represented here.
 const TPL=[["RFQ Template","Specification, commercial terms and weighted evaluation sections, laid out so quotes come back comparable.","Sourcing","rfq-template"],["Supplier Scorecard","Weighted quality, cost, delivery and service scoring with traffic-light dashboards and a review cadence.","SRM","supplier-scorecard"],["Negotiation Planner","Targets, walk-aways, a concessions ladder and counterpart analysis on one page.","Negotiation","negotiation-planner"],["Category Strategy Pack","Kraljic positioning, market analysis, levers and a board-ready strategy outline.","Strategy","category-strategy-pack"],["Supplier Risk Matrix","Financial, geographic, single-source and ESG risk in one weighted model.","Risk","supplier-risk-matrix"],["Contract Review Checklist","Forty clauses buyers commonly miss — liability caps, indexation, exit and IP.","Contracts","contract-review-checklist"],["Cost Saving Tracker","Pipeline-to-banked tracking with the evidence stages a finance team needs to sign a saving off.","Value","cost-saving-tracker"],["Procurement Policy Template","Thresholds, approvals and an ethics policy sized for a small organisation.","Governance","procurement-policy-template"]];
-const tplCard=([t,d,c,slug])=>`<div class="flip-tpl${["supplier-scorecard","supplier-risk-matrix","cost-saving-tracker"].includes(slug)?" is-xlsx":""}" id="tpl-${slug}"><div class="tpl-front"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span class="tag">${c}</span></div><h3 style="font-size:16px;margin-bottom:6px">${t}</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.5">${d}</p><div style="font-size:13px;color:var(--muted);margin:12px 0 14px">Reference structure · sample preview only</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost" style="padding:9px 16px;font-size:13px" onclick="tplFlip('${slug}')">Preview</button></div></div><div class="tpl-back"><div class="tpl-back-wrap"><img class="tpl-preview-img" loading="lazy" src="previews/${slug}.jpg" alt="${t} sample preview"><div class="tpl-back-bar"><button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" onclick="tplFlip('${slug}')">Back</button></div></div></div></div>`;
+const tplCard=([t,d,c,slug])=>`<div class="flip-tpl${["supplier-scorecard","supplier-risk-matrix","cost-saving-tracker"].includes(slug)?" is-xlsx":""}" id="tpl-${slug}"><div class="tpl-front"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span class="tag">${c}</span></div><h3 style="font-size:16px;margin-bottom:6px">${t}</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.5">${d}</p><div style="font-size:13px;color:var(--muted);margin:12px 0 14px">Reference structure · sample preview only</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost" style="padding:9px 16px;font-size:13px" data-do="tplFlip" data-a="${slug}">Preview</button></div></div><div class="tpl-back"><div class="tpl-back-wrap"><img class="tpl-preview-img" loading="lazy" src="previews/${slug}.jpg" alt="${t} sample preview"><div class="tpl-back-bar"><button class="btn btn-ghost" style="padding:8px 14px;font-size:12.5px" data-do="tplFlip" data-a="${slug}">Back</button></div></div></div></div>`;
 function tplFlip(slug){var el=document.getElementById("tpl-"+slug);if(el)el.classList.toggle("flipped");}
 document.getElementById("tpl-all").innerHTML=TPL.map(tplCard).join("");
 
@@ -239,7 +337,7 @@ const EX=[
 ];
 
 function tierBars(t){return `<span class="tier" title="Level ${t} of 3">${[1,2,3].map(n=>`<i class="${n<=t?'on':''}"></i>`).join("")}</span>`;}
-document.getElementById("pathways").innerHTML=ACADEMY.map((p,i)=>`<div role="button" tabindex="0" onkeydown="cardKey(event)" class="card glow-hover acad-card" style="cursor:pointer;position:relative" onclick="openPathway(${i})"><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag" ${p.lvl==="New"?'style="color:var(--lime);border-color:var(--lime)"':""}>${p.lvl}</span>${p.tier?tierBars(p.tier):""}</div><h3 style="font-size:17px;margin:12px 0 8px">${p.t}</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">${p.d}</p>${p.roles?`<div class="acad-roles"><span class="acad-roles-label">Suitable for</span>${p.roles}</div>`:""}<div style="color:var(--muted);font-size:12px;margin-top:12px">${p.time}</div><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:8px">Start pathway →</div></div>`).join("");
+document.getElementById("pathways").innerHTML=ACADEMY.map((p,i)=>`<div role="button" tabindex="0" data-key="cardKey$event" class="card glow-hover acad-card" style="cursor:pointer;position:relative" data-do="openPathway" data-a="${i}"><div style="display:flex;justify-content:space-between;align-items:center"><span class="tag" ${p.lvl==="New"?'style="color:var(--lime);border-color:var(--lime)"':""}>${p.lvl}</span>${p.tier?tierBars(p.tier):""}</div><h3 style="font-size:17px;margin:12px 0 8px">${p.t}</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">${p.d}</p>${p.roles?`<div class="acad-roles"><span class="acad-roles-label">Suitable for</span>${p.roles}</div>`:""}<div style="color:var(--muted);font-size:12px;margin-top:12px">${p.time}</div><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:8px">Start pathway →</div></div>`).join("");
 function acadStage(s){
   document.querySelectorAll(".acad-stage .mi-pill").forEach(b=>b.classList.toggle("on",b.dataset.stage===s));
   document.querySelectorAll("#pathways .acad-card").forEach((c,i)=>{
@@ -265,7 +363,7 @@ function openPathway(i){
     </div>
     ${p.mods.map((m,j)=>`
       <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
-        <button onclick="toggleMod(${i},${j})" style="all:unset;display:flex;gap:14px;align-items:center;width:100%;padding:18px 20px;cursor:pointer;box-sizing:border-box">
+        <button data-do="toggleMod" data-a="${i}" data-b="${j}" style="all:unset;display:flex;gap:14px;align-items:center;width:100%;padding:18px 20px;cursor:pointer;box-sizing:border-box">
           <span style="color:var(--lime);font-family:'Space Grotesk';font-weight:700;min-width:28px">${String(j+1).padStart(2,"0")}</span>
           <span style="font-family:'Space Grotesk';font-weight:600;font-size:15.5px;flex:1">${m.m}</span>
           <span id="mod-arrow-${i}-${j}" style="color:var(--muted)">＋</span>
@@ -472,7 +570,7 @@ function dateVal(d){ if(!d) return 0; const p=d.split(" "); return (parseInt(p[1
 function monthKey(d){ return d||""; }
 // sorted indices, newest first
 const SORTED_IDX=ARTICLES.map((a,i)=>i).sort((x,y)=>dateVal(ARTICLES[y].date)-dateVal(ARTICLES[x].date));
-document.getElementById("blog-list").innerHTML=SORTED_IDX.map((i)=>{const a=ARTICLES[i];return `<div role="button" tabindex="0" onkeydown="cardKey(event)" class="card glow-hover blog-card" data-cat="${a.cat}" data-month="${a.date||''}" style="cursor:pointer" onclick="openArticle(${i})"><span class="tag">${a.cat}</span><h3 style="font-size:17px;margin:12px 0 8px">${a.t}</h3><p style="color:var(--muted);font-size:13px">${a.date?a.date+" · ":""}${a.mins} min read</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Read article →</div></div>`;}).join("");
+document.getElementById("blog-list").innerHTML=SORTED_IDX.map((i)=>{const a=ARTICLES[i];return `<div role="button" tabindex="0" data-key="cardKey$event" class="card glow-hover blog-card" data-cat="${a.cat}" data-month="${a.date||''}" style="cursor:pointer" data-do="openArticle" data-a="${i}"><span class="tag">${a.cat}</span><h3 style="font-size:17px;margin:12px 0 8px">${a.t}</h3><p style="color:var(--muted);font-size:13px">${a.date?a.date+" · ":""}${a.mins} min read</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Read article →</div></div>`;}).join("");
 // Blog category filter with icons
 const BLOG_CATS=[
 ["All","",'<path d="M4 6h16M4 12h16M4 18h16"/>'],
@@ -485,7 +583,7 @@ const BLOG_CATS=[
 ];
 function renderBlogFilter(){
   document.getElementById("blog-filter").innerHTML=BLOG_CATS.map(([label,val,icon],i)=>`
-    <button class="mi-pill ${i===0?'on':''}" data-bcat="${val}" onclick="filterBlog('${val.replace(/'/g,"\\'")}')">
+    <button class="mi-pill ${i===0?'on':''}" data-bcat="${val}" data-do="filterBlog" data-a="${attrEsc(val)}">
       <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round">${icon}</svg>${label}
     </button>`).join("");
 }
@@ -504,8 +602,8 @@ function renderMonths(){
   const box=document.getElementById("blog-months");
   if(months.length<=1){ box.innerHTML=""; return; }
   let html='<span style="color:var(--muted);font-size:12px;margin-right:2px">Filter by month:</span>';
-  html+=`<button class="mi-pill mini ${CUR_MONTH===""?"on":""}" onclick="filterMonth('')">All months</button>`;
-  html+=months.map(m=>`<button class="mi-pill mini ${CUR_MONTH===m?'on':''}" onclick="filterMonth('${m}')">${m}</button>`).join("");
+  html+=`<button class="mi-pill mini ${CUR_MONTH===""?"on":""}" data-do="filterMonth" data-a="">All months</button>`;
+  html+=months.map(m=>`<button class="mi-pill mini ${CUR_MONTH===m?'on':''}" data-do="filterMonth" data-a="${m}">${m}</button>`).join("");
   box.innerHTML=html;
 }
 function filterMonth(m){
@@ -554,7 +652,7 @@ function openArticle(i){
   // like button (cosmetic — glows on press, resets on reload)
   const likeBox=document.getElementById("blog-like");
   if(likeBox){
-    likeBox.innerHTML=`<button class="like-btn" onclick="this.classList.toggle('liked')" aria-label="Was this useful?">
+    likeBox.innerHTML=`<button class="like-btn" data-do="likeToggle" aria-label="Was this useful?">
       <svg viewBox="0 0 24 24"><path d="M7 10v11M2 11h5v10H2zM7 10l4-7c1.5 0 2.5 1 2.5 2.5V9h5.5a2 2 0 0 1 2 2.3l-1.4 8A2 2 0 0 1 17.6 21H7"/></svg>
       <span>Useful</span></button>
     <span class="like-note">Found this useful? Tap to let us know.</span>`;
@@ -563,7 +661,7 @@ function openArticle(i){
   document.getElementById("blog-next").innerHTML=`
     <div style="border-top:1px solid var(--line);padding-top:24px">
       <div class="eyebrow" style="margin-bottom:12px">Next article</div>
-      <button class="card glow-hover" style="width:100%;text-align:left;cursor:pointer;display:flex;align-items:center;gap:16px;background:var(--panel)" onclick="openArticle(${ni})">
+      <button class="card glow-hover" style="width:100%;text-align:left;cursor:pointer;display:flex;align-items:center;gap:16px;background:var(--panel)" data-do="openArticle" data-a="${ni}">
         <div style="flex:1">
           <span class="tag" style="color:var(--lime);border-color:rgba(214,255,0,.4)">${na.cat}</span>
           <h3 style="font-size:18px;margin:10px 0 4px;color:var(--text)">${na.t}</h3>
@@ -604,7 +702,7 @@ function chatStarter(id){
   return `<div class="chat-empty">
     <div style="color:var(--muted);font-size:13.5px;margin-bottom:16px;line-height:1.55">I'm your senior procurement adviser — built on the discipline of an <b style="color:var(--text)">MCIPS Chartered</b> professional. I'll ask the right questions, structure the output the way the profession expects, and flag anything you should verify. Pick a starting point, or just tell me what you're working on.</div>
     <div class="starter-grid">${STARTERS.map(([t,d,q,ic])=>`
-      <button class="starter-card" onclick="send('${id}', '${q.replace(/'/g,"\\'")}')">
+      <button class="starter-card" data-do="send" data-a="${attrEsc(id)}" data-b="${attrEsc(q)}">
         <svg viewBox="0 0 24 24">${ic}</svg>
         <div><span class="st-t">${t}</span><span class="st-d">${d}</span></div>
       </button>`).join("")}</div>
@@ -626,10 +724,10 @@ document.querySelectorAll("[data-chat]").forEach((box,idx)=>{
       <span style="font-size:10.5px;color:var(--muted)">Senior procurement adviser</span>
     </div>
     <span style="margin-left:auto;font-size:11px;color:var(--muted)">live</span>
-    <button class="chip" style="padding:4px 12px;font-size:12px" onclick="resetChat('${id}')">↺ Reset</button></div>
+    <button class="chip" style="padding:4px 12px;font-size:12px" data-do="resetChat" data-a="${id}">↺ Reset</button></div>
     <div class="chat-log" id="${id}-log" style="height:${full?420:300}px">${chatStarter(id)}</div>
-    <div class="chat-foot"><input class="bwin" id="${id}-in" placeholder="e.g. Draft an RFQ for CNC machined parts…" onkeydown="if(event.key==='Enter')send('${id}')" aria-label="E.g. Draft an RFQ for CNC machined parts">
-    <button class="btn btn-lime" onclick="send('${id}')">Send</button></div>`;
+    <div class="chat-foot"><input class="bwin" id="${id}-in" placeholder="e.g. Draft an RFQ for CNC machined parts…" data-key="sendOnEnter" data-a="${attrEsc(id)}" aria-label="E.g. Draft an RFQ for CNC machined parts">
+    <button class="btn btn-lime" data-do="send" data-a="${id}">Send</button></div>`;
 });
 
 const AGENTS={
@@ -724,23 +822,23 @@ function defRenderDrivers(){
   host.innerHTML=_defRows.map(function(r,i){
     var isIndex=r[3]==="index";
     var head='<div style="display:grid;grid-template-columns:1fr 90px 100px 88px 34px;gap:8px;margin-bottom:6px;align-items:center">'
-      +'<input class="bwin" value="'+attrEsc(r[0])+'" oninput="_defRows['+i+'][0]=this.value" placeholder="Driver" aria-label="Driver">'
-      +'<input class="bwin" value="'+attrEsc(r[1])+'" oninput="_defRows['+i+'][1]=this.value" inputmode="decimal" placeholder="weight %" aria-label="Weight %">'
+      +'<input class="bwin" value="'+attrEsc(r[0])+'" data-inp="defRowSet" data-a="'+i+'" data-b="0" placeholder="Driver" aria-label="Driver">'
+      +'<input class="bwin" value="'+attrEsc(r[1])+'" data-inp="defRowSet" data-a="'+i+'" data-b="1" inputmode="decimal" placeholder="weight %" aria-label="Weight %">'
       +(isIndex
         ? '<input class="bwin" value="derived" disabled aria-label="Movement, derived from the index below" title="Derived from the index below" style="opacity:.55">'
-        : '<input class="bwin" value="'+attrEsc(r[2])+'" oninput="_defRows['+i+'][2]=this.value" inputmode="decimal" placeholder="move %" aria-label="Move %">')
-      +'<select class="bwin" aria-label="How this driver movement is determined" onchange="_defRows['+i+'][3]=this.value;defRenderDrivers()">'
+        : '<input class="bwin" value="'+attrEsc(r[2])+'" data-inp="defRowSet" data-a="'+i+'" data-b="2" inputmode="decimal" placeholder="move %" aria-label="Move %">')
+      +'<select class="bwin" aria-label="How this driver movement is determined" data-chg="defRowSetRender" data-a="'+i+'" data-b="3">'
       +'<option value="direct"'+(isIndex?"":" selected")+'>Stated</option>'
       +'<option value="index"'+(isIndex?" selected":"")+'>From index</option></select>'
-      +'<button class="btn btn-ghost" style="padding:6px 9px;font-size:12px" onclick="defRemoveDriver('+i+')" aria-label="Remove driver">&times;</button>'
+      +'<button class="btn btn-ghost" style="padding:6px 9px;font-size:12px" data-do="defRemoveDriver" data-a="+i+" aria-label="Remove driver">&times;</button>'
       +'</div>';
     if(!isIndex)return head;
     return head
       +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin:-2px 0 10px 0;padding:10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px">'
-      +'<label style="font-size:11px;color:var(--muted)">Contract base<input class="bwin" value="'+attrEsc(r[4])+'" oninput="_defRows['+i+'][4]=this.value" placeholder="2025-01" aria-label="Contract base period, YYYY-MM"></label>'
-      +'<label style="font-size:11px;color:var(--muted)">Their base (if different)<input class="bwin" value="'+attrEsc(r[5])+'" oninput="_defRows['+i+'][5]=this.value" placeholder="2025-06" aria-label="Base period the supplier claimed, YYYY-MM"></label>'
-      +'<label style="font-size:11px;color:var(--muted)">Measure to<input class="bwin" value="'+attrEsc(r[6])+'" oninput="_defRows['+i+'][6]=this.value" placeholder="2026-06" aria-label="Measure index movement to, YYYY-MM"></label>'
-      +'<label style="font-size:11px;color:var(--muted)">Lag (months)<input class="bwin" value="'+attrEsc(r[7])+'" oninput="_defRows['+i+'][7]=this.value" inputmode="numeric" placeholder="3" aria-label="Index lag in months"></label>'
+      +'<label style="font-size:11px;color:var(--muted)">Contract base<input class="bwin" value="'+attrEsc(r[4])+'" data-inp="defRowSet" data-a="'+i+'" data-b="4" placeholder="2025-01" aria-label="Contract base period, YYYY-MM"></label>'
+      +'<label style="font-size:11px;color:var(--muted)">Their base (if different)<input class="bwin" value="'+attrEsc(r[5])+'" data-inp="defRowSet" data-a="'+i+'" data-b="5" placeholder="2025-06" aria-label="Base period the supplier claimed, YYYY-MM"></label>'
+      +'<label style="font-size:11px;color:var(--muted)">Measure to<input class="bwin" value="'+attrEsc(r[6])+'" data-inp="defRowSet" data-a="'+i+'" data-b="6" placeholder="2026-06" aria-label="Measure index movement to, YYYY-MM"></label>'
+      +'<label style="font-size:11px;color:var(--muted)">Lag (months)<input class="bwin" value="'+attrEsc(r[7])+'" data-inp="defRowSet" data-a="'+i+'" data-b="7" inputmode="numeric" placeholder="3" aria-label="Index lag in months"></label>'
       +'<div style="grid-column:1/-1;color:var(--muted);font-size:11px">Uses the bundled synthetic index (2024-10 to 2026-06). Movement is derived from the <b>contract</b> base, never theirs.</div>'
       +'</div>';
   }).join("")+'<div style="color:var(--muted);font-size:11.5px">Weight = share of unit cost. Stated movement is taken on trust; an index-derived one is not.</div>';
@@ -3698,7 +3796,7 @@ function defRenderExtract(){
       +'<div style="color:var(--muted);font-size:11.5px;margin-top:2px">read from: &ldquo;'+ciEsc(f.evidence.quote)+'&rdquo;</div></div>'
       +(done
         ? '<span style="color:var(--lime);font-size:12px;white-space:nowrap">confirmed</span>'
-        : '<button class="btn btn-ghost" style="padding:5px 11px;font-size:12px;white-space:nowrap" onclick="defConfirm(\''+path+'\')">Confirm</button>')
+        : '<button class="btn btn-ghost" style="padding:5px 11px;font-size:12px;white-space:nowrap" data-do="defConfirm" data-a="'+path+'">Confirm</button>')
       +'</div>';
   };
   let body="";
@@ -3724,8 +3822,8 @@ function defRenderExtract(){
     +(body||'<p style="color:var(--muted);font-size:13.5px">Nothing in the letter could be read into a field.</p>')
     +rejected
     +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">'
-    +'<button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="defConfirmAll()">Confirm all</button>'
-    +'<button class="btn btn-lime" style="padding:8px 14px;font-size:13px"'+(anyLeft?' disabled title="Confirm every field first"':"")+' onclick="defApplyExtract()">Use these values</button>'
+    +'<button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" data-do="defConfirmAll">Confirm all</button>'
+    +'<button class="btn btn-lime" style="padding:8px 14px;font-size:13px"'+(anyLeft?' disabled title="Confirm every field first"':"")+' data-do="defApplyExtract">Use these values</button>'
     +'</div>'
     +'<p style="color:var(--muted);font-size:11px;margin-top:8px">Prompt '+ciEsc(r.promptVersion)+'. Confirming records that a person checked the value against the letter.</p>'
     +'</div>';
@@ -3809,7 +3907,7 @@ function ocRenderArgs(){
       +'<option value=""'+(a[1]===""?" selected":"")+'>Unknown</option>'
       +'<option value="yes"'+(a[1]==="yes"?" selected":"")+'>Moved them</option>'
       +'<option value="no"'+(a[1]==="no"?" selected":"")+'>Did not</option></select>'
-      +'<button class="btn btn-ghost" style="padding:6px 9px;font-size:12px" onclick="ocRemoveArg('+i+')" aria-label="Remove this argument">&times;</button>'
+      +'<button class="btn btn-ghost" style="padding:6px 9px;font-size:12px" data-do="ocRemoveArg" data-a="+i+" aria-label="Remove this argument">&times;</button>'
       +'</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">'
       +'<input class="bwin" value="'+attrEsc(a[2]||"")+'" data-arg="'+i+'" data-field="2" placeholder="Evidence you asked for" aria-label="Evidence you asked for">'
@@ -4135,7 +4233,7 @@ async function runMinutes(){
     out.innerHTML=cutNote(notes.length,6000,'of your notes')+`
       <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px;font-size:13.5px;line-height:1.7;color:#CFCFCF;white-space:pre-wrap;font-family:'Inter'">${esc(window._minutesText)}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
-        <button class="btn btn-lime" onclick="copyMinutes(this)">Copy for email</button>
+        <button class="btn btn-lime" data-do="copyMinutes$self">Copy for email</button>
         <a class="btn btn-ghost" href="mailto:?subject=${encodeURIComponent((window._minutesText.match(/^SUBJECT:\s*(.*)$/m)||[,'Meeting minutes'])[1])}&body=${encodeURIComponent(window._minutesText.slice(0,1500))}">Open in email app</a>
       </div>`;
   }catch(e){
@@ -4283,9 +4381,9 @@ async function runComparator(){
     out.innerHTML=`
       <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px;font-size:13.5px;line-height:1.7;color:#CFCFCF;white-space:pre-wrap">${esc(window._quoteReport)}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
-        <button class="btn btn-lime" onclick="downloadQuoteReport()">Download report (Word)</button>
-        <button class="btn btn-ghost" onclick="printQuoteReport()">Print / save as PDF</button>
-        <button class="btn btn-ghost" onclick="quoteFiles=[];document.getElementById('q-list').innerHTML='';document.getElementById('q-out').innerHTML=''">Start again</button>
+        <button class="btn btn-lime" data-do="downloadQuoteReport">Download report (Word)</button>
+        <button class="btn btn-ghost" data-do="printQuoteReport">Print / save as PDF</button>
+        <button class="btn btn-ghost" data-do="clearQuoteFiles">Start again</button>
       </div>
       <p style="color:var(--muted);font-size:12px;margin-top:10px">AI-generated analysis — verify the figures against the source quotes before any award decision.</p>`;
   }catch(e){
@@ -4410,9 +4508,9 @@ function ciRender(title,text,extraTop="",kind="plain"){
   document.getElementById("ci-out").innerHTML=cutNote(window._ciCut,13000,"of the pasted contract")+`${extraTop}${legend}
     <div style="background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px;font-size:13.5px;line-height:1.7;color:#CFCFCF;white-space:pre-wrap">${html}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
-      <button class="btn btn-lime" onclick="ciCopy(this)">Copy</button>
-      <button class="btn btn-ghost" onclick="ciDownload()">Download (Word)</button>
-      <button class="btn btn-ghost" onclick="ciPrint()">Print / save as PDF</button>
+      <button class="btn btn-lime" data-do="ciCopy$self">Copy</button>
+      <button class="btn btn-ghost" data-do="ciDownload">Download (Word)</button>
+      <button class="btn btn-ghost" data-do="ciPrint">Print / save as PDF</button>
     </div>${CI_DISCLAIMER}`;
   document.getElementById("ci-out").scrollIntoView({behavior:"smooth"});
 }
@@ -4539,7 +4637,7 @@ async function runRFQGen(){
     window._rfq={text:ciClean(text),co,nm,ti,email:v("rfq-email")};
     out.innerHTML=`${miBox(window._rfq.text)}
       <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-        <button class="btn btn-lime" onclick="rfqPDF()">Download RFQ (PDF)</button>
+        <button class="btn btn-lime" data-do="rfqPDF">Download RFQ (PDF)</button>
       </div>
       <p style="color:var(--muted);font-size:12px;margin-top:10px">PDF is issued in ${ciEsc(co)}'s name with a BuyrWorld watermark. Review before sending — you're responsible for the final content.</p>`;
   }catch(e){out.innerHTML='<p style="color:var(--muted);font-size:14px">Couldn\'t reach Buyr AI just now — try again in a moment.</p>';}
@@ -4575,7 +4673,7 @@ RULES (critical):
     let d;try{d=JSON.parse(text.replace(/```json|```/g,"").trim());}catch(e){
       // fallback: if not valid JSON, show as plain text rather than failing
       stopLoader();
-      out.innerHTML=`${miBox(text)}<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn btn-lime" onclick="sourcingToRFQ()">Generate an RFQ for this →</button></div>`;
+      out.innerHTML=`${miBox(text)}<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn btn-lime" data-do="sourcingToRFQ">Generate an RFQ for this →</button></div>`;
       window._srcItem=item;return;
     }
     window._srcItem=item;
@@ -4685,7 +4783,7 @@ function renderSourcing(d,item,placeholder){
     <span class="tag tag-lime">Supply market: ${ciEsc(item)}</span>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <span style="color:var(--muted);font-size:11px">Web-searched ${window._srcReport.at}</span>
-      <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="sourcingPDF()">Download report (PDF)</button>
+      <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" data-do="sourcingPDF">Download report (PDF)</button>
     </div>
   </div>
   <div class="grid2" style="align-items:start;gap:16px">
@@ -4716,7 +4814,7 @@ function renderSourcing(d,item,placeholder){
     </div>
     <div class="card" style="border-color:var(--lime)"><div class="eyebrow" style="margin-bottom:10px">Your first moves</div>
       <ul style="color:#CFCFCF;font-size:13px;line-height:1.5;padding-left:18px;margin:0">${moves||'<li style="color:var(--muted)">—</li>'}</ul>
-      <button class="btn btn-lime cta-grow" style="margin-top:14px;width:100%" onclick="sourcingToRFQ()">Generate an RFQ for this →</button>
+      <button class="btn btn-lime cta-grow" style="margin-top:14px;width:100%" data-do="sourcingToRFQ">Generate an RFQ for this →</button>
     </div>
   </div>`;
 }
@@ -5047,14 +5145,14 @@ function buildSim(){
   const rows=base.filter(([k])=>k!=="Other").slice(0,8).map(([k,v],i)=>`
     <div style="display:flex;align-items:center;gap:12px;margin:8px 0;font-size:13px">
       <span style="width:140px">${ciEsc(k)}${MI.exp?` <span style="color:var(--muted)">(${window.BW.moneyToDecimalString(v)})</span>`:""}</span>
-      <input type="range" id="sim-r${i}" aria-label="${ciEsc(k)} adjustment, percent" min="-20" max="40" value="0" style="flex:1;accent-color:var(--lime)" oninput="document.getElementById('sim-v${i}').textContent=this.value+'%'" data-name="${ciEsc(k)}" data-val="${MI.exp?v.minor:0}">
+      <input type="range" id="sim-r${i}" aria-label="${ciEsc(k)} adjustment, percent" min="-20" max="40" value="0" style="flex:1;accent-color:var(--lime)" data-inp="simLabel" data-a="${i}" data-name="${ciEsc(k)}" data-val="${MI.exp?v.minor:0}">
       <span id="sim-v${i}" style="width:46px;text-align:right;font-family:'Space Grotesk';font-weight:600">0%</span>
     </div>`).join("");
   box.innerHTML=`${MI.exp?"":`<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;font-size:13px"><span>Annual spend £</span><input class="bwin" id="sim-total" style="max-width:160px" placeholder="e.g. 500000" aria-label="E.g. 500000"><span style="color:var(--muted)">then estimate shares with the sliders</span></div>`}
     ${rows}
     <div style="display:flex;gap:10px;margin-top:12px">
-      <button class="btn btn-lime" onclick="runSim()">Calculate impact →</button>
-      <button class="btn btn-ghost" onclick="document.querySelectorAll('#mi-sim-controls input[type=range]').forEach(r=>{r.value=0;r.dispatchEvent(new Event('input'))});document.getElementById('mi-sim-out').innerHTML=''">Reset</button>
+      <button class="btn btn-lime" data-do="runSim">Calculate impact →</button>
+      <button class="btn btn-ghost" data-do="simReset">Reset</button>
     </div>`;
 }
 function runSim(){
@@ -5210,8 +5308,8 @@ function loadAIChart(group,sym){
   const arr=(AI_GROUPS.find(([g])=>g===_aiGroup)||AI_GROUPS[0])[1];
   const symbol=sym||arr[0][0];
   const nav=document.getElementById("ai-sectors"); if(!nav)return;
-  nav.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${AI_GROUPS.map(([g])=>`<button class="mi-pill${g===_aiGroup?" on":""}" style="padding:7px 13px;font-size:12px" onclick="loadAIChart('${g}')">${g}</button>`).join("")}</div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap">${arr.map(([s,d])=>`<button class="chip" style="font-size:11.5px;padding:5px 11px${s===symbol?";border-color:var(--lime);color:var(--lime)":""}" onclick="loadAIChart('${_aiGroup}','${s}')">${d}</button>`).join("")}</div>`;
+  nav.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${AI_GROUPS.map(([g])=>`<button class="mi-pill${g===_aiGroup?" on":""}" style="padding:7px 13px;font-size:12px" data-do="loadAIChart" data-a="${g}">${g}</button>`).join("")}</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">${arr.map(([s,d])=>`<button class="chip" style="font-size:11.5px;padding:5px 11px${s===symbol?";border-color:var(--lime);color:var(--lime)":""}" data-do="loadAIChart" data-a="${_aiGroup}" data-b="${s}">${d}</button>`).join("")}</div>`;
   const box=document.getElementById("ai-chart");
   box.innerHTML='<div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>';
   const s=document.createElement("script");
@@ -5357,8 +5455,8 @@ function loadLiveChart(group,sym){
   const arr=(LIVE_GROUPS.find(([g])=>g===_liveGroup)||LIVE_GROUPS[0])[1];
   const symbol=sym||arr[0][0];
   const nav=document.getElementById("live-nav");
-  nav.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${LIVE_GROUPS.map(([g])=>`<button class="mi-pill${g===_liveGroup?" on":""}" style="padding:7px 13px;font-size:12px" onclick="loadLiveChart('${g}')">${g}</button>`).join("")}</div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap">${arr.map(([s,d])=>`<button class="chip" style="font-size:11.5px;padding:5px 11px${s===symbol?";border-color:var(--lime);color:var(--lime)":""}" onclick="loadLiveChart('${_liveGroup}','${s}')">${d}</button>`).join("")}</div>`;
+  nav.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">${LIVE_GROUPS.map(([g])=>`<button class="mi-pill${g===_liveGroup?" on":""}" style="padding:7px 13px;font-size:12px" data-do="loadLiveChart" data-a="${g}">${g}</button>`).join("")}</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">${arr.map(([s,d])=>`<button class="chip" style="font-size:11.5px;padding:5px 11px${s===symbol?";border-color:var(--lime);color:var(--lime)":""}" data-do="loadLiveChart" data-a="${_liveGroup}" data-b="${s}">${d}</button>`).join("")}</div>`;
   const host=document.getElementById("live-chart");host.innerHTML="";
   const wrap=document.createElement("div");wrap.className="tradingview-widget-container";
   const inner=document.createElement("div");inner.className="tradingview-widget-container__widget";wrap.appendChild(inner);
@@ -5522,13 +5620,13 @@ function analyseSpend(){
     <div class="grid2" style="align-items:start">
       <div class="card"><div class="eyebrow" style="margin-bottom:6px">Insights</div>${insights}</div>
       <div class="card"><div class="eyebrow" style="margin-bottom:6px">Recommendations</div>${recHtml}
-        <button class="btn btn-lime" style="margin-top:14px" onclick="spendToAI()">Ask Buyr AI to go deeper →</button>
+        <button class="btn btn-lime" style="margin-top:14px" data-do="spendToAI">Ask Buyr AI to go deeper →</button>
       </div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
-      <button class="btn btn-lime" onclick="downloadSpendDoc()">Download report (Word)</button>
-      <button class="btn btn-ghost" onclick="printSpendReport()">Print / save as PDF</button>
-      <button class="btn btn-ghost" onclick="downloadSpendXlsx()">Download data (Excel)</button>
+      <button class="btn btn-lime" data-do="downloadSpendDoc">Download report (Word)</button>
+      <button class="btn btn-ghost" data-do="printSpendReport">Print / save as PDF</button>
+      <button class="btn btn-ghost" data-do="downloadSpendXlsx">Download data (Excel)</button>
     </div>`;
   window._spendData={date:new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}),total,rows,skipped,topS,topC,tail,tailVal,n80,top1,maxLine,maxLineDesc,
     hhi,hhiVerdict:hhiVerdict[0],pareto20,n20,uncat,bands,savings,savMin,savMax,
@@ -5721,3 +5819,65 @@ async function send(id,text){
     requestAnimationFrame(frame);}
   frame();
 })();
+
+
+/* Every action the markup may ask for, by name. Registered here, at the end,
+   where everything it names exists. A name the markup asks for that is not in
+   this table does nothing — which is the difference between a table and a
+   `window[name]` lookup. */
+registerActions({
+  /* navigation */
+  go: go, miGo: miGo, miCommodity: miCommodity, goAgent: goAgent,
+  toggleMenu: toggleMenu,
+
+  /* the tools */
+  runAgent: runAgent, runDefender: runDefender, runComparator: runComparator,
+  runContractReview: runContractReview, runContractHealth: runContractHealth,
+  runContractGenerate: runContractGenerate, runRFQGen: runRFQGen,
+  runMinutes: runMinutes, runSim: runSim, runSourcing: runSourcing,
+  runLabour: runLabour, runExposure: runExposure, runBriefing: runBriefing,
+  runCommodity: runCommodity, runAIWatch: runAIWatch,
+  analyseSpend: analyseSpend, loadSampleSpend: loadSampleSpend,
+  startSim: startSim, endSim: endSim, simReset: simReset,
+
+  /* the claim reviewer */
+  defCalc: defCalc, defAddDriver: defAddDriver, defLoadExample: defLoadExample,
+  defExtract: defExtract, defApplyExtract: defApplyExtract, defConfirmAll: defConfirmAll,
+  defSaveCase: defSaveCase, defDecisionPack: defDecisionPack, defConfirm: defConfirm,
+  defRemoveDriver: function (i) { defRemoveDriver(Number(i)); },
+  defRowSet: defRowSet, defRowSetRender: defRowSetRender,
+
+  /* outcomes */
+  ocSave: ocSave, ocClear: ocClear, ocExport: ocExport, ocAddArg: ocAddArg,
+  ocRemoveArg: function (i) { ocRemoveArg(Number(i)); },
+
+  /* documents out */
+  ciPrint: ciPrint, ciDownload: ciDownload, rfqPDF: rfqPDF, sourcingPDF: sourcingPDF,
+  printSpendReport: printSpendReport, printQuoteReport: printQuoteReport,
+  downloadSpendDoc: downloadSpendDoc, downloadSpendXlsx: downloadSpendXlsx,
+  downloadQuoteReport: downloadQuoteReport, miPrintReport: miPrintReport,
+  sourcingToRFQ: sourcingToRFQ, spendToAI: spendToAI, miUseSample: miUseSample,
+
+  /* content */
+  openArticle: function (i) { openArticle(Number(i)); },
+  openPathway: function (i) { openPathway(Number(i)); },
+  closeArticle: closeArticle, closePathway: closePathway,
+  acadStage: acadStage, toggleMod: toggleMod, tplFlip: tplFlip,
+  filterMonth: filterMonth, filterBlog: filterBlog, likeToggle: likeToggle,
+
+  /* market intelligence charts */
+  loadLiveChart: loadLiveChart, loadAIChart: loadAIChart, labDash: labDash,
+
+  /* the assistant */
+  send: send, sendOnEnter: sendOnEnter, resetChat: resetChat,
+  clearQuoteFiles: clearQuoteFiles, simLabel: simLabel,
+
+  /* adapters: the element, or the event, rather than a string */
+  cardKey$event: function (_a, _b, ev) { cardKey(ev, this); },
+  copyMinutes$self: function () { copyMinutes(this); },
+  ciCopy$self: function () { ciCopy(this); },
+  addQuoteFiles$self: function () { addQuoteFiles(this); },
+  loadContractFile$self: function () { loadContractFile(this); },
+  miLoadFile$named: function () { miLoadFile(this); fileChosen(this, "mi-fname"); },
+  loadSpendFile$named: function () { loadSpendFile(this); fileChosen(this, "spend-fname"); },
+});

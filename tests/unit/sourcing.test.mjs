@@ -274,7 +274,7 @@ describe("the normalisation panel is wired", () => {
     // The prose tool reads documents; this compares figures. Different halves.
     assert.ok(html.indexOf('id="q-out"') < html.indexOf('id="qn-list"'));
     assert.match(html, /id="tool-quotes"/);
-    assert.match(html, /onclick="runComparator\(\)"/);
+    assert.match(html, /data-do="runComparator"/);
   });
 
   test("it binds when the page is opened", () => {

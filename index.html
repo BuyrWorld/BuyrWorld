@@ -468,11 +468,11 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
 <header>
   <div class="wrap nav-in">
-    <button class="navlink" style="padding:0" onclick="go('home')">
+    <button class="navlink" style="padding:0" data-do="go" data-a="home">
 <img src="/buyrworld-logo.png" alt="BuyrWorld" width="560" height="156" style="height:36px;width:auto;display:block">
     </button>
     <nav class="desk-only" id="desknav"></nav>
-    <button class="navlink mob-only" style="font-size:20px" onclick="toggleMenu()">☰</button>
+    <button class="navlink mob-only" style="font-size:20px" data-do="toggleMenu">☰</button>
   </div>
   <div id="mobmenu"></div>
 </header>
@@ -491,8 +491,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <h1 class="hero-h" style="max-width:15ch">A supplier wants more.<br><span style="color:var(--lime)">Prove what's justified.</span></h1>
       <p style="color:var(--muted);font-size:17px;line-height:1.6;margin:20px 0 28px;max-width:600px">When a supplier asks for a price increase or a surcharge, BuyrWorld structures the request, separates what the evidence supports from what it does not, quantifies the exposure and prepares a response you can put in front of an approver.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
-        <button class="btn btn-lime cta-grow" style="font-size:16px;padding:15px 28px" onclick="go('tool-defender')">Review a supplier claim</button>
-        <button class="btn btn-ghost" onclick="go('about')">How the analysis works</button>
+        <button class="btn btn-lime cta-grow" style="font-size:16px;padding:15px 28px" data-do="go" data-a="tool-defender">Review a supplier claim</button>
+        <button class="btn btn-ghost" data-do="go" data-a="about">How the analysis works</button>
       </div>
       <div style="display:flex;gap:24px;margin-top:32px;color:var(--muted);font-size:13px;flex-wrap:wrap;justify-content:center">
         <span><b style="color:var(--text);font-family:'Space Grotesk'">Synthetic</b> data only</span>
@@ -525,7 +525,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <p style="color:var(--muted);font-size:14.5px;line-height:1.65;max-width:760px">BuyrWorld is a non-commercial research project exploring how supplier commercial-change requests can be turned into evidence-backed, auditable decisions. Nothing here is for sale, no services are offered, and every worked example uses synthetic data. It is a technology demonstration, not a procurement service.</p>
       </div>
       </div>
-      <button class="btn btn-ghost" style="margin-top:18px" onclick="go('about')">How the analysis works</button>
+      <button class="btn btn-ghost" style="margin-top:18px" data-do="go" data-a="about">How the analysis works</button>
     </div>
   </div></section>
 </div>
@@ -533,22 +533,22 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ BUYR AI ============ -->
 <div class="page" id="page-ai">
   <section class="sec"><div class="wrap">
-    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
+    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" data-do="go" data-a="tools">← All AI tools</button>
     <div class="eyebrow" style="margin-bottom:10px">Buyr AI</div>
     <h2 style="font-size:34px;margin-bottom:10px">Your AI procurement assistant</h2>
     <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Trained on the work of sourcing: RFQs, scorecards, category strategies, risk reviews and negotiation plans. Ask it like you'd brief a strong analyst.</p>
     <div class="chatbox" data-chat="full"></div>
     <div class="grid3" style="margin-top:28px">
-      <div role="button" tabindex="0" onkeydown="cardKey(event)" class="card glow-hover" style="cursor:pointer" onclick="runAgent('rfq')"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">RFQ Generator</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">From a one-line need to a send-ready RFQ with specs, Incoterms and evaluation criteria.</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Launch agent →</div></div>
-      <div role="button" tabindex="0" onkeydown="cardKey(event)" class="card glow-hover" style="cursor:pointer" onclick="runAgent('risk')"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">Supplier Risk Agent</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">Surface single-source exposure, financial flags and concentration risk before they bite.</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Launch agent →</div></div>
-      <div role="button" tabindex="0" onkeydown="cardKey(event)" class="card glow-hover" style="cursor:pointer" onclick="runAgent('neg')"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">Negotiation Agent</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">Walk in with targets, a concessions ladder and counters to their favourite tactics.</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Launch agent →</div></div>
+      <div role="button" tabindex="0" data-key="cardKey$event" class="card glow-hover" style="cursor:pointer" data-do="runAgent" data-a="rfq"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">RFQ Generator</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">From a one-line need to a send-ready RFQ with specs, Incoterms and evaluation criteria.</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Launch agent →</div></div>
+      <div role="button" tabindex="0" data-key="cardKey$event" class="card glow-hover" style="cursor:pointer" data-do="runAgent" data-a="risk"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">Supplier Risk Agent</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">Surface single-source exposure, financial flags and concentration risk before they bite.</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Launch agent →</div></div>
+      <div role="button" tabindex="0" data-key="cardKey$event" class="card glow-hover" style="cursor:pointer" data-do="runAgent" data-a="neg"><h3 style="font-size:16px;margin-bottom:8px;color:var(--lime)">Negotiation Agent</h3><p style="color:var(--muted);font-size:13.5px;line-height:1.55">Walk in with targets, a concessions ladder and counters to their favourite tactics.</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Launch agent →</div></div>
     </div>
     <div class="card" style="margin-top:28px;border-color:var(--lime);display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
       <div style="min-width:240px;flex:1">
         <h3 style="font-size:18px;margin-bottom:6px">Looking for the tools?</h3>
         <p style="color:var(--muted);font-size:14px;line-height:1.55">The Defender, Simulator, Summariser, Quote Comparator and Spend Analyser all live in AI Tools.</p>
       </div>
-      <button class="btn btn-lime" onclick="go('tools')">Open AI Tools →</button>
+      <button class="btn btn-lime" data-do="go" data-a="tools">Open AI Tools →</button>
     </div>
   </div></section>
 </div>
@@ -561,46 +561,46 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <p style="color:var(--muted);max-width:660px;margin-bottom:30px;line-height:1.6">Free, no signup. Pick a tool — each opens its own workspace.</p>
     <div class="eyebrow" style="margin-bottom:14px">Procurement tools</div>
     <div class="grid4">
-      <button class="tool-tile" onclick="go('tool-sourcing')">
+      <button class="tool-tile" data-do="go" data-a="tool-sourcing">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
         Supplier Discovery<span class="sub">Find suppliers, regions &amp; market · web-searched</span>
       </button>
-      <button class="tool-tile" onclick="go('tool-defender')">
+      <button class="tool-tile" data-do="go" data-a="tool-defender">
         <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6l7-3z"/><path d="M9.5 14.5l5-5"/><circle cx="9.7" cy="9.7" r="1"/><circle cx="14.3" cy="14.3" r="1"/></svg>
         Price-Increase Defender<span class="sub">Score &amp; rebut their letter · ≈ 2 min</span>
       </button>
-      <button class="tool-tile" onclick="go('tool-sim')">
+      <button class="tool-tile" data-do="go" data-a="tool-sim">
         <svg viewBox="0 0 24 24"><path d="M3 4h12v7H8l-3 3v-3H3z"/><path d="M9 13h12v7h-2v3l-3-3H9z"/></svg>
         Negotiation Simulator<span class="sub">Get scored /100 · negotiate vs an AI supplier</span>
       </button>
-      <button class="tool-tile" onclick="go('tool-minutes')">
+      <button class="tool-tile" data-do="go" data-a="tool-minutes">
         <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 11h6M9 14h6"/><path d="M9 17.5l1.5 1.5 3-3"/></svg>
         Meeting Summariser<span class="sub">Email-ready minutes · ≈ 1 min</span>
       </button>
-      <button class="tool-tile" onclick="go('tool-quotes')">
+      <button class="tool-tile" data-do="go" data-a="tool-quotes">
         <svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M4 7h16"/><path d="M6 7l-2.8 5.5a3.1 3.1 0 0 0 5.6 0L6 7z"/><path d="M18 7l-2.8 5.5a3.1 3.1 0 0 0 5.6 0L18 7z"/><path d="M9 21h6"/></svg>
         Quote Comparator<span class="sub">Excel · PDF · Word → branded report</span>
       </button>
-      <button class="tool-tile" onclick="go('tool-contract')">
+      <button class="tool-tile" data-do="go" data-a="tool-contract">
         <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v3h3"/><path d="M9 8.5h5"/><circle cx="12" cy="13.5" r="2.4"/><path d="M10.8 15.5L9.5 19l2.5-1.2L14.5 19l-1.3-3.5"/></svg>
         Contract Intelligence<span class="sub">Review · improve · health check</span>
       </button>
-      <button class="tool-tile" onclick="go('tool-rfq')">
+      <button class="tool-tile" data-do="go" data-a="tool-rfq">
         <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v3h3"/><path d="M9 11h6M9 14h6M9 17h4"/></svg>
         RFQ Generator<span class="sub">Branded, watermarked PDF</span>
       </button>
-      <button class="tool-tile" onclick="go('spend')">
+      <button class="tool-tile" data-do="go" data-a="spend">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 12V3.5"/><path d="M12 12l6 6"/></svg>
         Spend Analyser<span class="sub">Instant dashboard · in your browser</span>
       </button>
     </div>
     <div class="eyebrow" style="margin:34px 0 14px">AI agents — guided chat workflows</div>
     <div class="grid4">
-      <button class="tool-tile" onclick="go('ai');setTimeout(()=>runAgent('risk'),200)">
+      <button class="tool-tile" data-do="goAgent" data-a="risk">
         <svg viewBox="0 0 24 24"><path d="M12 3.5L22 21H2L12 3.5z"/><path d="M12 10v5"/><circle cx="12" cy="18" r="0.6"/></svg>
         Supplier Risk Agent<span class="sub">0–100 risk score + mitigations</span>
       </button>
-      <button class="tool-tile" onclick="go('ai');setTimeout(()=>runAgent('neg'),200)">
+      <button class="tool-tile" data-do="goAgent" data-a="neg">
         <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>
         Negotiation Agent<span class="sub">Targets · BATNA · concessions</span>
       </button>
@@ -611,7 +611,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ TOOL: SUPPLIER DISCOVERY (FLAGSHIP) ============ -->
 <div class="page" id="page-tool-sourcing">
   <section class="sec"><div class="wrap" style="max-width:900px">
-    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
+    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" data-do="go" data-a="tools">← All AI tools</button>
     <div class="eyebrow" style="margin-bottom:10px">Supplier Discovery</div>
     <h2 style="font-size:30px;margin-bottom:10px">Find the suppliers, before you go to market</h2>
     <p style="color:var(--muted);max-width:720px;line-height:1.6;margin-bottom:8px">Describe what you need to buy. Buyr AI searches the live web and maps your supply market: the kind of suppliers who make it, where they cluster, how concentrated the market is, and named candidate suppliers to investigate — so you walk into sourcing knowing the landscape, not guessing.</p>
@@ -662,7 +662,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         </select>
         <input class="bwin" id="src-dest" placeholder="Delivery destination, e.g. Coventry UK (optional)" aria-label="Delivery destination">
       </div>
-      <button class="btn btn-lime cta-grow" onclick="runSourcing()">Map my supply market →</button>
+      <button class="btn btn-lime cta-grow" data-do="runSourcing">Map my supply market →</button>
       <div id="src-out" style="margin-top:18px"></div>
     </div>
   </div></section>
@@ -671,7 +671,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ TOOL: DEFENDER ============ -->
 <div class="page" id="page-tool-defender">
   <section class="sec"><div class="wrap" style="max-width:860px">
-    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
+    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" data-do="go" data-a="tools">← All AI tools</button>
     <!-- Defender -->
     <div class="card" id="tool-defender">
       <h3 style="font-size:20px;margin-bottom:6px">Supplier Claim Review</h3>
@@ -704,12 +704,12 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
       <div class="eyebrow" style="margin:18px 0 8px">3 &middot; Cost drivers they are claiming</div>
       <div id="def-drivers"></div>
-      <button class="btn btn-ghost" style="margin-top:8px;padding:7px 13px;font-size:13px" onclick="defAddDriver()">+ Add driver</button>
+      <button class="btn btn-ghost" style="margin-top:8px;padding:7px 13px;font-size:13px" data-do="defAddDriver">+ Add driver</button>
 
       <div class="eyebrow" style="margin:18px 0 8px">4 &middot; Their letter (optional &mdash; used only to draft the reply)</div>
       <textarea class="bwin" id="def-letter" rows="4" aria-label="Supplier letter" placeholder="Paste the supplier letter here."></textarea>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;align-items:center">
-        <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="defExtract()">Read the letter</button>
+        <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" data-do="defExtract">Read the letter</button>
         <span style="color:var(--muted);font-size:12px">Proposes values for the fields above. Nothing is used until you confirm it.</span>
       </div>
       <div id="def-extract" style="margin-top:12px"></div>
@@ -731,11 +731,11 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <input class="bwin" id="def-context" style="margin-top:10px" placeholder="Optional context for the drafted reply" aria-label="Optional context: alternatives available, switching cost, contract notic">
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-        <button class="btn btn-lime" onclick="defCalc()">Calculate exposure</button>
-        <button class="btn btn-ghost" onclick="defSaveCase()">Save case</button>
-        <button class="btn btn-ghost" onclick="defLoadExample()">Load synthetic example</button>
-        <button class="btn btn-ghost" onclick="runDefender()">Draft the response</button>
-        <button class="btn btn-ghost" onclick="defDecisionPack()">Decision pack</button>
+        <button class="btn btn-lime" data-do="defCalc">Calculate exposure</button>
+        <button class="btn btn-ghost" data-do="defSaveCase">Save case</button>
+        <button class="btn btn-ghost" data-do="defLoadExample">Load synthetic example</button>
+        <button class="btn btn-ghost" data-do="runDefender">Draft the response</button>
+        <button class="btn btn-ghost" data-do="defDecisionPack">Decision pack</button>
       </div>
       <div id="def-calc" style="margin-top:18px"></div>
       <div id="def-out" style="margin-top:18px"></div>
@@ -753,15 +753,15 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         </div>
         <div class="eyebrow" style="margin:14px 0 6px">What you argued, and whether it moved them</div>
         <div id="oc-args"></div>
-        <button class="btn btn-ghost" style="margin-top:6px;padding:6px 12px;font-size:12.5px" onclick="ocAddArg()">+ Add argument</button>
+        <button class="btn btn-ghost" style="margin-top:6px;padding:6px 12px;font-size:12.5px" data-do="ocAddArg">+ Add argument</button>
         <label style="display:block;font-size:12px;color:var(--muted);margin-top:12px">Non-price concessions and commitments (one per line)
           <textarea class="bwin" id="oc-concessions" rows="2" placeholder="Payment terms 30 to 60 days"></textarea></label>
         <label style="display:block;font-size:12px;color:var(--muted);margin-top:10px">Lessons for the next case
           <textarea class="bwin" id="oc-lessons" rows="2" placeholder="What actually did the work"></textarea></label>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-          <button class="btn btn-lime" onclick="ocSave()">Record outcome</button>
-          <button class="btn btn-ghost" onclick="ocExport()">Export</button>
-          <button class="btn btn-ghost" onclick="ocClear()">Clear all</button>
+          <button class="btn btn-lime" data-do="ocSave">Record outcome</button>
+          <button class="btn btn-ghost" data-do="ocExport">Export</button>
+          <button class="btn btn-ghost" data-do="ocClear">Clear all</button>
         </div>
         <div id="oc-msg" style="margin-top:12px"></div>
         <div id="oc-list" style="margin-top:16px"></div>
@@ -773,7 +773,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ TOOL: SIMULATOR ============ -->
 <div class="page" id="page-tool-sim">
   <section class="sec"><div class="wrap" style="max-width:860px">
-    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
+    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" data-do="go" data-a="tools">← All AI tools</button>
     <!-- Simulator -->
     <div class="card" id="tool-sim">
       <h3 style="font-size:20px;margin-bottom:6px">Negotiation Simulator</h3>
@@ -787,8 +787,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <select class="bwin" id="sim-mode" aria-label="Negotiation difficulty"><option value="Standard">Difficulty: Standard</option><option value="Friendly">Difficulty: Friendly</option><option value="Hardball">Difficulty: Hardball</option></select>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-        <button class="btn btn-lime" onclick="startSim()">Start simulation</button>
-        <button class="btn btn-ghost" id="sim-end" style="display:none" onclick="endSim()">End &amp; score me</button>
+        <button class="btn btn-lime" data-do="startSim">Start simulation</button>
+        <button class="btn btn-ghost" id="sim-end" style="display:none" data-do="endSim">End &amp; score me</button>
       </div>
       <div id="sim-score"></div>
       <div class="chatbox" data-chat="sim"></div>
@@ -799,13 +799,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ TOOL: MEETING SUMMARISER ============ -->
 <div class="page" id="page-tool-minutes">
   <section class="sec"><div class="wrap" style="max-width:860px">
-    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
+    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" data-do="go" data-a="tools">← All AI tools</button>
     <!-- Meeting Summariser -->
     <div class="card" id="tool-minutes">
       <h3 style="font-size:20px;margin-bottom:6px">Meeting Notes Summariser</h3>
       <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:14px">Paste your raw meeting notes — scrappy bullet points, half-sentences, whatever you scribbled. You'll get clean, email-ready minutes: summary, decisions, and an action list with <b style="color:var(--text)">owners, departments, tasks and due dates</b> (anything not stated is marked TBC rather than invented). One tap to copy for email.</p>
       <textarea class="bwin" id="min-notes" rows="7" placeholder="e.g. weekly supply review 11/6 — alpha castings late again, Dave (quality) chasing 8D by fri. agreed buffer stock on A-parts, Sarah to raise PO this week. price increase letter from PackRight, JF to run defender + respond by 20th. next mtg weds…" aria-label="E.g. weekly supply review 11/6"></textarea>
-      <button class="btn btn-lime" style="margin-top:12px" onclick="runMinutes()">Summarise →</button>
+      <button class="btn btn-lime" style="margin-top:12px" data-do="runMinutes">Summarise →</button>
       <div id="min-out" style="margin-top:18px"></div>
     </div>
   </div></section>
@@ -814,16 +814,16 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ TOOL: QUOTE COMPARATOR ============ -->
 <div class="page" id="page-tool-quotes">
   <section class="sec"><div class="wrap" style="max-width:860px">
-    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
+    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" data-do="go" data-a="tools">← All AI tools</button>
     <!-- Quote Comparator -->
     <div class="card" id="tool-quotes">
       <h3 style="font-size:20px;margin-bottom:6px">Quote Comparator</h3>
       <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:14px">Drop in 2–4 supplier quotes in any mixture of <b style="color:var(--text)">Excel, PDF, Word or CSV</b>. You'll get a comprehensive review — quote summary, normalised landed-cost comparison with the working shown, weighted scoring, risks and the questions to ask each supplier — downloadable as a BuyrWorld-branded report.</p>
-      <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Add quote files — PDF · Word · Excel · CSV<input type="file" id="q-files" multiple accept=".xlsx,.xls,.csv,.pdf,.docx,.txt" onchange="addQuoteFiles(this)"></label>
+      <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Add quote files — PDF · Word · Excel · CSV<input type="file" id="q-files" multiple accept=".xlsx,.xls,.csv,.pdf,.docx,.txt" data-chg="addQuoteFiles$self"></label>
       <div id="q-list" style="margin:10px 0;display:flex;flex-wrap:wrap;gap:8px"></div>
       <input class="bwin" id="q-context" placeholder="Optional: weightings & assumptions, e.g. price 40/quality 25/lead time 20/risk 15; 5,000 units/yr; cost of capital 8%" aria-label="Optional: weightings & assumptions">
       <p style="color:var(--muted);font-size:12px;margin-top:8px">Works with text-based PDFs (not scans/photos). Anonymise anything sensitive — file text is sent to Buyr AI for the comparison.</p>
-      <button class="btn btn-lime" style="margin-top:12px" onclick="runComparator()">Compare quotes →</button>
+      <button class="btn btn-lime" style="margin-top:12px" data-do="runComparator">Compare quotes →</button>
       <div id="q-out" style="margin-top:18px"></div>
     </div>
 
@@ -848,8 +848,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <div class="page" id="page-tool-rfq">
   <section class="sec"><div class="wrap" style="max-width:860px">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px">
-      <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
-      <button class="btn btn-ghost" id="rfq-back-sourcing" style="padding:8px 14px;font-size:13px;display:none" onclick="go('tool-sourcing')">← Back to Supplier Discovery</button>
+      <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px" data-do="go" data-a="tools">← All AI tools</button>
+      <button class="btn btn-ghost" id="rfq-back-sourcing" style="padding:8px 14px;font-size:13px;display:none" data-do="go" data-a="tool-sourcing">← Back to Supplier Discovery</button>
     </div>
     <div class="card">
       <h3 style="font-size:20px;margin-bottom:6px">RFQ Generator</h3>
@@ -879,7 +879,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <input class="bwin" id="rfq-dead" placeholder="Response deadline, e.g. 28 June 2026" aria-label="Response deadline">
         <input class="bwin" id="rfq-extra" placeholder="Anything else: tooling, packaging, volume flexibility…" aria-label="Anything else: tooling, packaging, volume flexibility">
       </div>
-      <button class="btn btn-lime" onclick="runRFQGen()">Generate RFQ →</button>
+      <button class="btn btn-lime" data-do="runRFQGen">Generate RFQ →</button>
       <div id="rfq-out" style="margin-top:16px"></div>
     </div>
   </div></section>
@@ -888,7 +888,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ TOOL: CONTRACT INTELLIGENCE ============ -->
 <div class="page" id="page-tool-contract">
   <section class="sec"><div class="wrap" style="max-width:900px">
-    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
+    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" data-do="go" data-a="tools">← All AI tools</button>
     <div class="eyebrow" style="margin-bottom:10px">Contract Intelligence Agent</div>
     <h2 style="font-size:30px;margin-bottom:10px">Read the contract like a buyer, not a lawyer</h2>
     <p style="color:var(--muted);max-width:700px;line-height:1.6;margin-bottom:8px">Upload supplier terms, contracts or agreements and get a procurement-focused review: risk scoring, negotiation points, missing clauses and buyer-friendly amendments.</p>
@@ -896,7 +896,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
     <div class="card" style="margin-bottom:18px">
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Upload a contract (<b style="color:var(--text)">PDF, Word or TXT</b> — text-based, not scans) or paste the terms below. T&amp;Cs, MSAs, NDAs, framework and service agreements all work. Anonymise anything sensitive.</p>
-      <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload contract — PDF · Word · TXT<input type="file" id="ci-file" accept=".pdf,.docx,.txt" onchange="loadContractFile(this)"></label>
+      <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload contract — PDF · Word · TXT<input type="file" id="ci-file" accept=".pdf,.docx,.txt" data-chg="loadContractFile$self"></label>
       <div id="ci-chip" style="margin:10px 0"></div>
       <textarea class="bwin" id="ci-paste" rows="6" placeholder="…or paste the contract text / key clauses here" aria-label="Paste the contract text"></textarea>
     </div>
@@ -906,19 +906,19 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <span class="tag tag-lime">Step 1</span>
         <h3 style="font-size:15.5px;margin:10px 0 6px">Review Contract</h3>
         <p style="color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:12px">Find the risks, weak clauses and negotiation opportunities before you sign.</p>
-        <button class="btn btn-lime" style="padding:9px 14px;font-size:13px;width:100%;justify-content:center" onclick="runContractReview()">Review a Supplier Contract</button>
+        <button class="btn btn-lime" style="padding:9px 14px;font-size:13px;width:100%;justify-content:center" data-do="runContractReview">Review a Supplier Contract</button>
       </div>
       <div class="card" style="padding:18px">
         <span class="tag tag-lime">Step 2</span>
         <h3 style="font-size:15.5px;margin:10px 0 6px">Generate Better Contract</h3>
         <p style="color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:12px">A redlined rewrite — contested wording struck out, buyer-friendly wording inserted.</p>
-        <button class="btn btn-ghost" style="padding:9px 14px;font-size:13px;width:100%;justify-content:center" onclick="runContractGenerate()">Generate a Better Contract</button>
+        <button class="btn btn-ghost" style="padding:9px 14px;font-size:13px;width:100%;justify-content:center" data-do="runContractGenerate">Generate a Better Contract</button>
       </div>
       <div class="card" style="padding:18px">
         <span class="tag">Standalone</span>
         <h3 style="font-size:15.5px;margin:10px 0 6px">Contract Health Check</h3>
         <p style="color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:12px">Score the agreement and download a management-ready metrics report. Run any time — no need for Steps 1–2 first.</p>
-        <button class="btn btn-ghost" style="padding:9px 14px;font-size:13px;width:100%;justify-content:center" onclick="runContractHealth()">Run Contract Health Check</button>
+        <button class="btn btn-ghost" style="padding:9px 14px;font-size:13px;width:100%;justify-content:center" data-do="runContractHealth">Run Contract Health Check</button>
       </div>
     </div>
 
@@ -935,13 +935,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <p style="color:var(--muted);max-width:720px;line-height:1.6;margin-bottom:18px">Live indices, metals, energy and FX. AI-searched briefings and commodity intelligence. Your commodity exposure, stress-tested. Everything a buyer needs to read the market — and decide what to do about it.</p>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px">
-      <button class="mi-pill on" data-t="live" onclick="miGo('live')"><svg viewBox="0 0 24 24"><path d="M3 19h18"/><path d="M5 15l4-5 3 3 5-7"/></svg>Live Markets</button>
-      <button class="mi-pill" data-t="ai" onclick="miGo('ai')"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg>AI Economy</button>
-      <button class="mi-pill" data-t="news" onclick="miGo('news')"><svg viewBox="0 0 24 24"><path d="M4 5h13v15H6a2 2 0 0 1-2-2V5z"/><path d="M17 8h3v10a2 2 0 0 1-2 2"/><path d="M7 9h7M7 12.5h7M7 16h4"/></svg>News</button>
-      <button class="mi-pill" data-t="brief" onclick="miGo('brief')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg>Daily Briefing</button>
-      <button class="mi-pill" data-t="comm" onclick="miGo('comm')"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12L4 7.5M12 12v9"/></svg>Commodity Intel</button>
-      <button class="mi-pill" data-t="exp" onclick="miGo('exp')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/></svg>Exposure &amp; Simulator</button>
-      <button class="mi-pill" data-t="lab" onclick="miGo('lab')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5"/><path d="M16.5 9.5c1.4.4 2.5 1.7 2.5 3.3M16 4.8a3 3 0 0 1 0 5.7"/></svg>Labour Costs</button>
+      <button class="mi-pill on" data-t="live" data-do="miGo" data-a="live"><svg viewBox="0 0 24 24"><path d="M3 19h18"/><path d="M5 15l4-5 3 3 5-7"/></svg>Live Markets</button>
+      <button class="mi-pill" data-t="ai" data-do="miGo" data-a="ai"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg>AI Economy</button>
+      <button class="mi-pill" data-t="news" data-do="miGo" data-a="news"><svg viewBox="0 0 24 24"><path d="M4 5h13v15H6a2 2 0 0 1-2-2V5z"/><path d="M17 8h3v10a2 2 0 0 1-2 2"/><path d="M7 9h7M7 12.5h7M7 16h4"/></svg>News</button>
+      <button class="mi-pill" data-t="brief" data-do="miGo" data-a="brief"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg>Daily Briefing</button>
+      <button class="mi-pill" data-t="comm" data-do="miGo" data-a="comm"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12L4 7.5M12 12v9"/></svg>Commodity Intel</button>
+      <button class="mi-pill" data-t="exp" data-do="miGo" data-a="exp"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/></svg>Exposure &amp; Simulator</button>
+      <button class="mi-pill" data-t="lab" data-do="miGo" data-a="lab"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5"/><path d="M16.5 9.5c1.4.4 2.5 1.7 2.5 3.3M16 4.8a3 3 0 0 1 0 5.7"/></svg>Labour Costs</button>
     </div>
 
     <!-- LIVE MARKETS -->
@@ -959,8 +959,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px">
           <p style="color:var(--muted);font-size:11.5px;max-width:560px">Scroll the watchlist (right) to switch instruments · use the range buttons (bottom) — YTD shows year-to-date in green/red · use the ruler tool in the left toolbar to measure the % change between any two points in time. LME base metals (aluminium, zinc, tin, lead) and steel indices are licensed data with no free feed — use the live AI check instead. Prices may be delayed; indicative, not for contract settlement.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-ghost" style="padding:8px 13px;font-size:12.5px" onclick="miGo('comm');document.getElementById('mi-comm').value='Aluminium'">Aluminium / zinc / steel live read →</button>
-            <button class="btn btn-ghost" style="padding:8px 13px;font-size:12.5px" onclick="miGo('news')">Top economy stories →</button>
+            <button class="btn btn-ghost" style="padding:8px 13px;font-size:12.5px" data-do="miCommodity" data-a="Aluminium">Aluminium / zinc / steel live read →</button>
+            <button class="btn btn-ghost" style="padding:8px 13px;font-size:12.5px" data-do="miGo" data-a="news">Top economy stories →</button>
           </div>
         </div>
       </div>
@@ -975,7 +975,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <div id="ai-chart"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px">
           <p style="color:var(--muted);font-size:11.5px;max-width:540px">Industry and input-cost intelligence for buyers — not investment research or advice. Crusoe and Nscale are private and unlisted; Schneider Electric's Paris listing isn't in the free feed, so Eaton and nVent represent the electrical-infrastructure segment. Prices may be delayed.</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost" style="padding:9px 14px;font-size:13px" onclick="miGo('news')">Top AI &amp; market stories →</button><button class="btn btn-lime" style="padding:9px 14px;font-size:13px" onclick="runAIWatch()">AI-economy procurement briefing →</button></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost" style="padding:9px 14px;font-size:13px" data-do="miGo" data-a="news">Top AI &amp; market stories →</button><button class="btn btn-lime" style="padding:9px 14px;font-size:13px" data-do="runAIWatch">AI-economy procurement briefing →</button></div>
         </div>
         <div id="mi-ai-out" style="margin-top:12px"></div>
       </div>
@@ -996,7 +996,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
           <div><h3 style="font-size:19px;margin-bottom:4px">Today's Procurement Briefing</h3>
           <p style="color:var(--muted);font-size:13.5px">Global picture, cost risks, commodity moves, opportunities and recommended actions — searched and written fresh.</p></div>
-          <button class="btn btn-lime" onclick="runBriefing()">Generate today's briefing</button>
+          <button class="btn btn-lime" data-do="runBriefing">Generate today's briefing</button>
         </div>
         <div id="mi-brief" style="margin-top:14px"></div>
       </div>
@@ -1011,7 +1011,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           <select class="bwin" id="mi-comm" style="max-width:280px" aria-label="Commodity">
             <option>Aluminium</option><option>Copper</option><option>Nickel</option><option>Titanium</option><option>Steel (HRC)</option><option>Stainless Steel 304</option><option>Stainless Steel 316</option><option>Zinc</option><option>Tin</option><option>Lead</option><option>Magnesium</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Palladium</option><option>Brent Crude</option><option>Natural Gas</option><option>UK Electricity</option><option>Lithium</option><option>Polymer (PP/PE)</option><option>Paper &amp; Board</option><option>Ocean Freight</option>
           </select>
-          <button class="btn btn-lime" onclick="runCommodity()">Analyse market →</button>
+          <button class="btn btn-lime" data-do="runCommodity">Analyse market →</button>
         </div>
         <div id="mi-comm-out" style="margin-top:14px"></div>
       </div>
@@ -1024,13 +1024,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <h3 style="font-size:19px;margin:10px 0 4px">My Commodity Exposure</h3>
         <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Upload or paste your spend (supplier, category, amount). Buyr AI maps each category to its underlying commodity content and shows where your money is really exposed.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
-          <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload CSV / Excel<input type="file" id="mi-file" accept=".csv,.txt,.xlsx,.xls" onchange="miLoadFile(this);document.getElementById('mi-fname').textContent=this.files[0]?this.files[0].name+' ✓':''"></label>
-          <button class="btn btn-ghost" style="padding:10px 16px;font-size:13px" onclick="miUseSample()">Load sample data</button>
+          <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload CSV / Excel<input type="file" id="mi-file" accept=".csv,.txt,.xlsx,.xls" data-chg="miLoadFile$named"></label>
+          <button class="btn btn-ghost" style="padding:10px 16px;font-size:13px" data-do="miUseSample">Load sample data</button>
           <span class="fname" id="mi-fname"></span>
         </div>
         <div class="sheet-head"><span>SUPPLIER</span><span>CATEGORY</span><span>AMOUNT</span></div>
         <textarea class="bwin sheet-in" id="mi-paste" rows="5" placeholder="Alpha Castings Ltd, Castings, 42000&#10;PackRight Ltd, Packaging, 12750&#10;&#10;…one line per invoice or PO. Same format as the Spend Analyser." aria-label="Paste supplier, category and annual spend, one per line"></textarea>
-        <button class="btn btn-lime" style="margin-top:12px" onclick="runExposure()">Map my exposure →</button>
+        <button class="btn btn-lime" style="margin-top:12px" data-do="runExposure">Map my exposure →</button>
         <div id="mi-exp-out" style="margin-top:16px"></div>
       </div>
       <div style="height:18px"></div>
@@ -1049,10 +1049,10 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Indicative fully-loaded manufacturing labour costs by country — directional for sourcing comparisons and should-cost models.</p>
         <div id="mi-labour"></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center">
-          <select class="bwin" id="mi-lab-c" style="max-width:220px" onchange="labDash()" aria-label="Country to benchmark"></select>
+          <select class="bwin" id="mi-lab-c" style="max-width:220px" data-chg="labDash" aria-label="Country to benchmark"></select>
           <span style="color:var(--muted);font-size:12px">vs</span>
-          <select class="bwin" id="mi-lab-base" style="max-width:180px" onchange="labDash()" aria-label="Country to compare against"></select>
-          <button class="btn btn-ghost" style="padding:9px 14px;font-size:13px" onclick="runLabour()">Live check →</button>
+          <select class="bwin" id="mi-lab-base" style="max-width:180px" data-chg="labDash" aria-label="Country to compare against"></select>
+          <button class="btn btn-ghost" style="padding:9px 14px;font-size:13px" data-do="runLabour">Live check →</button>
         </div>
         <div id="mi-lab-dash" style="margin-top:14px"></div>
         <div id="mi-lab-out" style="margin-top:12px"></div>
@@ -1061,7 +1061,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
     <p style="color:var(--muted);font-size:11.5px;margin-top:16px">Intelligence is generated on demand from live web sources and AI assessment at the moment you request it — sources are cited, figures should be verified before commercial commitments. Not investment advice.</p>
     <div id="mi-export-row" style="display:none;gap:10px;flex-wrap:wrap;margin-top:10px">
-      <button class="btn btn-lime" onclick="miPrintReport()">Export / print report (PDF)</button>
+      <button class="btn btn-lime" data-do="miPrintReport">Export / print report (PDF)</button>
     </div>
   </div></section>
 </div>
@@ -1387,14 +1387,14 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <p style="color:var(--muted);max-width:640px;margin-bottom:32px;line-height:1.6">Structured pathways written by a practitioner — from your first PO to category leadership and CIPS.</p>
     <div class="acad-stage" style="margin-bottom:26px">
       <span style="color:var(--muted);font-size:13px;margin-right:6px">Where are you?</span>
-      <button class="mi-pill on" data-stage="all" onclick="acadStage('all')">Show all</button>
-      <button class="mi-pill" data-stage="1" onclick="acadStage('1')">New to procurement</button>
-      <button class="mi-pill" data-stage="2" onclick="acadStage('2')">A few years in</button>
-      <button class="mi-pill" data-stage="3" onclick="acadStage('3')">Leading a function</button>
+      <button class="mi-pill on" data-stage="all" data-do="acadStage" data-a="all">Show all</button>
+      <button class="mi-pill" data-stage="1" data-do="acadStage" data-a="1">New to procurement</button>
+      <button class="mi-pill" data-stage="2" data-do="acadStage" data-a="2">A few years in</button>
+      <button class="mi-pill" data-stage="3" data-do="acadStage" data-a="3">Leading a function</button>
     </div>
     <div class="grid3" id="pathways"></div>
     <div id="pathway-detail" style="display:none;max-width:760px">
-      <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="closePathway()">← All pathways</button>
+      <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" data-do="closePathway">← All pathways</button>
       <div id="pathway-body"></div>
     </div>
   </div></section>
@@ -1435,7 +1435,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <div class="blog-months" id="blog-months" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px;align-items:center"></div>
     <div id="blog-list" class="grid3"></div>
     <div id="blog-article" style="display:none;max-width:720px">
-      <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="closeArticle()">← All articles</button>
+      <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" data-do="closeArticle">← All articles</button>
       <div id="blog-body" class="bw-prose"></div>
       <div id="blog-like" style="margin-top:30px;display:flex;align-items:center;gap:14px"></div>
       <div id="blog-next" style="margin-top:36px"></div>
@@ -1446,19 +1446,19 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <!-- ============ SPEND ANALYSER ============ -->
 <div class="page" id="page-spend">
   <section class="sec"><div class="wrap">
-    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" onclick="go('tools')">← All AI tools</button>
+    <button class="btn btn-ghost" style="margin-bottom:24px;padding:8px 14px;font-size:13px" data-do="go" data-a="tools">← All AI tools</button>
     <div class="eyebrow" style="margin-bottom:10px">Spend Analyser</div>
     <h2 style="font-size:34px;margin-bottom:10px">See your spend the way a category manager would</h2>
     <p style="color:var(--muted);max-width:680px;margin-bottom:32px;line-height:1.6">Paste or upload your spend data and get an instant dashboard: Pareto, concentration, tail spend, insights and recommendations. Everything runs in your browser — <b style="color:var(--text)">your data never leaves your device</b> unless you choose to send the summary to Buyr AI.</p>
     <div class="card" style="margin-bottom:24px">
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
-        <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload CSV<input type="file" id="spend-file" accept=".csv,.txt" onchange="loadSpendFile(this);document.getElementById('spend-fname').textContent=this.files[0]?this.files[0].name+' ✓':''"></label>
-        <button class="btn btn-ghost" style="padding:10px 16px;font-size:13px" onclick="loadSampleSpend()">Load sample data</button>
+        <label class="fbtn"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload CSV<input type="file" id="spend-file" accept=".csv,.txt" data-chg="loadSpendFile$named"></label>
+        <button class="btn btn-ghost" style="padding:10px 16px;font-size:13px" data-do="loadSampleSpend">Load sample data</button>
         <span class="fname" id="spend-fname"></span>
       </div>
       <div class="sheet-head"><span>SUPPLIER</span><span>CATEGORY</span><span>AMOUNT</span></div>
       <textarea class="bwin sheet-in" id="spend-paste" rows="6" placeholder="Alpha Castings Ltd, Castings, 42000&#10;Bravo Fasteners, Fasteners, 8100&#10;PackRight Ltd, Packaging, 12750&#10;&#10;…one line per invoice or PO, separated by commas. A header row is fine — most CSV exports paste straight in." aria-label="Paste supplier, category and annual spend, one per line"></textarea>
-      <button class="btn btn-lime" style="margin-top:12px" onclick="analyseSpend()">Analyse spend →</button>
+      <button class="btn btn-lime" style="margin-top:12px" data-do="analyseSpend">Analyse spend →</button>
     </div>
     <div id="spend-out"></div>
   </div></section>
@@ -1526,7 +1526,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <footer>
   <div class="wrap" style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between">
     <img src="/buyrworld-logo.png" alt="BuyrWorld" width="560" height="156" style="height:40px;width:auto;display:block">
-    <span style="color:var(--muted);font-size:13px">Independent procurement technology research · non-commercial demonstration · <a href="#" onclick="go('legal');return false" style="color:var(--muted)">Privacy &amp; Terms</a><br><span style="font-size:11px">BUYRWORLD LTD · Registered in England &amp; Wales, company no. 17289466 · Registered office: 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ</span><br><span style="font-size:11px">Conversations with Buyr AI may be stored to improve the service — see our <a href="#" onclick="go('legal');return false" style="color:var(--muted)">Privacy Policy</a>.</span></span>
+    <span style="color:var(--muted);font-size:13px">Independent procurement technology research · non-commercial demonstration · <a href="#" data-do="go" data-a="legal" style="color:var(--muted)">Privacy &amp; Terms</a><br><span style="font-size:11px">BUYRWORLD LTD · Registered in England &amp; Wales, company no. 17289466 · Registered office: 71-75 Shelton Street, Covent Garden, London, WC2H 9JQ</span><br><span style="font-size:11px">Conversations with Buyr AI may be stored to improve the service — see our <a href="#" data-do="go" data-a="legal" style="color:var(--muted)">Privacy Policy</a>.</span></span>
   </div>
 </footer>
 

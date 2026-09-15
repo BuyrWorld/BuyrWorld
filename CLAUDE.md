@@ -58,6 +58,7 @@ Deploys are GitHub → Vercel. Pushing to `main` deploys production.
 
 ## Design system (added Sept 2026)
 
+- **The application lives in `app.js` and `mount.mjs`, not in `index.html`.** The page loads them from the positions the inline blocks occupied. `script-src` no longer allows inline script, so **an inline `onclick` will not run** — markup asks for an action by name (`data-do`, `data-chg`, `data-inp`, `data-key`) and a table in `app.js` maps it to a function. A table, not `window[name]`: a string that arrives in markup must never choose which function runs.
 - **The sidebar is fixed and opaque, so every landmark beside it must be indented past it or hidden.** `header` was indented and `footer` was not; above 1080px the footer drew underneath the sidebar and the logo in it looked clipped. `tests/integration/shell.test.mjs` checks the whole set rather than the one that was missing.
 - **Tokens live in one `:root` block.** `--bw-*` for surfaces, ink, semantics, spacing, radius and type. The original seven (`--bg`, `--panel`, `--lime` and so on) are now **aliases** of them, because 1,382 inline `style=` attributes reference those names. Never remove an alias.
 - **Primitives are `.bw-*` classes** and take colours from tokens only. `tests/security/design-system.test.mjs` fails on a hardcoded hex inside one.
