@@ -1,0 +1,14 @@
+# Git stores text as LF and checks it out however the platform prefers. Making
+# that explicit stops every commit on Windows emitting a warning per file, and
+# stops a file arriving with mixed endings — which is what the script
+# extraction left in mount.mjs.
+* text=auto eol=lf
+
+# Binary, so git should not touch them at all.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary

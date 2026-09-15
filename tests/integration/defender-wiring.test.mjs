@@ -196,7 +196,11 @@ describe("the Spend Analyser uses the tested engine", () => {
   });
 
   test("a missing engine says so rather than rendering nothing", () => {
-    assert.match(fn, /The spend engine did not load/);
+    // The wording moved into one shared sentence when the engine became a
+    // separate request: three places had their own, and two of them still
+    // described a page opened off the file system, which is no longer the
+    // likely failure.
+    assert.match(fn, /out.innerHTML=engineNote()/);
   });
 
   test("savings ranges come from the engine, not from inline percentages", () => {

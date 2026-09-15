@@ -146,6 +146,65 @@ function simReset() {
   var out = document.getElementById("mi-sim-out"); if (out) out.innerHTML = "";
 }
 
+
+/* ================================================= the engine, and its absence ===
+   window.BW is mounted by mount.mjs, a separate module request since the page
+   dropped 'unsafe-inline' from script-src. A separate request can fail in ways
+   an inline block could not: a 404, the wrong media type, a policy refusing it.
+
+   Thirty-four controls check for it and return without a word. This says it
+   once, at the top of the page, so a dead button is explained rather than
+   mysterious — and says which of the three failures it was, where that can be
+   established, because "did not load" and "loaded but did not run" send you to
+   different places. */
+
+var ENGINE_MISSING_TEXT =
+  "The calculation engine did not load, so anything that works out a figure will do nothing. " +
+  "Nothing you have saved is affected.";
+
+/** The same sentence wherever a result would have gone. */
+function engineNote() {
+  return '<p style="color:var(--bw-danger);font-size:var(--bw-t-body);line-height:1.6;margin:0">'
+    + ciEsc(ENGINE_MISSING_TEXT) + '</p>';
+}
+
+function engineBanner(detail) {
+  var id = "bw-engine-missing";
+  var el = document.getElementById(id);
+  if (!el) {
+    el = document.createElement("div");
+    el.id = id;
+    el.setAttribute("role", "alert");
+    el.style.cssText = "position:sticky;top:0;z-index:200;background:#3a0f14;border-bottom:1px solid #FF6B6B;"
+      + "color:#FFD9D9;padding:12px 20px;font-size:13.5px;line-height:1.6";
+    if (document.body.firstChild) document.body.insertBefore(el, document.body.firstChild);
+    else document.body.appendChild(el);
+  }
+  el.innerHTML = "<b>" + ciEsc(ENGINE_MISSING_TEXT) + "</b>"
+    + (detail ? '<br><span style="opacity:.8">' + ciEsc(detail) + "</span>" : "");
+}
+
+/* After load, because a module runs after the document is parsed: checking any
+   earlier would report a failure that has not happened yet. */
+window.addEventListener("load", function () {
+  if (window.BW) return;
+  engineBanner("");
+  /* Which of the three it was. Same origin, so connect-src 'self' permits it. */
+  fetch("/mount.mjs", { cache: "no-store" }).then(function (r) {
+    var type = r.headers && r.headers.get ? (r.headers.get("content-type") || "") : "";
+    if (!r.ok) {
+      engineBanner("/mount.mjs returned " + r.status + ". The engine is not deployed with this page.");
+    } else if (type && !/javascript/i.test(type)) {
+      engineBanner("/mount.mjs was served as " + type + " rather than JavaScript, so the browser refused to run it.");
+    } else {
+      engineBanner("/mount.mjs was reached and did not run. Check the browser console: a content security "
+        + "policy or a syntax error will be named there.");
+    }
+  }).catch(function () {
+    engineBanner("/mount.mjs could not be fetched at all. The page is loaded but the engine is not reachable.");
+  });
+});
+
 /* ======================================================= action dispatch ===
    Markup names an action; this looks it up in a table and calls it. The table
    is why this exists: `window[name]` would work and would leave a string that
@@ -865,10 +924,7 @@ function defLoadExample(){
 function defCalc(){
   var out=document.getElementById("def-calc");
   _defResult=null;
-  if(!window.BW){
-    out.innerHTML='<p style="color:#FF5C5C;font-size:14px">The calculation engine did not load. It is an ES module, so this page must be served over http rather than opened from the file system.</p>';
-    return;
-  }
+  if(!window.BW){ out.innerHTML=engineNote(); return; }
   var v=function(id){var el=document.getElementById(id);return el?el.value:"";};
   try{
     var drivers=_defRows.filter(function(r){
@@ -1316,8 +1372,9 @@ function inboxExample(){
 
 function inboxRun(filename){
   var out=document.getElementById("inbox-out");
+  if(out&&!window.BW){ out.innerHTML=engineNote(); return; }
   var text=(document.getElementById("inbox-text")||{value:""}).value;
-  if(!window.BW||!window.BW.classify){ out.innerHTML='<p style="color:#FF5C5C;font-size:14px">The classifier did not load. This page must be served over http rather than opened from the file system.</p>'; return; }
+  if(!window.BW||!window.BW.classify){ out.innerHTML=engineNote(); return; }
 
   var R=window.BW.classify(text,{filename:filename||""});
   _inboxResult=R;
@@ -5510,7 +5567,7 @@ function analyseSpend(){
   // adapts the result for display and renders. Amounts become major units at
   // the edge, for formatting only — never for arithmetic.
   if(!window.BW||!window.BW.analyseSpendExact){
-    out.innerHTML='<p style="color:#FF5C5C;font-size:14px">The spend engine did not load. This page must be served over http rather than opened from the file system.</p>';
+    out.innerHTML=engineNote();
     return;
   }
   const A=window.BW.analyseSpendExact(window.BW.parseSpendCsv(raw));
