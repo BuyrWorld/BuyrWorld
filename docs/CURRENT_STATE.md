@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 41 |
-| Test files | 0 | 67 |
+| Modules under `src/` | 0 | 43 |
+| Test files | 0 | 69 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -193,8 +193,26 @@ document containing that sentence.
 stable identity derived on write, explicit and reversible merges, no migration.
 See `DOMAIN_MODEL.md`.
 
-Five `localStorage` stores: `case-store.mjs`, `outcome-store.mjs`, `part-store.mjs`, `lot-store.mjs` and `estimate-store.mjs`. Each
-withholds rather than misreads a record written by another build. What they hold
+`src/studio/scenario.mjs` is the model behind both Should-Cost Studio entry
+paths. Upload drawing and No drawing — enter details manually converge on it,
+so the same reviewed values give the same answer whichever way they arrived.
+It holds three distinctions the rest of the product depends on: blank is not
+the same as "I don't know" is not the same as zero; what somebody typed is
+kept beside what it converts to; and a value read from a document is a
+proposal until a person accepts it, which is what stops a late extraction
+overwriting a newer manual edit.
+
+Six `localStorage` stores: `case-store.mjs`, `outcome-store.mjs`,
+`part-store.mjs`, `lot-store.mjs`, `estimate-store.mjs` and
+`studio-store.mjs`. Each withholds rather than misreads a record written by
+another build.
+
+`studio-store.mjs` is the odd one. Every other store holds finished work;
+this one holds unfinished work on purpose, because a buyer who has entered
+half a part and does not yet know the pass rate must be able to put it down
+and come back. It stores the fields and their provenance and no calculated
+result, so a reopened scenario can never show a total its own inputs no
+longer support. What they hold
 and what that means is documented in `SECURITY_REVIEW.md` under **Data
 handling**; that section is the one to read before anything else here.
 

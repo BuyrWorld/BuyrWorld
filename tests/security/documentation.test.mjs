@@ -50,9 +50,9 @@ describe("the stores the review lists are the stores that exist", () => {
     return [...found].sort();
   };
 
-  test("there are five, and the review names each one", () => {
+  test("there are six, and the review names each one", () => {
     const keys = keysInCode();
-    assert.equal(keys.length, 5, `found ${keys.length} stores: ${keys.join(", ")}`);
+    assert.equal(keys.length, 6, `found ${keys.length} stores: ${keys.join(", ")}`);
     for (const key of keys) {
       assert.ok(security.includes(`\`${key}\``), `${key} is not in the data-handling section`);
     }

@@ -118,6 +118,7 @@ exactly one device until somebody exports it.
 | `bw.parts.v1` | `part-store.mjs` | The parts library and its comparison attributes | — |
 | `bw.lots.v1` | `lot-store.mjs` | **Reviewed lots**: producer, site, distributor, heat, lot, decision, nonconformities and who they were attributed to, reviewer and reasoning | 32KB |
 | `bw.estimates.v1` | `estimate-store.mjs` | Saved cost build-ups: what each element came to and how strong the figure was | 64KB |
+| `bw.studio.v1` | `studio-store.mjs` | **Should-Cost Studio scenarios, including unfinished ones**: part and material identity, dimensions, quantities, rates, and the provenance of every field. No calculated result and no uploaded document — a drawing is referenced, never stored here | 128KB |
 
 `bw.probe` is written and removed immediately to test whether storage works at
 all. It holds nothing.
