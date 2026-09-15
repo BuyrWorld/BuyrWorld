@@ -224,8 +224,11 @@ describe("restoring", () => {
   });
 
   test("restoring nothing does not throw", () => {
-    sb.defRestore(undefined);
-    sb.defRestore({});
+    // Stated rather than implied. Calling and relying on an exception to fail
+    // the test does check something, but it claims nothing a reader — or a
+    // count of what this suite actually asserts — can see.
+    assert.doesNotThrow(() => sb.defRestore(undefined));
+    assert.doesNotThrow(() => sb.defRestore({}));
   });
 });
 

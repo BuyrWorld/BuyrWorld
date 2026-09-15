@@ -223,11 +223,26 @@ describe("it refuses rather than guessing", () => {
   });
 
   test("a weak match is flagged rather than presented as settled", () => {
+    /* This asserted nothing for as long as it existed: it was guarded by
+       `if (r.kind !== DOC_KIND.UNKNOWN)`, and its fixture — a note about an
+       agreement reached on Tuesday — classifies as unknown, so the body never
+       ran. The test named the behaviour and never checked it.
+
+       A phrase that reaches a suggestion on one weak signal is what the name
+       promises, so that is what it uses now. */
+    const r = classify("We must apply a price increase across the range from next quarter.");
+    assert.notEqual(r.kind, DOC_KIND.UNKNOWN, "this fixture must reach a suggestion, or the test is vacuous");
+    assert.equal(r.band, "weak");
+    assert.match(r.note, /Check the suggestion/);
+  });
+
+  test("a document that reaches nothing says so instead of guessing weakly", () => {
+    // The case the one above used to sit on. Unknown is its own answer, and it
+    // carries no band at all rather than a weak one.
     const r = classify("This is a note about an agreement we reached regarding delivery on Tuesday afternoon.");
-    if (r.kind !== DOC_KIND.UNKNOWN) {
-      assert.equal(r.band, "weak");
-      assert.match(r.note, /Check the suggestion/);
-    }
+    assert.equal(r.kind, DOC_KIND.UNKNOWN);
+    assert.equal(r.band, "none");
+    assert.match(r.note, /Nothing here matched/);
   });
 
   test("a letter with one stray number is not spend data", () => {

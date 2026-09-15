@@ -208,6 +208,17 @@ console.log(`Ungrounded values ACCEPTED   ${wronglyAccepted}   <- must be zero`)
 console.log(`Values pre-confirmed         ${preConfirmed}   <- must be zero`);
 console.log("-".repeat(68));
 
+/* The two numbers above are the safety claim this script exists to make,
+   and both are zero when nothing was examined: no value was wrongly accepted
+   because no value was proposed. "No ungrounded value was accepted" then
+   reports a success that describes an empty run. The invariant is only
+   meaningful over a population, so the population is checked first. */
+if (results.length === 0 || claimed === 0 || grounded === 0) {
+  console.log(`\nFAIL — ${results.length} case(s), ${claimed} value(s) proposed, ${grounded} grounded. `
+    + "Nothing was extracted, so the invariant below is vacuous.\n");
+  process.exit(1);
+}
+
 if (wronglyAccepted > 0 || preConfirmed > 0) {
   console.log("\nA safety invariant was broken. This is not a scoring miss.\n");
   process.exit(1);

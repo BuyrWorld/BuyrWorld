@@ -156,6 +156,14 @@ console.log(`Pending a future layer ${PENDING.length}`);
 console.log(`Calculation accuracy   ${((totalChecks - failedChecks) / totalChecks * 100).toFixed(1)}%`);
 console.log("-".repeat(64));
 
+/* Zero failures out of zero cases is not a pass. If the corpus stops
+   loading, this script's happy ending reads exactly the same as a real one. */
+if (CASES.length === 0 || EVALUABLE.length === 0 || totalChecks === 0) {
+  console.log(`\nFAIL — ${CASES.length} case(s), ${EVALUABLE.length} evaluable, ${totalChecks} assertion(s). `
+    + "Nothing was evaluated, so nothing passed.\n");
+  process.exit(1);
+}
+
 if (failedCases.length) {
   console.log(`\n${failedCases.length} case(s) FAILED.\n`);
   process.exit(1);

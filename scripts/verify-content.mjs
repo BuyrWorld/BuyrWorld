@@ -106,6 +106,20 @@ for (const file of files) {
 
 console.log(`Scanned ${scanned} text files and ${files.length - scanned} binary assets.\n`);
 
+/* A scan that scanned nothing finds nothing, and "no prohibited content
+   found" is then true and meaningless. The tree has had more than forty text
+   files for the life of this script; a number below twenty means the walk or
+   the extension list broke, not that the repository shrank. */
+const FLOOR = 20;
+if (scanned < FLOOR) {
+  console.log(`FAIL — only ${scanned} text file(s) were scanned. This check has stopped looking.`);
+  process.exit(1);
+}
+if (RULES.length === 0) {
+  console.log("FAIL — no rules to check against. This check has stopped looking.");
+  process.exit(1);
+}
+
 if (violations.length === 0) {
   console.log("PASS — no prohibited commercial or personal content found.");
   process.exit(0);
