@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 46 |
-| Test files | 0 | 79 |
+| Modules under `src/` | 0 | 47 |
+| Test files | 0 | 80 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -204,6 +204,27 @@ of standards in this repository, so a requirement leaning on a specification
 whose clause text nobody supplied stays `unverified`. Conflicting
 requirements are reported and never resolved, because choosing between two
 tolerances is an engineering decision.
+
+`src/studio/edit-proposal.mjs` turns a described change into a proposal and
+refuses to turn it into code. Every operation a proposal may contain is on a
+closed list checked by name, so nothing is evaluated and an instruction with
+nowhere to land is refused rather than attempted. An ambiguous target becomes
+a question — two pockets and "this pocket" asks which — because picking one
+and being wrong changes the part silently. A proposal worked out against an
+older revision is refused, and so is accepting a preview of a part that has
+since moved on. What a model is not allowed to decide — a tolerance value, a
+specification revision, whether something is confirmed — is held back and
+reported rather than quietly dropped.
+
+`src/studio/geometry.mjs` is a deliberately small parametric part: a
+rectangular block, through-holes and rectangular pockets, and nothing that
+would let anyone mistake it for a CAD replacement. Dimensions are integer
+micrometres. The block and a rectangular pocket have exact volumes; a round
+hole does not, because its volume contains pi — so a part with holes reports
+a volume *interval* whose bounds provably contain the truth, rather than a
+rounded figure presented as a measurement. Feature ids survive deletion,
+which is what lets `requirements.mjs` detect a detached requirement instead
+of handing the tolerance written for one hole to a different one.
 
 `src/studio/geometry.mjs` is a deliberately small parametric part: a
 rectangular block, through-holes and rectangular pockets, and nothing that

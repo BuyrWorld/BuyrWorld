@@ -234,6 +234,27 @@ no model, an array (empty or not) for a model carrying those features.
 
 C4 (AI-assisted edits) remains unstarted.
 
+### v4 C4 — AI-assisted edits · engine DONE, UI not yet
+
+- `src/studio/edit-proposal.mjs` — a closed list of operations, target
+  resolution, staleness, preview through the real geometry, acceptance
+- `tests/unit/edit-proposal.test.mjs` — 38 tests
+
+A proposal is data checked against a closed list, not code. Nothing is
+evaluated; an operation the list does not hold cannot be expressed. Ambiguity
+becomes a question. A stale proposal is refused, and so is accepting a
+preview of a part that has since changed. What a model may not decide is held
+back and reported.
+
+Nothing here calls a model: a proposal arrives as an object from wherever and
+is validated the same way, which is what keeps the manual path working with
+no AI service configured.
+
+Mutation-checked five refusals; all five are caught.
+
+Still to do: the panel for typing an instruction, and an adapter prompt that
+produces proposals in this shape.
+
 ## Decisions
 
 - **The pack's reference implementations are not adopted.** `material-planning.mjs`
