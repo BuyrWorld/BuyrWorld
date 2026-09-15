@@ -2646,6 +2646,24 @@ function scLayoutHTML(plan,u){
     +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-2) 0 0;line-height:1.5">'+ciEsc(L.note)+'</p>';
 }
 
+/* Which way in the person chose. Presentation only: both paths reach the
+   same fields, the same engine and the same results, so nothing downstream
+   asks this. It exists so the drawing reader can be out of the way for
+   somebody who has no drawing, which is most people most of the time. */
+var _scEntry="manual";
+
+function scEntry(which){
+  _scEntry = which === "upload" ? "upload" : "manual";
+  var panel=document.getElementById("sc-upload-panel");
+  if(panel)panel.hidden = _scEntry !== "upload";
+  var m=document.getElementById("sc-entry-manual");
+  var u=document.getElementById("sc-entry-upload");
+  if(m)m.setAttribute("aria-pressed", String(_scEntry === "manual"));
+  if(u)u.setAttribute("aria-pressed", String(_scEntry === "upload"));
+  /* Nothing is cleared either way. A drawing can arrive after ten minutes of
+     typing, and the typing has to survive it. */
+}
+
 function scBind(){
   var page=document.getElementById("page-shouldcost");
   if(!page||page.dataset.scBound)return;
@@ -6000,6 +6018,7 @@ async function send(id,text){
    this table does nothing — which is the difference between a table and a
    `window[name]` lookup. */
 registerActions({
+  scEntry: function (which) { scEntry(which); },
   /* navigation */
   go: go, miGo: miGo, miCommodity: miCommodity, goAgent: goAgent,
   toggleMenu: toggleMenu,

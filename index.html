@@ -219,6 +219,29 @@
 .bw-grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .bw-grid-wide{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
 @media(max-width:1100px){.bw-grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}.bw-grid-wide{grid-template-columns:minmax(0,1fr)}}
+/* The Should-Cost Studio: inputs, route, result. Proportions from
+   design/04-APPROVED-STUDIO.md (28/42/30 of the content area), as fractions
+   rather than fixed widths so it fills the real viewport instead of
+   reproducing the concept image as a clipped canvas. Below 1200 the result
+   drops under the two working columns; below 860 everything stacks in the
+   order the work happens: enter, route, result. */
+.bw-studio{display:grid;gap:var(--bw-4);align-items:start;grid-template-columns:minmax(0,28fr) minmax(0,42fr) minmax(0,30fr)}
+@media(max-width:1200px){.bw-studio{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.bw-studio>.bw-studio-result{grid-column:1/-1}}
+@media(max-width:860px){.bw-studio{grid-template-columns:minmax(0,1fr)}.bw-studio>.bw-studio-result{grid-column:auto}}
+.bw-studio-col{display:flex;flex-direction:column;gap:var(--bw-4);min-width:0}
+/* The two ways in. The chosen one is marked by border, background and a tick
+   together with aria-pressed — never by colour alone, which is the house rule
+   for every status in this product. */
+.bw-studio-entry{display:grid;gap:var(--bw-3);grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:var(--bw-4)}
+@media(max-width:760px){.bw-studio-entry{grid-template-columns:minmax(0,1fr)}}
+.bw-entry{display:flex;flex-direction:column;gap:6px;text-align:left;padding:var(--bw-4);cursor:pointer;
+  background:var(--bw-panel);border:1px solid var(--bw-line);border-radius:var(--bw-r-2);font:inherit;color:inherit}
+.bw-entry:hover{border-color:var(--bw-line-strong)}
+.bw-entry:focus-visible{outline:2px solid var(--bw-lime);outline-offset:2px}
+.bw-entry[aria-pressed="true"]{border-color:var(--bw-lime);background:var(--bw-raised)}
+.bw-entry-title{font-weight:600;font-size:14.5px;color:var(--bw-text);display:flex;gap:8px;align-items:center}
+.bw-entry[aria-pressed="true"] .bw-entry-title::after{content:"✓";color:var(--bw-lime);font-size:13px}
+.bw-entry-note{font-size:12.5px;line-height:1.6;color:var(--bw-muted)}
 @media(max-width:760px){.bw-grid-2,.bw-grid-3{grid-template-columns:minmax(0,1fr)}}
 
 /* Focus stays visible on every new control, as it does on the old ones. */
@@ -1114,9 +1137,25 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
     <div id="sc-mode-material" role="tabpanel" aria-labelledby="sc-tab-material">
 
-      <div class="bw-panel" style="margin-bottom:var(--bw-4)">
-        <div class="bw-panel-head"><div class="bw-panel-title">0 &middot; Read it off the drawing</div>
-          <span class="bw-status bw-status--derived">optional</span></div>
+      <!-- Two ways in, deliberately the same size and the same weight. The
+           pack requires them to be equally clear: a drawing is one source of
+           the same facts, not the way the tool is meant to be used. -->
+      <div class="bw-studio-entry" role="group" aria-label="How would you like to start?">
+        <button type="button" class="bw-entry" id="sc-entry-manual" aria-pressed="true" data-do="scEntry" data-a="manual">
+          <span class="bw-entry-title">No drawing &mdash; enter details manually</span>
+          <span class="bw-entry-note">Type what you know. You can leave anything you are not sure of, mark it
+            <b>I don't know</b>, and save it part-finished.</span>
+        </button>
+        <button type="button" class="bw-entry" id="sc-entry-upload" aria-pressed="false" data-do="scEntry" data-a="upload">
+          <span class="bw-entry-title">Upload a drawing</span>
+          <span class="bw-entry-note">A PDF is read in this browser and each value is offered with the page it
+            came from. Nothing is used until you confirm it.</span>
+        </button>
+      </div>
+
+      <div class="bw-panel" id="sc-upload-panel" hidden style="margin-bottom:var(--bw-4)">
+        <div class="bw-panel-head"><div class="bw-panel-title">Read it off the drawing</div>
+          <span class="bw-status bw-status--derived">values need confirming</span></div>
         <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Upload a PDF and the labelled values on it are read out, each with the page and the exact characters it came from. <b style="color:var(--bw-text)">The file never leaves this browser</b> &mdash; there is no upload, no extraction service and no prompt, so nothing written in the document can change what is read. Nothing found is used until you confirm it.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <label class="bw-act bw-act-secondary" style="cursor:pointer;margin:0">
@@ -1126,8 +1165,8 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         </div>
         <div id="scx-out" style="margin-top:var(--bw-4)"></div>
       </div>
-    <div class="bw-grid bw-grid-2" style="align-items:start">
-      <div>
+    <div class="bw-studio">
+      <div class="bw-studio-col">
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head"><div class="bw-panel-title">1 &middot; The part</div></div>
           <div class="bw-fields" style="margin-bottom:var(--bw-3)">
@@ -1181,7 +1220,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         </div>
       </div>
 
-      <div>
+      <div class="bw-studio-col">
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head"><div class="bw-panel-title">4 &middot; The route</div></div>
           <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">A yield is <b style="color:var(--bw-text)">accepted output divided by input</b>. It is not a scrap percentage added to demand: 100 parts at 95% yield needs 106 blanks, not 105, and across a route the difference compounds. Setup and test pieces must say which side of the yield they come from &mdash; that is the mistake that counts the same pieces twice.</p>
@@ -1218,9 +1257,15 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           <button class="bw-act bw-act-text" data-sc-act="clear">Clear</button>
         </div>
       </div>
-    </div>
 
-    <div id="sc-out" style="margin-top:var(--bw-6)"></div>
+      <!-- The result sits beside the work rather than below it, as the
+           approved layout has it: changing a number on the left should move a
+           figure you can still see. Sticky so it stays put down a long form,
+           and only where there is height to spare for it. -->
+      <div class="bw-studio-col bw-studio-result">
+        <div id="sc-out"></div>
+      </div>
+    </div>
     </div>
 
     <div id="sc-mode-cert" role="tabpanel" aria-labelledby="sc-tab-cert" hidden>

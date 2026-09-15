@@ -64,6 +64,30 @@ fatal, which is the module's existing convention for a missing input.
 
 Checks: `node scripts/verify.mjs` — all 6 passed, 1,931 tests.
 
+### Slice 2 — one model behind both entry paths · DONE
+
+`src/studio/scenario.mjs` and `src/services/studio-store.mjs`, with 61 tests.
+Blank / unknown / zero kept distinct; entered text kept beside its conversion;
+an extracted value is a proposal until accepted, and a late extraction cannot
+overwrite a newer manual edit. Completeness is reported per output, so a
+quantity plan can be ready while a cost is blocked.
+
+Checks: all 6 passed, 1,992 tests.
+
+### Slice 3 — the approved layout and the two ways in · DONE
+
+- `index.html` — entry choice; `.bw-studio` grid at the approved 28/42/30;
+  the result moved out from under the form into the third column
+- `app.js` — `scEntry`, registered in the action table
+- `tests/integration/studio-layout.test.mjs` — 24 tests
+
+The drawing reader was panel "0 · Read it off the drawing", above the form
+and marked *optional*. That reads as the way in, with typing as what you do
+when it fails — the framing `design/05-NO-DRAWING.md` rules out. The two are
+now peers of identical size, and the reader lives inside the upload choice.
+
+Checks: all 6 passed, 2,016 tests.
+
 ## Decisions
 
 - **The pack's reference implementations are not adopted.** `material-planning.mjs`
@@ -90,5 +114,6 @@ Checks: `node scripts/verify.mjs` — all 6 passed, 1,931 tests.
 
 ## Next slice
 
-Slice 2 — the Studio shell: the approved three-column layout and the two equal
-entry paths, with the manual route reaching a supported quantity plan.
+Slice 4 — wire the scenario model to the page: per-field provenance badges,
+"I don't know", guided help, and draft save/reopen. The model and the store
+exist and are tested; the form does not yet use them.

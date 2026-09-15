@@ -136,10 +136,17 @@ describe("layout degrades rather than shrinking until unreadable", () => {
   });
 
   test("three columns become two, then one", () => {
-    const wide = css.match(/@media\(max-width:1100px\)\{([^@]*)\}/)[1];
-    assert.match(wide, /\.bw-grid-3\{grid-template-columns:repeat\(2/);
-    const narrow = css.match(/@media\(max-width:760px\)\{([^@]*)\}/)[1];
-    assert.match(narrow, /\.bw-grid-2,\.bw-grid-3\{grid-template-columns:minmax\(0,1fr\)\}/);
+    /* Every block at each width, joined, rather than the first one. There is
+       more than one @media(max-width:760px) in the sheet now that the Studio
+       has its own, and matching only the first made this assert against
+       whichever happened to be written earliest — it broke the moment a rule
+       was inserted above it, which is a test that depends on source order
+       rather than on the rule it cares about. */
+    const at = (w) => [...css.matchAll(new RegExp(`@media\\(max-width:${w}px\\)\\{([^@]*)\\}`, "g"))]
+      .map((m) => m[1]).join("\n");
+
+    assert.match(at(1100), /\.bw-grid-3\{grid-template-columns:repeat\(2/);
+    assert.match(at(760), /\.bw-grid-2,\.bw-grid-3\{grid-template-columns:minmax\(0,1fr\)\}/);
   });
 
   test("a wide table scrolls inside its own box", () => {
