@@ -198,6 +198,24 @@
 .bw-rev-save:focus-visible{outline:2px solid var(--bw-lime);outline-offset:2px;border-radius:2px}
 .bw-rev-what{flex:1;min-width:0}
 .bw-rev-hash{font-size:10px;color:var(--bw-muted);opacity:.8;font-family:ui-monospace,monospace}
+/* The Part Builder. The plan view is drawn to scale from the model's own
+   integers, so it cannot disagree with the numbers beside it. */
+.bw-pb-view{margin-top:12px;border:1px solid var(--bw-line);border-radius:var(--bw-r-1);padding:6px}
+.bw-pb-frame{font-size:11px;color:var(--bw-muted);margin:6px 0 0;line-height:1.5}
+.bw-pb-facts{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:10px 0 0;font-size:12px}
+.bw-pb-facts dt{color:var(--bw-muted)}
+.bw-pb-facts dd{margin:0;color:var(--bw-text);font-variant-numeric:tabular-nums}
+.bw-pb-why{color:var(--bw-muted);font-size:10.5px;font-variant-numeric:normal}
+.bw-pb-unknown{color:var(--bw-muted);font-variant-numeric:normal}
+.bw-pb-features{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:3px}
+.bw-pb-feature{display:flex;gap:8px;align-items:baseline;font-size:11.5px;color:var(--bw-muted)}
+.bw-pb-feature b{color:var(--bw-text);flex:none}
+.bw-pb-feature span{flex:1;min-width:0}
+.bw-pb-del{background:none;border:0;padding:0;font:inherit;font-size:11px;color:var(--bw-muted);
+  cursor:pointer;text-decoration:underline;text-underline-offset:2px;flex:none}
+.bw-pb-del:hover{color:var(--bw-danger)}
+.bw-pb-del:focus-visible{outline:2px solid var(--bw-lime);outline-offset:2px;border-radius:2px}
+.bw-pb-acts{display:flex;gap:10px;margin-top:10px}
 
 /* Article prose. The blog body carried its paragraph styling on every single
    paragraph — the same four declarations, 49 times. The container owns it now. */
@@ -1271,6 +1289,48 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
              something or picking something up. At the bottom of a long form,
              reopening is a thing you find by scrolling past the work you were
              trying not to repeat. -->
+        <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+          <div class="bw-panel-head">
+            <div class="bw-panel-title">Build the part</div>
+            <span class="bw-status bw-status--derived">optional</span>
+          </div>
+          <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">
+            A rectangular block with through-holes and pockets &mdash; enough to show somebody
+            what the part is, and no more. <b style="color:var(--bw-text)">This is not a CAD
+            package</b>: no curves, no fillets, nothing freeform. Everything else on this page
+            works without it.
+          </p>
+
+          <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+            <label class="bw-field">Width (mm)<input class="bwin" id="pb-w" inputmode="decimal" placeholder="100"></label>
+            <label class="bw-field">Length (mm)<input class="bwin" id="pb-l" inputmode="decimal" placeholder="50"></label>
+            <label class="bw-field">Thickness (mm)<input class="bwin" id="pb-t" inputmode="decimal" placeholder="10"></label>
+          </div>
+          <button type="button" class="bw-act bw-act-secondary bw-act--sm" data-do="scSetBlock">Set the block</button>
+
+          <div class="eyebrow" style="margin:var(--bw-4) 0 6px">Add a through-hole</div>
+          <div class="bw-fields" style="margin-bottom:8px">
+            <label class="bw-field">Centre X<input class="bwin" id="pb-hx" inputmode="decimal" placeholder="15"></label>
+            <label class="bw-field">Centre Y<input class="bwin" id="pb-hy" inputmode="decimal" placeholder="25"></label>
+            <label class="bw-field">Diameter<input class="bwin" id="pb-hd" inputmode="decimal" placeholder="6"></label>
+          </div>
+          <button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scAddHole">Add hole</button>
+
+          <div class="eyebrow" style="margin:var(--bw-4) 0 6px">Add a pocket</div>
+          <div class="bw-fields" style="margin-bottom:8px">
+            <label class="bw-field">Corner X<input class="bwin" id="pb-px" inputmode="decimal" placeholder="40"></label>
+            <label class="bw-field">Corner Y<input class="bwin" id="pb-py" inputmode="decimal" placeholder="10"></label>
+            <label class="bw-field">Width<input class="bwin" id="pb-pw" inputmode="decimal" placeholder="20"></label>
+            <label class="bw-field">Length<input class="bwin" id="pb-pl" inputmode="decimal" placeholder="20"></label>
+            <label class="bw-field">Depth<input class="bwin" id="pb-pd" inputmode="decimal" placeholder="3"></label>
+          </div>
+          <button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scAddPocket">Add pocket</button>
+
+          <p id="pb-status" role="status" aria-live="polite"
+             style="font-size:12px;margin:var(--bw-3) 0 0;line-height:1.6;min-height:1.2em"></p>
+          <div id="pb-out"></div>
+        </div>
+
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head"><div class="bw-panel-title">Your scenarios</div></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">

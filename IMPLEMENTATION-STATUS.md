@@ -203,7 +203,7 @@ says so.
 
 Checks: all 6 passed, 2,244 tests.
 
-### v4 C2 — the bounded Part Builder · engine DONE, UI not yet
+### v4 C2 — the bounded Part Builder · DONE
 
 - `src/studio/geometry.mjs` — block, through-holes, rectangular pockets,
   validation, stable ids, bounded volume, mass, undo
@@ -219,8 +219,20 @@ feature ids and detects a detached one — but the page passed an empty feature
 list, so DETACHED had tests and could never occur in the product. The third
 instance of that pattern this month.
 
-Still to do: the Part Builder interface, and passing the real feature list to
-`scRenderRequirements`. C4 (AI-assisted edits) remains unstarted.
+The interface is built: a plan view drawn to scale from the model, features
+listed and removable, undo, and volume and weight shown as a range wherever a
+round feature puts pi in the arithmetic.
+
+`scRenderRequirements` now receives the real feature list, so a deleted hole
+detaches its requirement **in the product** rather than only in the module.
+
+Wiring it found a modelling error in C1. `attachments()` decided a part had
+been modelled by asking whether the feature list was empty — so deleting the
+only hole on a block made the requirement that just lost its target report as
+waiting for a model sitting right there. The caller now says which: null for
+no model, an array (empty or not) for a model carrying those features.
+
+C4 (AI-assisted edits) remains unstarted.
 
 ## Decisions
 

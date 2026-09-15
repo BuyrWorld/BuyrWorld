@@ -369,14 +369,20 @@ function verificationOf(input, spec) {
  * a finish to a new face." Nothing here moves a requirement. It reports which
  * ones have lost their target so a person can decide.
  *
- * @param {Array}  list        requirements
- * @param {Set|Array} features feature ids that currently exist
+ * @param {Array} list  requirements
+ * @param {Set|Array|null} features  the ids on the model, or null for no model
  */
-export function attachments(list, features = []) {
-  const have = features instanceof Set ? features : new Set(features);
-  /* No feature list at all is a part with no model yet, which is the normal
-     state for C1 — not a part whose every feature has just been deleted. */
-  const modelled = have.size > 0;
+export function attachments(list, features = null) {
+  /* null means there is no model. An array — including an empty one — means
+     there is a model carrying exactly those features.
+
+     Deciding it from the list's length instead would make a block whose last
+     hole was just deleted indistinguishable from a part nobody has modelled,
+     and the requirement that lost its target would report as waiting for a
+     model that is sitting right there. */
+  const modelled = features !== null && features !== undefined;
+  const have = !modelled ? new Set()
+    : (features instanceof Set ? features : new Set(features));
 
   return Object.freeze(list.map((r) => {
     if (r.scope.type === SCOPE.PART) return mark(r, ATTACHMENT.OK);
@@ -565,7 +571,7 @@ export function deserialiseRequirements(text) {
  * scopes, sources and unresolved questions." So this reports what is
  * incomplete as plainly as what is settled.
  */
-export function schedule(list, features = []) {
+export function schedule(list, features = null) {
   const attach = attachments(list, features);
   const byId = new Map(attach.map((a) => [a.id, a]));
   const clash = conflicts(list);

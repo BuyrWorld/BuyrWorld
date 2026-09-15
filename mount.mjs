@@ -53,6 +53,10 @@
   import { DRAFT_LABEL, snapshot as reviewSnapshot, buildPackage as buildReviewPackage,
            verifyPackage as verifyReviewPackage, FORMATS as REVIEW_FORMATS }
     from "./src/studio/review-export.mjs";
+  import { block, addHole, addPocket, editFeature, removeFeature, resize,
+           featureIds, volume, mass as geometryMass, history as geometryHistory,
+           FRAME as GEOMETRY_FRAME, FEATURE as GEOMETRY_FEATURE }
+    from "./src/studio/geometry.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
@@ -102,6 +106,9 @@
                 serialiseRequirements, deserialiseRequirements,
                 DRAFT_LABEL, reviewSnapshot, buildReviewPackage, verifyReviewPackage,
                 REVIEW_FORMATS,
+                block, addHole, addPocket, editFeature, removeFeature, resize,
+                featureIds, volume, geometryMass, geometryHistory,
+                GEOMETRY_FRAME, GEOMETRY_FEATURE,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,

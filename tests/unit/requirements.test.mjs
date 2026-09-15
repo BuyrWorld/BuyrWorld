@@ -46,15 +46,29 @@ describe("requirements do not need geometry", () => {
       kind: KIND.SURFACE_TEXTURE, parameter: "Ra", value: "1.6", valueUnit: "um",
       scope: { type: SCOPE.FEATURE, featureId: "bore-1" },
     });
-    const [a] = attachments([r], []);
+    /* null, not []. An empty array now means a model that happens to carry no
+       features, which is a different claim: a requirement naming a feature on
+       such a part has lost its target rather than being ahead of it. */
+    const [a] = attachments([r], null);
     assert.equal(a.state, ATTACHMENT.WAITING);
     assert.match(a.why, /no model yet/);
+  });
+
+  test("a model with no features left is not the same as no model", () => {
+    /* Delete the only hole on a block and the feature list goes empty. If that
+       read as "no model", the requirement that just lost its target would
+       report as waiting for a model sitting right there. Found by the Part
+       Builder wiring, where it happened. */
+    const r = requirement({ kind: KIND.SURFACE_TEXTURE, parameter: "Ra", value: "1.6",
+      scope: { type: SCOPE.FEATURE, featureId: "hole-1" } });
+    assert.equal(attachments([r], null)[0].state, ATTACHMENT.WAITING, "no model");
+    assert.equal(attachments([r], [])[0].state, ATTACHMENT.DETACHED, "a model with nothing on it");
   });
 
   test("and a schedule says so rather than calling it detached", () => {
     const r = requirement({ kind: KIND.EDGE, condition: "Break 0.3 max",
       scope: { type: SCOPE.FEATURE, featureId: "edge-top" } });
-    const s = schedule([r], []);
+    const s = schedule([r], null);
     assert.deepEqual([...s.waitingForGeometry], [r.id]);
     assert.deepEqual([...s.detached], []);
   });
@@ -212,7 +226,7 @@ describe("citing a specification", () => {
     const r = requirement({ kind: KIND.PROCESS, process: "Solution treat",
       spec: { name: "SYN-SPEC-200" } });
     assert.equal(r.spec.revision, null);
-    const s = schedule([r], []);
+    const s = schedule([r], null);
     assert.match(s.rows[0].spec, /no revision given/);
   });
 
@@ -257,7 +271,7 @@ describe("where a requirement applies", () => {
     const r = requirement({ kind: KIND.FINISH, process: "Anodise",
       scope: { type: SCOPE.ALL_EXCEPT, except: ["bore-1", "face-datum-A"] } });
     assert.deepEqual([...r.scope.except], ["bore-1", "face-datum-A"]);
-    assert.match(schedule([r], []).rows[0].target, /all except bore-1\+face-datum-A/);
+    assert.match(schedule([r], null).rows[0].target, /all except bore-1\+face-datum-A/);
   });
 });
 
@@ -392,7 +406,7 @@ describe("the schedule both audiences read", () => {
   test("an incomplete requirement says which field is missing", () => {
     const r = requirement({ kind: KIND.GEOMETRIC, characteristic: "Position" });
     assert.deepEqual([...r.missing], ["value"]);
-    const s = schedule([r], []);
+    const s = schedule([r], null);
     assert.deepEqual([...s.incomplete], [r.id]);
     assert.match(s.nextQuestion, /missing a value: value/);
   });
@@ -408,16 +422,16 @@ describe("the schedule both audiences read", () => {
 
   test("nothing to ask returns null rather than a reassuring sentence", () => {
     const r = requirement({ kind: KIND.EDGE, condition: "Break 0.3 max" });
-    assert.equal(schedule([r], []).nextQuestion, null);
+    assert.equal(schedule([r], null).nextQuestion, null);
   });
 
   test("it says when a set could go to a reviewer", () => {
     const r = requirement({ kind: KIND.EDGE, condition: "Break 0.3 max" });
-    assert.equal(schedule([r], []).readyToRequestReview, true);
+    assert.equal(schedule([r], null).readyToRequestReview, true);
   });
 
   test("and never says approved, because that is a person's decision", () => {
-    const s = schedule([requirement({ kind: KIND.EDGE, condition: "x" })], []);
+    const s = schedule([requirement({ kind: KIND.EDGE, condition: "x" })], null);
     assert.equal("approved" in s, false);
     assert.equal(JSON.stringify(s).includes("approved"), false);
   });
@@ -425,7 +439,7 @@ describe("the schedule both audiences read", () => {
   test("an unverified citation blocks nothing but is reported", () => {
     const r = requirement({ kind: KIND.FINISH, process: "Anodise",
       spec: { name: "SYN-SPEC-100", revision: "C" } });
-    const s = schedule([r], []);
+    const s = schedule([r], null);
     assert.deepEqual([...s.unverified], [r.id]);
     assert.equal(s.readyToRequestReview, true, "a citation somebody has to check is not an error");
     assert.match(s.nextQuestion, /nobody has supplied/);

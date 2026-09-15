@@ -3035,7 +3035,11 @@ function scRenderRequirements(){
 
   /* No feature list: C1 has no geometry, so every feature-scoped requirement
      reports as waiting rather than detached. */
-  var sched=B.reqSchedule(_scReqs,[]);
+  /* The features that actually exist, so a requirement whose target has been
+     deleted reports as detached rather than as waiting for a model. Passing an
+     empty list here made that state unreachable in the product while it was
+     tested in the module. */
+  var sched=B.reqSchedule(_scReqs, typeof scFeatureIds==="function"?scFeatureIds():null);
 
   var rows=sched.rows.map(function(row){
     var flags=[];
@@ -3169,6 +3173,231 @@ function scSaveArtifact(name){
   a.download="BuyrWorld-review-"+name;
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+
+/* ------------------------------------------------------- the Part Builder */
+
+/* The model on screen, and its undo history. Null until somebody starts one:
+   a part with no model is the normal state for a buyer who is describing
+   requirements, not a broken one. */
+var _scModel = null;
+var _scHistory = null;
+
+/** Micrometres from a millimetre field, or null. */
+function scUm(id){
+  var t=scVal(id);
+  if(t==="") return null;
+  if(!/^\d+(\.\d{1,3})?$/.test(t)) return null;
+  var parts=t.split(".");
+  return BigInt(parts[0])*1000n + BigInt((parts[1]||"").padEnd(3,"0"));
+}
+
+function scBuilderStatus(message,bad){
+  var el=document.getElementById("pb-status");
+  if(!el) return;
+  el.innerHTML='<span style="color:var('+(bad?"--bw-danger":"--bw-muted")+')">'+ciEsc(message)+'</span>';
+}
+
+/** Start or resize the block. */
+function scSetBlock(){
+  var B=window.BW;
+  if(!B||!B.block){ scBuilderStatus("The engine did not load.",true); return; }
+  var w=scUm("pb-w"), l=scUm("pb-l"), t=scUm("pb-t");
+  if(w===null||l===null||t===null){
+    scBuilderStatus("Enter a width, a length and a thickness in millimetres.",true);
+    return;
+  }
+  try{
+    if(!_scModel){
+      _scModel=B.block({widthUm:w,lengthUm:l,thicknessUm:t});
+      _scHistory=B.geometryHistory(_scModel);
+      scBuilderStatus("Started a block "+scMm(w)+" × "+scMm(l)+" × "+scMm(t)+" mm.");
+    }else{
+      var r=B.resize(_scModel,{widthUm:w,lengthUm:l,thicknessUm:t});
+      if(r.error){ scBuilderStatus(r.error,true); scRenderBuilder(); return; }
+      _scModel=_scHistory.push(r.model);
+      scBuilderStatus("Resized.");
+    }
+  }catch(e){ scBuilderStatus(String(e.message||e),true); return; }
+  scRenderBuilder();
+}
+
+var scMm=function(um){
+  var whole=um/1000n, frac=String(um%1000n).padStart(3,"0").replace(/0+$/,"");
+  return frac?whole+"."+frac:String(whole);
+};
+
+function scAddHole(){
+  var B=window.BW;
+  if(!_scModel||!B){ scBuilderStatus("Start a block first.",true); return; }
+  var x=scUm("pb-hx"), y=scUm("pb-hy"), d=scUm("pb-hd");
+  if(x===null||y===null||d===null){ scBuilderStatus("A hole needs a centre and a diameter.",true); return; }
+  var r=B.addHole(_scModel,{xUm:x,yUm:y,diameterUm:d});
+  if(r.error){ scBuilderStatus(r.error,true); return; }   // the typed values stay
+  _scModel=_scHistory.push(r.model);
+  scBuilderStatus("Added "+r.model.features[r.model.features.length-1].id+".");
+  scRenderBuilder();
+}
+
+function scAddPocket(){
+  var B=window.BW;
+  if(!_scModel||!B){ scBuilderStatus("Start a block first.",true); return; }
+  var x=scUm("pb-px"), y=scUm("pb-py"), w=scUm("pb-pw"), l=scUm("pb-pl"), d=scUm("pb-pd");
+  if(x===null||y===null||w===null||l===null||d===null){
+    scBuilderStatus("A pocket needs a corner, a size and a depth.",true); return;
+  }
+  var r=B.addPocket(_scModel,{xUm:x,yUm:y,widthUm:w,lengthUm:l,depthUm:d});
+  if(r.error){ scBuilderStatus(r.error,true); return; }
+  _scModel=_scHistory.push(r.model);
+  scBuilderStatus("Added "+r.model.features[r.model.features.length-1].id+".");
+  scRenderBuilder();
+}
+
+function scRemoveFeature(id){
+  var B=window.BW;
+  if(!_scModel||!B) return;
+  var r=B.removeFeature(_scModel,id);
+  if(r.error){ scBuilderStatus(r.error,true); return; }
+  _scModel=_scHistory.push(r.model);
+  /* Say what it cost, rather than leaving somebody to find out from the
+     requirements list that a tolerance has come loose. */
+  var loose=scDetachedCount();
+  scBuilderStatus("Removed "+id+"."+(loose?" "+loose+" requirement(s) now point at nothing.":""));
+  scRenderBuilder();
+}
+
+function scUndoModel(){
+  if(!_scHistory) return;
+  _scModel=_scHistory.undo();
+  scBuilderStatus("Undone.");
+  scRenderBuilder();
+}
+
+function scRedoModel(){
+  if(!_scHistory) return;
+  _scModel=_scHistory.redo();
+  scBuilderStatus("Redone.");
+  scRenderBuilder();
+}
+
+/** How many requirements no longer point at a feature that exists. */
+function scDetachedCount(){
+  var B=window.BW;
+  if(!B||!B.reqSchedule) return 0;
+  return B.reqSchedule(_scReqs, scFeatureIds()).detached.length;
+}
+
+/** The feature ids the requirements panel checks against. */
+function scFeatureIds(){
+  var B=window.BW;
+  /* null, not an empty array: no model at all is different from a model with
+     nothing left on it, and the requirements panel needs to tell them apart to
+     say whether a requirement is waiting or has come loose. */
+  return (_scModel&&B&&B.featureIds) ? B.featureIds(_scModel) : null;
+}
+
+/** A plan view, drawn to scale from the model's own integers. */
+function scModelSvg(model){
+  var W=Number(model.widthUm), L=Number(model.lengthUm);
+  var pad=8, vb=260;
+  var k=(vb-pad*2)/Math.max(W,L);
+  var px=function(v){ return pad+Number(v)*k; };
+
+  var shapes=model.features.map(function(f){
+    if(f.kind==="through-hole"){
+      return '<circle cx="'+px(f.xUm)+'" cy="'+px(f.yUm)+'" r="'+(Number(f.diameterUm)/2*k)
+        +'" fill="var(--bw-bg)" stroke="var(--bw-lime)" stroke-width="1"></circle>';
+    }
+    return '<rect x="'+px(f.xUm)+'" y="'+px(f.yUm)+'" width="'+(Number(f.widthUm)*k)
+      +'" height="'+(Number(f.lengthUm)*k)+'" fill="none" stroke="var(--bw-warning)"'
+      +' stroke-width="1" stroke-dasharray="3 2"></rect>';
+  }).join("");
+
+  /* Built as one value rather than concatenated across lines: a label split
+     mid-sentence in the source reads as truncated to anything checking it, and
+     is harder for a person to confirm is a whole sentence. */
+  var label="Plan view of the part, "+scMm(model.widthUm)+" by "+scMm(model.lengthUm)
+    +" millimetres, with "+model.features.length+" feature(s)";
+
+  return '<svg viewBox="0 0 '+vb+' '+(pad*2+L*k)+'" width="100%" role="img"'
+    +' aria-label="'+attrEsc(ciEsc(label))+'">'
+    +'<rect x="'+pad+'" y="'+pad+'" width="'+(W*k)+'" height="'+(L*k)
+    +'" fill="var(--bw-panel)" stroke="var(--bw-line-strong)" stroke-width="1"></rect>'
+    +shapes
+    +'<circle cx="'+pad+'" cy="'+pad+'" r="2.5" fill="var(--bw-lime)"></circle>'
+    +'</svg>';
+}
+
+/** The builder: the view, the features, and what the part weighs. */
+function scRenderBuilder(){
+  var host=document.getElementById("pb-out");
+  if(!host) return;
+  var B=window.BW;
+
+  if(!_scModel){
+    host.innerHTML='<p style="color:var(--bw-muted);font-size:12px;margin:10px 0 0;line-height:1.6">'
+      +'No model yet. You do not need one &mdash; requirements, quantities and costs all work '
+      +'without it. Build one when a shape would help somebody understand the part.</p>';
+    scRenderRequirements();
+    return;
+  }
+
+  var v=B.volume(_scModel);
+  var d=null;
+  try{
+    if(scVal("sc-dv")!==""&&scVal("sc-ds")!=="") d=B.scDensity(scVal("sc-dv"),scVal("sc-du")||"g/cm3",scVal("sc-ds"));
+  }catch(e){ d=null; }
+  var m=B.geometryMass(_scModel,d);
+
+  var features=_scModel.features.map(function(f){
+    var what=f.kind==="through-hole"
+      ? "⌀"+scMm(f.diameterUm)+" at "+scMm(f.xUm)+", "+scMm(f.yUm)
+      : scMm(f.widthUm)+" × "+scMm(f.lengthUm)+" × "+scMm(f.depthUm)+" deep at "+scMm(f.xUm)+", "+scMm(f.yUm);
+    return '<li class="bw-pb-feature"><b>'+ciEsc(f.id)+'</b><span>'+ciEsc(what)+'</span>'
+      +'<button type="button" class="bw-pb-del" data-do="scRemoveFeature" data-a="'+attrEsc(ciEsc(f.id))+'"'
+      +' aria-label="Remove '+attrEsc(ciEsc(f.id))+'">Remove</button></li>';
+  }).join("");
+
+  /* Volume and weight as a range when a round feature puts pi in the
+     arithmetic, and as one number when nothing does. Presenting a bracket as
+     a single figure is the thing the engine went to trouble to avoid. */
+  var volText=v.exact
+    ? scMm3(v.lowerUm3)+" mm³"
+    : scMm3(v.lowerUm3)+" – "+scMm3(v.upperUm3)+" mm³";
+
+  var massText=!m.known
+    ? '<span class="bw-pb-unknown">Not known &mdash; '+ciEsc(m.why)+'</span>'
+    : (m.exact ? scG(m.lowerUg)+" g" : scG(m.lowerUg)+" – "+scG(m.upperUg)+" g");
+
+  host.innerHTML=
+    '<div class="bw-pb-view">'+scModelSvg(_scModel)+'</div>'
+    +'<p class="bw-pb-frame">Measured from the '+ciEsc(_scModel.frame.origin)
+    +'. X is '+ciEsc(_scModel.frame.x)+', Y is '+ciEsc(_scModel.frame.y)+'.</p>'
+    +'<dl class="bw-pb-facts">'
+    +'<dt>Volume</dt><dd>'+ciEsc(volText)+(v.exact?'':' <span class="bw-pb-why">'+ciEsc(v.why)+'</span>')+'</dd>'
+    +'<dt>Weight</dt><dd>'+massText+'</dd>'
+    +'<dt>Revision</dt><dd>'+_scModel.revision+'</dd>'
+    +'</dl>'
+    +(features?'<ul class="bw-pb-features">'+features+'</ul>':'')
+    +'<div class="bw-pb-acts">'
+    +'<button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scUndoModel">Undo</button>'
+    +'<button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scRedoModel">Redo</button>'
+    +'</div>';
+
+  /* The requirements panel now has real feature ids to check against, which
+     is what lets a requirement report as detached rather than as waiting. */
+  scRenderRequirements();
+}
+
+function scMm3(um3){
+  /* Cubic micrometres to cubic millimetres: 1e9 of them. Integer division,
+     because a tenth of a cubic millimetre is not a number anybody needs. */
+  return String(um3/1000000000n);
+}
+function scG(ug){
+  var whole=ug/1000000n, frac=String((ug%1000000n)/1000n).padStart(3,"0").replace(/0+$/,"");
+  return frac?whole+"."+frac:String(whole);
 }
 
 function scVal(id){var e=document.getElementById(id);return e?String(e.value).trim():"";}
@@ -3492,7 +3721,7 @@ function scBind(){
   scAnnotate();
   scRenderDrafts();
   scReqKindChanged();
-  scRenderRequirements();
+  scRenderBuilder();
   exBind(page);
   page.addEventListener("change",function(e){
     if(e.target&&e.target.id==="sc-form")scFormLabels();
@@ -6890,6 +7119,12 @@ registerActions({
   scReqKindChanged: function () { scReqKindChanged(); },
   scExportReview: function () { scExportReview(); },
   scSaveArtifact: function (name) { scSaveArtifact(name); },
+  scSetBlock: function () { scSetBlock(); },
+  scAddHole: function () { scAddHole(); },
+  scAddPocket: function () { scAddPocket(); },
+  scRemoveFeature: function (id) { scRemoveFeature(id); },
+  scUndoModel: function () { scUndoModel(); },
+  scRedoModel: function () { scRedoModel(); },
   /* navigation */
   go: go, miGo: miGo, miCommodity: miCommodity, goAgent: goAgent,
   toggleMenu: toggleMenu,

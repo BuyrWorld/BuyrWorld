@@ -337,9 +337,14 @@ describe("it is on the page", () => {
   });
 
   test("the panel is drawn when the page opens", () => {
+    /* Through scRenderBuilder now: the builder draws itself and then the
+       requirements, because the requirements panel needs the feature list the
+       builder owns. Calling both from scBind would draw requirements once
+       against an empty list and again against the real one. */
     const bind = fnSource("scBind", app);
     assert.match(bind, /scReqKindChanged\(\)/);
-    assert.match(bind, /scRenderRequirements\(\)/);
+    assert.match(bind, /scRenderBuilder\(\)/);
+    assert.match(fnSource("scRenderBuilder", app), /scRenderRequirements\(\)/);
   });
 
   test("the module reaches the page through the mount", () => {
