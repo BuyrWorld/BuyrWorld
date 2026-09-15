@@ -388,7 +388,7 @@ export function planMaterial(input = {}) {
 
   /* Mass, where a density was supplied. */
   const d = input.density;
-  const grossUg = d ? massOf(input.stockVolumeUm3 * stockToBuy, d) : null;
+  const grossUg = d && input.stockVolumeUm3 ? massOf(input.stockVolumeUm3 * stockToBuy, d) : null;
   const blankUg = d && input.blankVolumeUm3 ? massOf(input.blankVolumeUm3, d) : null;
   const partUg = d && input.partVolumeUm3 ? massOf(input.partVolumeUm3, d) : null;
   const netUg = partUg === null ? null : partUg * route.goodParts;
@@ -396,10 +396,19 @@ export function planMaterial(input = {}) {
   /* Where the difference between net and gross actually went. Recoverable
      offcut (whole unused area of bought stock) is kept apart from scrap
      generated making the parts, because one can often be sold back as a size
-     and the other only as swarf. */
-  const boughtVolume = input.stockVolumeUm3 * stockToBuy;
+     and the other only as swarf.
+
+     All three are optional, because a piece count is a complete answer on its
+     own. How many blanks fit on a sheet is a question about two rectangles; it
+     needs no thickness, no alloy and no density. Requiring them to answer it
+     would force a number to be invented for a quantity that does not depend on
+     it, which is the opposite of what this module is for. Volume is reported
+     when the thickness was given and withheld when it was not. */
+  const boughtVolume = input.stockVolumeUm3 ? input.stockVolumeUm3 * stockToBuy : null;
   const releasedVolume = input.blankVolumeUm3 ? input.blankVolumeUm3 * blanksToRelease : null;
-  const offcutVolume = releasedVolume === null ? null : boughtVolume - releasedVolume;
+  const offcutVolume = boughtVolume === null || releasedVolume === null
+    ? null
+    : boughtVolume - releasedVolume;
 
   return Object.freeze({
     ok: true,

@@ -9,3 +9,10 @@ September 2026 Progress/
 .DS_Store
 Thumbs.db
 .vercel/
+
+# The v4 implementation pack, kept in the repository for reference while it is
+# being implemented. Same reason as above: this repository is public and Vercel
+# serves committed files statically, and the pack carries competitor research,
+# the original audit brief and the approved concept image. START-HERE.md asks
+# for it in design-handoff/, which is where it is — untracked.
+design-handoff/

@@ -20,6 +20,12 @@ const ROOT = process.cwd();
 // prove the removal held.
 const SKIP_DIRS = new Set([
   ".git", "node_modules", "scripts", "docs", "tests", "September 2026 Progress",
+  /* The v4 design handoff: gitignored and in .vercelignore for the same reason
+     the briefs folder is — this repository is public and Vercel serves what is
+     committed. It names competitors and payment processors in its own
+     competitive research, which is why it must not ship, not a reason to fail
+     a scan of what does. */
+  "design-handoff",
 ]);
 const TEXT_EXT = new Set([".html", ".js", ".mjs", ".css", ".json", ".txt", ".xml", ".md", ".webmanifest", ".svg"]);
 
