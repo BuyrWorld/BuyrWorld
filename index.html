@@ -216,6 +216,24 @@
 .bw-pb-del:hover{color:var(--bw-danger)}
 .bw-pb-del:focus-visible{outline:2px solid var(--bw-lime);outline-offset:2px;border-radius:2px}
 .bw-pb-acts{display:flex;gap:10px;margin-top:10px}
+/* Describing a change. A preview is a proposal, so it reads as one: what
+   you asked, what it would do, what it would cost, and two buttons. */
+.bw-ai-ask,.bw-ai-preview{border-left:3px solid var(--bw-line-strong);padding-left:10px}
+.bw-ai-preview{border-left-color:var(--bw-lime)}
+.bw-ai-q{font-size:12px;color:var(--bw-body);margin:0 0 6px;line-height:1.6}
+.bw-ai-eg{font-size:11px;color:var(--bw-muted);margin:6px 0 4px}
+.bw-ai-egs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+.bw-ai-egs code{font-size:11px;color:var(--bw-muted);font-family:ui-monospace,monospace}
+.bw-ai-said{font-size:11.5px;color:var(--bw-muted);margin:0 0 6px;line-height:1.6}
+.bw-ai-said b{color:var(--bw-text);font-weight:500}
+.bw-ai-head{font-size:12px;color:var(--bw-text);margin:0 0 4px}
+.bw-ai-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;
+  font-size:12px;color:var(--bw-body);line-height:1.6}
+.bw-ai-steps li::before{content:"→ ";color:var(--bw-lime)}
+.bw-ai-cost{font-size:11.5px;color:var(--bw-warning);margin:8px 0 0;line-height:1.6}
+.bw-ai-note{font-size:11px;color:var(--bw-muted);margin:8px 0 0}
+.bw-ai-acts{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+.bw-ai-done{font-size:12px;color:var(--bw-muted);margin:0;line-height:1.6}
 
 /* Article prose. The blog body carried its paragraph styling on every single
    paragraph — the same four declarations, 49 times. The container owns it now. */
@@ -1329,6 +1347,20 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           <p id="pb-status" role="status" aria-live="polite"
              style="font-size:12px;margin:var(--bw-3) 0 0;line-height:1.6;min-height:1.2em"></p>
           <div id="pb-out"></div>
+
+          <!-- Under the buttons, not above them: typing a sentence is the
+               shortcut and the controls are the thing that always works. -->
+          <div class="eyebrow" style="margin:var(--bw-4) 0 6px">Or describe the change</div>
+          <p style="color:var(--bw-muted);font-size:11.5px;margin:0 0 8px;line-height:1.6">
+            Read by written rule, here in this browser &mdash; there is no service and no
+            prompt. It shows you the change before making it, and asks when a sentence does
+            not say enough. Try <code>add a 6mm hole at 15, 25</code>.
+          </p>
+          <label class="bw-field" style="margin-bottom:8px">Describe a change
+            <input class="bwin" id="ai-text" placeholder="move hole-1 10mm along X">
+          </label>
+          <button type="button" class="bw-act bw-act-secondary bw-act--sm" data-do="scDescribeChange">Show me what that would do</button>
+          <div id="ai-out" role="status" aria-live="polite" style="margin-top:var(--bw-3)"></div>
         </div>
 
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">

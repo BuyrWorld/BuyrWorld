@@ -3400,6 +3400,119 @@ function scG(ug){
   return frac?whole+"."+frac:String(whole);
 }
 
+
+/* -------------------------------------------------- describing a change */
+
+/* The previewed change waiting for a decision, and the model it was previewed
+   against. Held together so accepting can refuse if the part moved between
+   the two — what you saw is the only safe definition of what you agreed to. */
+var _scPreview = null;
+
+function scAiStatus(html){
+  var el=document.getElementById("ai-out");
+  if(el) el.innerHTML=html;
+}
+
+/** Read what was typed, validate it, and preview it. Nothing is applied. */
+function scDescribeChange(){
+  var B=window.BW;
+  if(!B||!B.readInstruction){ scAiStatus(scErr("The engine did not load.")); return; }
+  if(!_scModel){
+    scAiStatus(scErr("There is no part yet. Build a block first, then describe a change to it."));
+    return;
+  }
+
+  _scPreview=null;
+  var read=B.readInstruction(scVal("ai-text"), _scModel.revision);
+
+  if(!read.ok){
+    /* A question, not a failure. The difference matters: one means try again,
+       the other means answer something. */
+    scAiStatus(
+      '<div class="bw-ai-ask"><p class="bw-ai-q">'+ciEsc(read.question)+'</p>'
+      +(read.examples
+        ? '<p class="bw-ai-eg">Things it can take:</p><ul class="bw-ai-egs">'
+          +read.examples.map(function(e){return '<li><code>'+ciEsc(e)+'</code></li>';}).join("")
+          +'</ul>'
+        : '')
+      +'</div>');
+    return;
+  }
+
+  var v=B.validateProposal(_scModel, read.proposal);
+
+  if(v.outcome!=="ready"){
+    var lines=(v.questions.length?v.questions:[v.why]).filter(Boolean);
+    scAiStatus('<div class="bw-ai-ask">'
+      +lines.map(function(l){return '<p class="bw-ai-q">'+ciEsc(l)+'</p>';}).join("")
+      +'</div>');
+    return;
+  }
+
+  var pv=B.previewProposal(_scModel, v);
+  if(!pv.ok){
+    scAiStatus(scErr(pv.why));
+    return;
+  }
+
+  _scPreview=pv;
+  scRenderPreview(pv, read.said);
+}
+
+/** What the change would do, and what it would cost. */
+function scRenderPreview(pv, said){
+  var B=window.BW;
+
+  var steps=pv.applied.map(function(a){
+    return '<li>'+ciEsc(a)+'</li>';
+  }).join("");
+
+  /* What it would strand. Worked out against the model that would result, so
+     the warning is about the change rather than about the part as it is. */
+  var cost="";
+  if(pv.losesFeatures.length&&B.reqSchedule){
+    var after=B.reqSchedule(_scReqs, B.featureIds(pv.model));
+    if(after.detached.length){
+      cost='<p class="bw-ai-cost">'+after.detached.length+' requirement(s) would be left '
+        +'pointing at nothing, because this removes '+ciEsc(pv.losesFeatures.join(", "))+'.</p>';
+    }
+  }
+
+  scAiStatus(
+    '<div class="bw-ai-preview">'
+    +'<p class="bw-ai-said">You asked: <b>'+ciEsc(said)+'</b></p>'
+    +'<p class="bw-ai-head">This would:</p><ul class="bw-ai-steps">'+steps+'</ul>'
+    +cost
+    +'<p class="bw-ai-note">Nothing has changed yet.</p>'
+    +'<div class="bw-ai-acts">'
+    +'<button type="button" class="bw-act bw-act-secondary bw-act--sm" data-do="scAcceptChange">Make this change</button>'
+    +'<button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scDiscardChange">Leave it</button>'
+    +'</div></div>');
+}
+
+/** Commit exactly what was previewed, if the part has not moved since. */
+function scAcceptChange(){
+  var B=window.BW;
+  if(!_scPreview||!B){ return; }
+  var r=B.acceptProposal(_scPreview, _scModel);
+  if(r.error){
+    scAiStatus(scErr(r.error));
+    _scPreview=null;
+    return;
+  }
+  _scModel=_scHistory.push(r.model);
+  _scPreview=null;
+  var box=document.getElementById("ai-text");
+  if(box) box.value="";
+  scAiStatus('<p class="bw-ai-done">Done. Undo is in the builder above if it is not what you meant.</p>');
+  scRenderBuilder();
+}
+
+function scDiscardChange(){
+  _scPreview=null;
+  scAiStatus('<p class="bw-ai-done">Left as it was.</p>');
+}
+
 function scVal(id){var e=document.getElementById(id);return e?String(e.value).trim():"";}
 function scInt(id){var t=scVal(id).replace(/[^0-9]/g,"");return t===""?null:parseInt(t,10);}
 
@@ -7125,6 +7238,9 @@ registerActions({
   scRemoveFeature: function (id) { scRemoveFeature(id); },
   scUndoModel: function () { scUndoModel(); },
   scRedoModel: function () { scRedoModel(); },
+  scDescribeChange: function () { scDescribeChange(); },
+  scAcceptChange: function () { scAcceptChange(); },
+  scDiscardChange: function () { scDiscardChange(); },
   /* navigation */
   go: go, miGo: miGo, miCommodity: miCommodity, goAgent: goAgent,
   toggleMenu: toggleMenu,

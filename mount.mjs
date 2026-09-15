@@ -57,6 +57,11 @@
            featureIds, volume, mass as geometryMass, history as geometryHistory,
            FRAME as GEOMETRY_FRAME, FEATURE as GEOMETRY_FEATURE }
     from "./src/studio/geometry.mjs";
+  import { validate as validateProposal, preview as previewProposal,
+           accept as acceptProposal, describe as describeStep, withheld,
+           OPERATION as EDIT_OPERATION, OUTCOME as EDIT_OUTCOME }
+    from "./src/studio/edit-proposal.mjs";
+  import { readInstruction, PHRASINGS } from "./src/studio/read-instruction.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
@@ -109,6 +114,8 @@
                 block, addHole, addPocket, editFeature, removeFeature, resize,
                 featureIds, volume, geometryMass, geometryHistory,
                 GEOMETRY_FRAME, GEOMETRY_FEATURE,
+                validateProposal, previewProposal, acceptProposal, describeStep, withheld,
+                EDIT_OPERATION, EDIT_OUTCOME, readInstruction, PHRASINGS,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,

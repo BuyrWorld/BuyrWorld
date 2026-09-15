@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 47 |
-| Test files | 0 | 80 |
+| Modules under `src/` | 0 | 48 |
+| Test files | 0 | 82 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -204,6 +204,17 @@ of standards in this repository, so a requirement leaning on a specification
 whose clause text nobody supplied stays `unverified`. Conflicting
 requirements are reported and never resolved, because choosing between two
 tolerances is an engineering decision.
+
+`src/studio/read-instruction.mjs` reads a typed instruction into that
+proposal shape, by written rule and with no model — the same reasoning
+`extract-document.mjs` gives about drawings, and sharper here because the
+sentence is about to become a change to a part. It knows five phrasings and
+refuses the rest, showing what it can take. The requests the pack names are
+answered by name: "make this aerospace grade" asks which specification
+applies, "tighten the tolerance" asks by how much and on what, and a fillet
+is refused by saying what this builds. When a real adapter is configured it
+produces proposals in the same shape and goes through the same validation;
+this stays as the path that works without one.
 
 `src/studio/edit-proposal.mjs` turns a described change into a proposal and
 refuses to turn it into code. Every operation a proposal may contain is on a

@@ -234,7 +234,7 @@ no model, an array (empty or not) for a model carrying those features.
 
 C4 (AI-assisted edits) remains unstarted.
 
-### v4 C4 — AI-assisted edits · engine DONE, UI not yet
+### v4 C4 — AI-assisted edits · DONE
 
 - `src/studio/edit-proposal.mjs` — a closed list of operations, target
   resolution, staleness, preview through the real geometry, acceptance
@@ -252,8 +252,18 @@ no AI service configured.
 
 Mutation-checked five refusals; all five are caught.
 
-Still to do: the panel for typing an instruction, and an adapter prompt that
-produces proposals in this shape.
+`src/studio/read-instruction.mjs` reads a typed sentence into that proposal
+shape by written rule, with no model — so the feature works with no AI
+service configured, which the pack requires twice. It knows five phrasings
+and refuses the rest, showing what it can take. The requests the pack names
+are answered by name.
+
+The panel is built: type, see the steps in plain words and what the change
+would cost in requirements, then accept or leave it.
+
+Still to do when a provider is configured: an adapter prompt producing
+proposals in this same shape. It goes through the same validation, and the
+rule-based reader stays as the path that works without one.
 
 ## Decisions
 
