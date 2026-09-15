@@ -2369,6 +2369,144 @@ function scRenderStages(){
   }
 }
 
+
+/* ------------------------------------------------- Studio field provenance */
+
+/* The fields the engine reads, each mapped to its name in the scenario model,
+   with the two questions a junior buyer actually asks. The help is written for
+   somebody who has not met the term before; an expert can collapse it and see
+   the same form, the same numbers and the same results.
+
+   Only fields that reach a calculation are here. Annotating a free-text note
+   with "where do I find this?" would be noise. */
+var SC_FIELD_HELP = {
+  "sc-qty":   {name:"goodParts",      means:"How many finished parts you need to end up with, after everything that goes wrong along the way.",
+                                       where:"The order, the schedule or the annual forecast. If it is an annual figure, say so — a year is not one batch."},
+  "sc-grade": {name:"materialGrade",  means:"The material specification, as written on the drawing or the enquiry.",
+                                       where:"The drawing's title block, or the material note beside the part number."},
+  "sc-bw":    {name:"blankWidth",     means:"The width of the piece released into production, before anything is cut away.",
+                                       where:"Bigger than the finished part: add whatever machining and handling allowance the process needs."},
+  "sc-bl":    {name:"blankLength",    means:"The length of that same released piece.",
+                                       where:"The drawing, plus the same allowance you added to the width. Blank size and finished size are different numbers and must never be swapped."},
+  "sc-bt":    {name:"blankThickness", means:"The thickness of the stock the blank is cut from.",
+                                       where:"The plate or sheet you buy, not the finished part. Only needed for a weight or a cost — a piece count does not use it."},
+  "sc-s1":    {name:"stockWidth",     means:"The width of the sheet, plate or bar your supplier actually sells.",
+                                       where:"The supplier's stock list. Use a size they hold, not a size you would like."},
+  "sc-s2":    {name:"stockLength",    means:"The length of that same purchased piece.",
+                                       where:"The same line of the supplier's stock list as the width. Sheet is sold at set sizes, so use one they actually hold."},
+  "sc-kerf":  {name:"kerf",           means:"How much width the cut itself destroys, between one blank and the next.",
+                                       where:"The process: a laser takes a fraction of a millimetre, a bandsaw takes a few. Zero is a real answer for a shear."},
+  "sc-edge":  {name:"edgeMargin",     means:"The strip around the edge of the sheet that cannot be used.",
+                                       where:"Whatever the machine has to clamp or cannot reach. Ask the person who runs it."},
+  "sc-dv":    {name:"density",        means:"How heavy the material is for its size. Needed to turn a volume into a weight.",
+                                       where:"The material datasheet. Do not guess it from a similar alloy — the whole purchased weight moves with it."}
+};
+
+/* Fields a person has said they cannot answer. Distinct from blank: blank is
+   somebody who has not got there yet, and this is somebody who has and cannot
+   answer. The engine must treat them differently, and so must the screen. */
+var _scUnknown = {};
+
+/* Where each value came from. Absent means typed by the person using it, which
+   is the common case and stays the cheap one. */
+var _scSource = {};
+
+function scFieldName(id){ return SC_FIELD_HELP[id] ? SC_FIELD_HELP[id].name : null; }
+
+/** What to show beside a field, in the pack's vocabulary. */
+function scFieldState(id){
+  if(_scUnknown[id]) return "Not known yet";
+  var el=document.getElementById(id);
+  var has = el && String(el.value).trim() !== "";
+  if(!has) return "Missing";
+  var src=_scSource[id];
+  if(src==="assumption") return "Assumed";
+  if(src==="extracted") return "Extracted — check this";
+  return "User confirmed";
+}
+
+/* Deliberately not a colour. A dot and the word, like every other status in
+   this product, because colour alone is not a signal. */
+function scStateDot(state){
+  if(state==="User confirmed") return "var(--bw-success)";
+  if(state==="Extracted — check this") return "var(--bw-warning)";
+  if(state==="Assumed") return "var(--bw-muted)";
+  return "var(--bw-line-strong)";
+}
+
+/** Attach the provenance row and help to every field the engine reads. */
+function scAnnotate(){
+  for(var id in SC_FIELD_HELP){
+    var input=document.getElementById(id);
+    if(!input) continue;
+    var label=input.closest ? input.closest(".bw-field") : null;
+    if(!label || label.dataset.scAnnotated) continue;
+    label.dataset.scAnnotated="1";
+
+    var row=document.createElement("div");
+    row.className="bw-fieldmeta";
+    row.id="scmeta-"+id;
+    label.appendChild(row);
+
+    var help=document.createElement("details");
+    help.className="bw-fieldhelp";
+    var sum=document.createElement("summary");
+    sum.textContent="What does this mean?";
+    help.appendChild(sum);
+    var body=document.createElement("div");
+    /* textContent, not innerHTML: this copy is ours today, and a sink that
+       only ever sees safe strings is still a sink. */
+    body.textContent=SC_FIELD_HELP[id].means;
+    var where=document.createElement("div");
+    where.className="bw-fieldwhere";
+    where.textContent="Where do I find this? "+SC_FIELD_HELP[id].where;
+    help.appendChild(body); help.appendChild(where);
+    label.appendChild(help);
+  }
+  scRenderFieldStates();
+}
+
+/** Redraw every provenance row. Cheap enough to do on any change. */
+function scRenderFieldStates(){
+  for(var id in SC_FIELD_HELP){
+    var row=document.getElementById("scmeta-"+id);
+    if(!row) continue;
+    var state=scFieldState(id);
+    var unknown=Boolean(_scUnknown[id]);
+    row.innerHTML=
+      '<span class="bw-fieldstate"><span class="bw-dot" style="background:'+scStateDot(state)+'"></span>'
+      + ciEsc(state) + '</span>'
+      + '<button type="button" class="bw-fieldunknown" data-do="scDontKnow" data-a="'+ciEsc(id)+'"'
+      + ' aria-pressed="'+(unknown?"true":"false")+'">'
+      + (unknown ? "I know this after all" : "I don&rsquo;t know") + '</button>';
+    var input=document.getElementById(id);
+    if(input){
+      input.disabled=unknown;
+      /* A disabled input still submits its old value to anything reading
+         .value, so the value is cleared when the person says they do not know
+         it. Leaving it would let a stale number reach the engine behind a
+         label that says nobody knows it. */
+      if(unknown && String(input.value).trim()!=="") input.value="";
+    }
+  }
+}
+
+/** Mark a field unknown, or take it back. */
+function scDontKnow(id){
+  if(!SC_FIELD_HELP[id]) return;
+  if(_scUnknown[id]) delete _scUnknown[id]; else _scUnknown[id]=true;
+  scRenderFieldStates();
+  var input=document.getElementById(id);
+  if(input && !_scUnknown[id] && typeof input.focus==="function") input.focus();
+}
+
+/** Every field a person has said they cannot answer. */
+function scUnknownFields(){
+  var out=[];
+  for(var id in _scUnknown) if(_scUnknown[id]) out.push(SC_FIELD_HELP[id].name);
+  return out;
+}
+
 function scVal(id){var e=document.getElementById(id);return e?String(e.value).trim():"";}
 function scInt(id){var t=scVal(id).replace(/[^0-9]/g,"");return t===""?null:parseInt(t,10);}
 
@@ -2421,6 +2559,22 @@ function scRun(){
   var out=document.getElementById("sc-out");
   if(!out||!window.BW||!window.BW.planMaterial)return;
   var B=window.BW;
+
+  /* Fields somebody has said they cannot answer stop this, named, before any
+     arithmetic starts. Clearing the input would make the engine refuse anyway,
+     but it would refuse with "enter a blank width" — and the person did not
+     forget it, they told us they do not know it. That is a different problem
+     with a different next step, and it belongs to somebody else. */
+  var unknown=scUnknownFields();
+  if(unknown.length){
+    out.innerHTML=scErr(
+      "Waiting on "+unknown.join(", ")+". "
+      + "You marked "+(unknown.length===1?"this":"these")+" as not known, so there is no purchase "
+      + "quantity yet — a figure worked out around a gap would be a figure nobody could defend. "
+      + "The rest of what you have entered is kept, and you can save it as a draft.");
+    return;
+  }
+
   var u=scVal("sc-unit")||"mm";
   var L=function(id,what){return B.scLength(scVal(id),u,what);};
 
@@ -2671,9 +2825,15 @@ function scBind(){
   scRenderStages();
   scRenderCosts();
   scFormLabels();
+  scAnnotate();
   exBind(page);
   page.addEventListener("change",function(e){
     if(e.target&&e.target.id==="sc-form")scFormLabels();
+  });
+  /* A field goes from Missing to User confirmed the moment something is typed
+     in it, so the badge has to follow the typing rather than the run. */
+  page.addEventListener("input",function(e){
+    if(e.target&&e.target.id&&SC_FIELD_HELP[e.target.id])scRenderFieldStates();
   });
   page.addEventListener("click",function(e){
     var m=e.target&&e.target.closest?e.target.closest("[data-sc-mode]"):null;
@@ -6019,6 +6179,7 @@ async function send(id,text){
    `window[name]` lookup. */
 registerActions({
   scEntry: function (which) { scEntry(which); },
+  scDontKnow: function (id) { scDontKnow(id); },
   /* navigation */
   go: go, miGo: miGo, miCommodity: miCommodity, goAgent: goAgent,
   toggleMenu: toggleMenu,

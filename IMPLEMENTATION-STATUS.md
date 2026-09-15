@@ -88,6 +88,25 @@ now peers of identical size, and the reader lives inside the upload choice.
 
 Checks: all 6 passed, 2,016 tests.
 
+### Slice 4 — provenance, "I don't know", and help on every field · DONE
+
+- `app.js` — `SC_FIELD_HELP` (ten fields mapped to scenario names, each with
+  what it means and where to find it), `scFieldState`, `scAnnotate`,
+  `scDontKnow`, `scUnknownFields`; `scRun` refuses by name
+- `index.html` — styles for the provenance row and the help disclosure
+- `tests/integration/studio-fields.test.mjs` — 28 tests
+- `tests/integration/should-cost-wiring.test.mjs` — 4 more, end to end
+
+The controls are attached programmatically rather than written into sixteen
+labels: identical markup sixteen times is sixteen chances to get one wrong,
+and CLAUDE.md asks for a large `index.html` change to be split instead.
+
+Marking a field unknown clears it as well as disabling it — a disabled input
+still hands its old value to anything reading `.value`, which is exactly the
+invisible default the pack forbids.
+
+Checks: all 6 passed, 2,048 tests.
+
 ## Decisions
 
 - **The pack's reference implementations are not adopted.** `material-planning.mjs`
@@ -114,6 +133,6 @@ Checks: all 6 passed, 2,016 tests.
 
 ## Next slice
 
-Slice 4 — wire the scenario model to the page: per-field provenance badges,
-"I don't know", guided help, and draft save/reopen. The model and the store
-exist and are tested; the form does not yet use them.
+Slice 5 — draft save and reopen on the page. `studio-store.mjs` and the
+scenario model are built and tested; the form does not yet write to them, so
+the "save it as a draft" the refusal message offers is not yet a button.

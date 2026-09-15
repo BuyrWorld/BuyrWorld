@@ -42,7 +42,7 @@ function fnSource(name) {
 }
 
 /** Run the page's should-cost code over a stub form. */
-function run(fields = {}, { stages, checked = false, costs = {}, amortise = false } = {}) {
+function run(fields = {}, { stages, checked = false, costs = {}, amortise = false, unknown = {} } = {}) {
   const values = {
     "sc-qty": "1000", "sc-unit": "mm", "sc-grade": "Fictional grade FG-300",
     "sc-bw": "200", "sc-bl": "100", "sc-bt": "5",
@@ -82,8 +82,17 @@ function run(fields = {}, { stages, checked = false, costs = {}, amortise = fals
     _scStages: stages ?? [["Laser cut", "98", "0", "input"], ["Form", "95", "4", "input"]],
     _scCosts: costs,
   };
+  /* scUnknownFields is a real dependency of scRun now: a field somebody has
+     said they cannot answer stops the calculation by name, before any
+     arithmetic. The two variables it reads go in with it — this harness
+     assembles functions rather than loading the file, so a new dependency has
+     to be named here or it resolves to nothing. */
   const src = ["scVal", "scInt", "scErr", "scRun", "scRow", "scPlanHTML", "scLayoutHTML",
-               "scCostEntries", "scCostHTML", "scAssumptionsHTML", "bcSaveHTML"].map(fnSource).join("\n");
+               "scCostEntries", "scCostHTML", "scAssumptionsHTML", "bcSaveHTML",
+               "scUnknownFields"].map(fnSource).join("\n")
+    + `\nvar SC_FIELD_HELP=${JSON.stringify(
+        Object.fromEntries(Object.keys(unknown).map((id) => [id, { name: id }])))};`
+    + `\nvar _scUnknown=${JSON.stringify(unknown)};`;
   vm.createContext(sandbox);
   new vm.Script(src + "\n;scRun();").runInContext(sandbox);
   return out.innerHTML;
@@ -414,5 +423,36 @@ describe("the cost, and the empty field", () => {
     const table = o.slice(o.indexOf("Assumptions this rests on"));
     assert.match(table, /Laser cut yield/, "a material assumption");
     assert.match(table, /Raw stock/, "a cost assumption");
+  });
+});
+
+/* ------------------------------------------- a field nobody knows stops it */
+
+describe("a field the person cannot answer", () => {
+  test("stops the calculation rather than defaulting it", () => {
+    // acceptance example 3: "do not calculate a complete purchase quantity
+    // using an invisible default."
+    const html = run({}, { unknown: { "sc-kerf": true } });
+    assert.match(html, /Waiting on sc-kerf/);
+    assert.equal(/blanks per sheet|Stock to buy/.test(html), false,
+      "no quantity may be produced around the gap");
+  });
+
+  test("names every one of them, not just the first", () => {
+    const html = run({}, { unknown: { "sc-kerf": true, "sc-edge": true } });
+    assert.match(html, /sc-kerf/);
+    assert.match(html, /sc-edge/);
+  });
+
+  test("and says the rest of the work survives", () => {
+    const html = run({}, { unknown: { "sc-kerf": true } });
+    assert.match(html, /The rest of what you have entered is kept/);
+    assert.match(html, /save it as a draft/);
+  });
+
+  test("with nothing unknown, the plan is produced as before", () => {
+    const html = run({});
+    assert.equal(/Waiting on/.test(html), false);
+    assert.match(html, /Stock to buy|blanks/i);
   });
 });
