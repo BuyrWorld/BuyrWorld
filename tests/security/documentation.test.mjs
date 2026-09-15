@@ -22,6 +22,7 @@ import { pageSource } from "../helpers/page.mjs";
 
 const security = readFileSync("docs/SECURITY_REVIEW.md", "utf8");
 const state = readFileSync("docs/CURRENT_STATE.md", "utf8");
+const handover = readFileSync("docs/OWNER_HANDOVER.md", "utf8");
 const html = pageSource();
 
 /** Every module under src/, by path. */
@@ -274,3 +275,65 @@ describe("the review does not invent what it cannot know", () => {
     }
   });
 });
+
+/* ------------------------------------------------------------- the handover */
+
+describe("the handover describes the product somebody would inherit", () => {
+  /* It is the document read by whoever picks this up, including the owner
+     after a gap, so being wrong in it costs more than being wrong elsewhere.
+     It went a whole session describing seven engine modules while forty-one
+     existed, because nothing was checking it. */
+
+  test("it names every part of the product a reader would have to find", () => {
+    for (const thing of [
+      "should-cost.mjs", "certificate.mjs", "mill.mjs", "build-up.mjs",
+      "extract-document.mjs", "classify.mjs", "app.js", "mount.mjs",
+    ]) {
+      assert.ok(handover.includes(thing), `the handover has never heard of ${thing}`);
+    }
+  });
+
+  test("the module count it states is the module count there is", () => {
+    const stated = Number((handover.match(/([\d,]+) modules under/) || [])[1].replace(/,/g, ""));
+    assert.equal(stated, modules().length, "the count has drifted");
+  });
+
+  test("the test count it states is the test count there is", () => {
+    const stated = Number((handover.match(/([\d,]+) tests across/) || [])[1].replace(/,/g, ""));
+    assert.ok(stated > 1500, `the handover claims ${stated} tests`);
+    assert.equal(handover.includes("231 tests"), false, "an old figure has survived");
+  });
+
+  test("the verification-step count matches the script", () => {
+    const script = readFileSync("scripts/verify.mjs", "utf8");
+    const steps = (script.match(/^\s*name: /gm) || []).length;
+    assert.ok(handover.includes(`runs ${numberWord(steps)} checks`),
+      `the script has ${steps} steps and the handover does not say so`);
+  });
+
+  test("it no longer says the policy must allow inline script", () => {
+    // It said so for a reason that stopped being true.
+    assert.equal(/Content-Security-Policy still allows inline script/.test(handover), false);
+    assert.match(handover, /Inline script is no\s+longer permitted/);
+  });
+
+  test("it still says the things that must never be claimed", () => {
+    for (const line of [
+      "secure, enterprise-ready or compliant",
+      "because none has been measured against a real supplier",
+      "That anyone uses it",
+    ]) {
+      assert.ok(handover.includes(line), `the handover has stopped saying: ${line}`);
+    }
+  });
+
+  test("it still says nobody has used it, which is the one that will be tempting to drop", () => {
+    assert.match(handover, /Nobody has used it/);
+    assert.match(handover, /corpus of zero/);
+  });
+});
+
+/** Small numbers written out, the way the handover writes them. */
+function numberWord(n) {
+  return ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"][n] || String(n);
+}

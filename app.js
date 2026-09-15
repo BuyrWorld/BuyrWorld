@@ -626,7 +626,6 @@ const ARTICLES=[
 
 const MONTHS={January:1,February:2,March:3,April:4,May:5,June:6,July:7,August:8,September:9,October:10,November:11,December:12};
 function dateVal(d){ if(!d) return 0; const p=d.split(" "); return (parseInt(p[1])||0)*100+(MONTHS[p[0]]||0); }
-function monthKey(d){ return d||""; }
 // sorted indices, newest first
 const SORTED_IDX=ARTICLES.map((a,i)=>i).sort((x,y)=>dateVal(ARTICLES[y].date)-dateVal(ARTICLES[x].date));
 document.getElementById("blog-list").innerHTML=SORTED_IDX.map((i)=>{const a=ARTICLES[i];return `<div role="button" tabindex="0" data-key="cardKey$event" class="card glow-hover blog-card" data-cat="${a.cat}" data-month="${a.date||''}" style="cursor:pointer" data-do="openArticle" data-a="${i}"><span class="tag">${a.cat}</span><h3 style="font-size:17px;margin:12px 0 8px">${a.t}</h3><p style="color:var(--muted);font-size:13px">${a.date?a.date+" · ":""}${a.mins} min read</p><div style="color:var(--lime);font-family:'Space Grotesk';font-size:13px;margin-top:12px">Read article →</div></div>`;}).join("");
