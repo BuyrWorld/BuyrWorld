@@ -166,6 +166,22 @@ repository does not have and which is not something to improvise.
 
 Checks: all 6 passed, 2,163 tests.
 
+### v4 C1 on the page · DONE
+
+- `mount.mjs` — the requirements module exposed
+- `app.js` — `SC_REQ_FORM`, `scReqFromForm`, `scAddRequirement`,
+  `scReqKindChanged`, `scRenderRequirements`
+- `index.html` — the panel, in the centre column beside the route
+- `tests/integration/requirements-wiring.test.mjs` — 31 tests
+
+The panel sits next to the manufacturing route because both answer "what does
+this part need doing to it" — one commercially, one technically.
+
+Two deliberate absences, both tested: no list of standards to pick from (it
+would imply the tool knows what they contain), and nothing pre-filled.
+
+Checks: all 6 passed, 2,194 tests.
+
 ## Decisions
 
 - **The pack's reference implementations are not adopted.** `material-planning.mjs`

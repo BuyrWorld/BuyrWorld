@@ -2854,6 +2854,229 @@ function scRenderComparison(){
     +'</div>';
 }
 
+
+/* ------------------------------------------------ engineering requirements */
+
+/* The requirements entered so far, newest last. Plain records from
+   requirements.mjs — the page keeps no second copy and no derived state, so
+   the schedule shown is always computed from these. */
+var _scReqs = [];
+
+/* What each kind asks for. The module knows which fields a kind requires;
+   this knows what to call them and what to say beside them. Keeping the two
+   apart means the form cannot drift into implying a field is optional when
+   the module treats it as required. */
+var SC_REQ_FORM = {
+  "dimensional-tolerance": {
+    label: "Dimensional tolerance",
+    help: "How much variation is allowed on one dimension. State the limits — there is no general default here.",
+    tolerance: true
+  },
+  "general-tolerance": {
+    label: "General tolerance",
+    help: "A convention covering dimensions with no individual tolerance. Name it and say what it covers.",
+    fields: [["convention", "Convention", "Synthetic house standard, medium class"]]
+  },
+  "geometric-control": {
+    label: "Geometric control",
+    help: "Position, flatness, perpendicularity and so on, with the datums they are measured from.",
+    fields: [["characteristic", "Characteristic", "Position"], ["value", "Value", "0.2"],
+             ["valueUnit", "Unit", "mm"], ["datumText", "Datums", "A|B|C"]]
+  },
+  "surface-texture": {
+    label: "Surface texture",
+    help: "Which parameter, and what value. Ra and Rz are different measurements — they do not convert.",
+    fields: [["parameter", "Parameter", "Ra"], ["value", "Value", "1.6"], ["valueUnit", "Unit", "um"]]
+  },
+  "finish-coating": {
+    label: "Finish or coating",
+    help: "The process, and which areas are treated. Masked areas are part of the requirement, not a detail.",
+    fields: [["process", "Process", "Anodise"], ["designation", "Type or class", "Type II, clear"],
+             ["thickness", "Thickness", "20–25 um"]]
+  },
+  "edge-condition": {
+    label: "Edge condition",
+    help: "Say what the edges must be. 'Break all edges' with no dimension is not a requirement anyone can inspect.",
+    fields: [["condition", "Requirement", "Break 0.3 max, all edges"]]
+  },
+  "other-process": {
+    label: "Process",
+    help: "Heat treatment and other confirmed operations. Only what is actually required — not what the shape suggests.",
+    fields: [["process", "Process", "Solution treat and age"]]
+  },
+  "inspection-certification": {
+    label: "Inspection or certification",
+    help: "What has to be measured or supplied, and on what basis. These come from your organisation, not from this tool.",
+    fields: [["requirement", "Requirement", "Full dimensional report, first article"]]
+  }
+};
+
+/** Read the add-requirement form into a record, or report why it cannot. */
+function scReqFromForm(){
+  var B=window.BW;
+  if(!B||!B.reqRequirement) return {error:"The engine did not load, so requirements cannot be recorded."};
+
+  var kind=scVal("req-kind");
+  var shape=SC_REQ_FORM[kind];
+  if(!shape) return {error:"Choose what kind of requirement this is."};
+
+  var input={kind:kind, source:scVal("req-source")||null, note:scVal("req-note")||null};
+
+  /* Scope. "All except" needs its exceptions, and the module refuses it
+     without them rather than treating it as "all". */
+  var scopeType=scVal("req-scope")||"whole-part";
+  var targets=scVal("req-target").split(",").map(function(t){return t.trim();}).filter(Boolean);
+  if(scopeType==="feature") input.scope={type:"feature", featureId:targets[0]||null};
+  else if(scopeType==="selected-faces") input.scope={type:"selected-faces", faces:targets};
+  else if(scopeType==="all-except") input.scope={type:"all-except", except:targets};
+  else input.scope={type:"whole-part"};
+
+  /* A specification is a citation. Supplying the clause text is what turns it
+     into something this tool will stand behind. */
+  var specName=scVal("req-spec");
+  if(specName){
+    input.spec={name:specName, revision:scVal("req-specrev")||null,
+                clause:scVal("req-clause")||null, text:scVal("req-spectext")||null};
+  }
+
+  if(scVal("req-question")) input.question=scVal("req-question");
+
+  if(shape.tolerance){
+    try{
+      input.tolerance=B.reqTolerance({
+        nominal:scVal("req-nominal"),
+        unit:scVal("req-tolunit")||scVal("sc-unit")||"mm",
+        plusMinus:scVal("req-pm")||undefined,
+        upper:scVal("req-upper")||undefined,
+        lower:scVal("req-lower")||undefined
+      });
+    }catch(e){ return {error:String(e.message||e)}; }
+  }
+
+  if(shape.fields){
+    for(var i=0;i<shape.fields.length;i++){
+      var f=shape.fields[i][0];
+      var v=scVal("req-"+f);
+      if(v!=="") input[f==="datumText"?"datums":f] = f==="datumText"?v.split("|").map(function(d){return d.trim();}):v;
+    }
+  }
+
+  try{ return {requirement:B.reqRequirement(input)}; }
+  catch(e){ return {error:String(e.message||e)}; }
+}
+
+function scAddRequirement(){
+  var r=scReqFromForm();
+  if(r.error){ scReqStatus(r.error,true); return; }
+  _scReqs.push(r.requirement);
+  scReqStatus(SC_REQ_FORM[r.requirement.kind].label+" added.");
+  scClearReqForm();
+  scRenderRequirements();
+}
+
+function scRemoveRequirement(id){
+  _scReqs=_scReqs.filter(function(r){return r.id!==id;});
+  scReqStatus("Removed.");
+  scRenderRequirements();
+}
+
+function scClearReqForm(){
+  ["req-target","req-nominal","req-pm","req-upper","req-lower","req-spec","req-specrev",
+   "req-clause","req-spectext","req-question","req-source","req-note",
+   "req-convention","req-characteristic","req-value","req-valueUnit","req-datumText",
+   "req-parameter","req-process","req-designation","req-thickness","req-condition",
+   "req-requirement"].forEach(function(id){
+    var e=document.getElementById(id); if(e)e.value="";
+  });
+}
+
+function scReqStatus(message,bad){
+  var el=document.getElementById("req-status");
+  if(!el)return;
+  el.innerHTML='<span style="color:var('+(bad?"--bw-danger":"--bw-muted")+')">'+ciEsc(message)+'</span>';
+}
+
+/** Show only the fields the chosen kind actually uses. */
+function scReqKindChanged(){
+  var kind=scVal("req-kind");
+  var shape=SC_REQ_FORM[kind];
+  var host=document.getElementById("req-kind-fields");
+  var helpEl=document.getElementById("req-kind-help");
+  if(helpEl)helpEl.textContent=shape?shape.help:"";
+  var tol=document.getElementById("req-tolerance-fields");
+  if(tol)tol.hidden=!(shape&&shape.tolerance);
+  if(!host)return;
+
+  if(!shape||!shape.fields){ host.innerHTML=""; return; }
+  host.innerHTML=shape.fields.map(function(f){
+    /* aria-label as well as the wrapping label. A field built at runtime has
+       no author-visible association for anything reading the source, and a
+       belt-and-braces name costs nothing on a control that is generated. */
+    return '<label class="bw-field">'+ciEsc(f[1])
+      +'<input class="bwin" id="req-'+attrEsc(ciEsc(f[0]))+'"'
+      +' aria-label="'+attrEsc(ciEsc(f[1]))+'"'
+      +' placeholder="'+attrEsc(ciEsc(f[2]))+'"></label>';
+  }).join("");
+}
+
+/** The list, and what it is waiting on. */
+function scRenderRequirements(){
+  var host=document.getElementById("req-list");
+  if(!host)return;
+  var B=window.BW;
+  if(!B||!B.reqSchedule){ host.innerHTML=""; return; }
+
+  if(!_scReqs.length){
+    host.innerHTML='<p style="color:var(--bw-muted);font-size:12px;margin:10px 0 0;line-height:1.6">'
+      +'Nothing recorded yet. You can add tolerances, finishes and specifications now &mdash; '
+      +'none of it needs a model of the part.</p>';
+    return;
+  }
+
+  /* No feature list: C1 has no geometry, so every feature-scoped requirement
+     reports as waiting rather than detached. */
+  var sched=B.reqSchedule(_scReqs,[]);
+
+  var rows=sched.rows.map(function(row){
+    var flags=[];
+    if(row.verification==="unverified") flags.push("Specification text not supplied");
+    if(row.verification==="flagged-for-review") flags.push("Flagged for the reviewer");
+    if(row.attachment==="no-feature-yet") flags.push("Waiting for the part model");
+    if(row.attachment==="needs-reattachment") flags.push("Needs reattaching");
+    if(row.missing.length) flags.push("Missing: "+row.missing.join(", "));
+
+    return '<li class="bw-req">'
+      +'<div class="bw-req-head"><b>'+ciEsc(row.label)+'</b>'
+      +'<span class="bw-req-target">'+ciEsc(row.target)+'</span></div>'
+      +(row.stated?'<div class="bw-req-val">'+ciEsc(row.stated)
+        +' <span class="bw-req-range">('+ciEsc(row.limits)+')</span></div>':'')
+      +(row.spec?'<div class="bw-req-spec">'+ciEsc(row.spec)+'</div>':'')
+      +(flags.length?'<div class="bw-req-flags">'+flags.map(function(f){
+          return '<span class="bw-req-flag">'+ciEsc(f)+'</span>';}).join("")+'</div>':'')
+      +'<button type="button" class="bw-req-del" data-do="scRemoveRequirement" data-a="'
+      +attrEsc(ciEsc(row.id))+'" aria-label="Remove '+attrEsc(ciEsc(row.label))+'">Remove</button>'
+      +'</li>';
+  }).join("");
+
+  var conflicts=sched.conflicts.length
+    ? '<div class="bw-req-conflicts"><div class="bw-req-conflicts-head">'
+      +sched.conflicts.length+' to settle</div>'
+      +sched.conflicts.map(function(c){
+        return '<p class="bw-req-conflict">'+ciEsc(c.why)+'</p>';}).join("")
+      +'</div>'
+    : "";
+
+  /* The one sentence a junior buyer can take to a reviewer. Null when there
+     is nothing outstanding, and then nothing is said — a reassuring line
+     where there is no news is noise. */
+  var next=sched.nextQuestion
+    ? '<p class="bw-req-next"><b>To ask the reviewer:</b> '+ciEsc(sched.nextQuestion)+'</p>'
+    : '<p class="bw-req-next bw-req-next--ok">Nothing outstanding. '
+      +'This is ready to send for technical review.</p>';
+
+  host.innerHTML='<ul class="bw-reqs">'+rows+'</ul>'+conflicts+next;
+}
+
 function scVal(id){var e=document.getElementById(id);return e?String(e.value).trim():"";}
 function scInt(id){var t=scVal(id).replace(/[^0-9]/g,"");return t===""?null:parseInt(t,10);}
 
@@ -3174,6 +3397,8 @@ function scBind(){
   scFormLabels();
   scAnnotate();
   scRenderDrafts();
+  scReqKindChanged();
+  scRenderRequirements();
   exBind(page);
   page.addEventListener("change",function(e){
     if(e.target&&e.target.id==="sc-form")scFormLabels();
@@ -6566,6 +6791,9 @@ registerActions({
   scKeepOne: function (name) { scKeepOne(name); },
   scAcceptEmpty: function () { scAcceptEmpty(); },
   scDismissComparison: function () { scDismissComparison(); },
+  scAddRequirement: function () { scAddRequirement(); },
+  scRemoveRequirement: function (id) { scRemoveRequirement(id); },
+  scReqKindChanged: function () { scReqKindChanged(); },
   /* navigation */
   go: go, miGo: miGo, miCommodity: miCommodity, goAgent: goAgent,
   toggleMenu: toggleMenu,

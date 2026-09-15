@@ -34,6 +34,8 @@ const ALLOWED = new Map([
   ["elId", "an element id this code chose itself"],
   ["msgs[0]", "loader text from a hardcoded array"],
   ["etaHtml", "loader markup this code built"],
+  ["conflicts", "requirement-conflict markup this code built; the only value in "
+    + "it is the module's own `why` sentence, and it goes through ciEsc"],
   ["rows", "saved-scenario rows this code built; the two values that come from "
     + "a person — the scenario name and its id — go through ciEsc in the text "
     + "and attrEsc(ciEsc(…)) in every attribute, because attrEsc alone escapes "

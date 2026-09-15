@@ -45,6 +45,11 @@
            labelOf as scLabelOf } from "./src/studio/scenario.mjs";
   import { newId as scNewId, saveScenario, loadScenarios, loadScenario,
            deleteScenario, storeStatus as scenarioStoreStatus } from "./src/services/studio-store.mjs";
+  import { KIND as REQ_KIND, SCOPE as REQ_SCOPE, VERIFICATION as REQ_VERIFICATION,
+           ATTACHMENT as REQ_ATTACHMENT, tolerance as reqTolerance,
+           requirement as reqRequirement, newRequirementId, attachments as reqAttachments,
+           conflicts as reqConflicts, schedule as reqSchedule, labelOfKind as reqLabelOfKind,
+           serialiseRequirements, deserialiseRequirements } from "./src/studio/requirements.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
@@ -88,6 +93,10 @@
                 SC_SOURCE, SC_ENTRY, SC_GOAL,
                 scNewId, saveScenario, loadScenarios, loadScenario, deleteScenario,
                 scenarioStoreStatus,
+                REQ_KIND, REQ_SCOPE, REQ_VERIFICATION, REQ_ATTACHMENT,
+                reqTolerance, reqRequirement, newRequirementId, reqAttachments,
+                reqConflicts, reqSchedule, reqLabelOfKind,
+                serialiseRequirements, deserialiseRequirements,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,

@@ -158,6 +158,28 @@
 .bw-cmp-note{font-size:11px;color:var(--bw-muted);line-height:1.5}
 .bw-cmp-acts{display:flex;gap:8px;flex-wrap:wrap}
 .bw-act--sm{padding:4px 10px;font-size:11.5px}
+/* Recorded requirements. Each row is what it is, where it applies, what it
+   says, and anything outstanding about it. */
+.bw-reqs{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.bw-req{position:relative;border:1px solid var(--bw-line);border-radius:var(--bw-r-1);
+  padding:9px 74px 9px 10px;display:flex;flex-direction:column;gap:4px}
+.bw-req-head{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:12.5px;color:var(--bw-text)}
+.bw-req-target{font-size:11px;color:var(--bw-muted)}
+.bw-req-val{font-size:12px;color:var(--bw-text);font-variant-numeric:tabular-nums}
+.bw-req-range{color:var(--bw-muted);font-size:11px}
+.bw-req-spec{font-size:11px;color:var(--bw-muted)}
+.bw-req-flags{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.bw-req-flag{font-size:10.5px;color:var(--bw-warning);border:1px solid var(--bw-warning);
+  border-radius:999px;padding:1px 7px;line-height:1.5}
+.bw-req-del{position:absolute;top:8px;right:9px;background:none;border:0;padding:0;font:inherit;
+  font-size:11px;color:var(--bw-muted);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.bw-req-del:hover{color:var(--bw-danger)}
+.bw-req-del:focus-visible{outline:2px solid var(--bw-lime);outline-offset:2px;border-radius:2px}
+.bw-req-conflicts{margin-top:10px;border-left:3px solid var(--bw-warning);padding-left:10px}
+.bw-req-conflicts-head{font-size:12px;font-weight:600;color:var(--bw-text);margin-bottom:4px}
+.bw-req-conflict{font-size:11.5px;color:var(--bw-muted);margin:0 0 4px;line-height:1.6}
+.bw-req-next{font-size:12px;color:var(--bw-body);margin:12px 0 0;line-height:1.7}
+.bw-req-next--ok{color:var(--bw-muted)}
 
 /* Article prose. The blog body carried its paragraph styling on every single
    paragraph — the same four declarations, 49 times. The container owns it now. */
@@ -1307,6 +1329,86 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--bw-3)">
             <button class="bw-act bw-act-secondary" data-sc-act="add-stage">+ Add an operation</button>
           </div>
+        </div>
+
+        <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+          <div class="bw-panel-head">
+            <div class="bw-panel-title">Engineering requirements</div>
+            <span class="bw-status bw-status--derived">no model needed</span>
+          </div>
+          <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">
+            Tolerances, finishes and specifications, for the whole part or for one feature.
+            Record them now &mdash; none of this waits for a drawing or a model.
+            <b style="color:var(--bw-text)">Naming a specification records the citation, not its
+            contents</b>: nothing here knows what any standard requires, so paste the clause you
+            are working from if you have it.
+          </p>
+
+          <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+            <label class="bw-field">What kind
+              <select class="bwin" id="req-kind" data-chg="scReqKindChanged">
+                <option value="dimensional-tolerance">Dimensional tolerance</option>
+                <option value="general-tolerance">General tolerance</option>
+                <option value="geometric-control">Geometric control</option>
+                <option value="surface-texture">Surface texture</option>
+                <option value="finish-coating">Finish or coating</option>
+                <option value="edge-condition">Edge condition</option>
+                <option value="other-process">Process</option>
+                <option value="inspection-certification">Inspection or certification</option>
+              </select>
+            </label>
+            <label class="bw-field">Where it applies
+              <select class="bwin" id="req-scope">
+                <option value="whole-part">The whole part</option>
+                <option value="feature">One feature</option>
+                <option value="selected-faces">Selected faces</option>
+                <option value="all-except">All surfaces except&hellip;</option>
+              </select>
+            </label>
+            <label class="bw-field">Which one(s)
+              <input class="bwin" id="req-target" placeholder="bore-1, face-top">
+            </label>
+          </div>
+          <p id="req-kind-help" style="color:var(--bw-muted);font-size:11.5px;margin:0 0 var(--bw-3);line-height:1.6"></p>
+
+          <div id="req-tolerance-fields">
+            <div class="eyebrow" style="margin:0 0 6px">The limits &mdash; state them one way, not two</div>
+            <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+              <label class="bw-field">Nominal<input class="bwin" id="req-nominal" inputmode="decimal" placeholder="10"></label>
+              <label class="bw-field">Unit
+                <select class="bwin" id="req-tolunit">
+                  <option value="mm">mm</option><option value="in">in</option>
+                  <option value="um">um</option><option value="cm">cm</option>
+                </select>
+              </label>
+              <label class="bw-field">Plus/minus<input class="bwin" id="req-pm" inputmode="decimal" placeholder="0.1"></label>
+              <label class="bw-field">Upper<input class="bwin" id="req-upper" inputmode="decimal" placeholder="+0.2"></label>
+              <label class="bw-field">Lower<input class="bwin" id="req-lower" inputmode="decimal" placeholder="-0.1"></label>
+            </div>
+          </div>
+
+          <div class="bw-fields" id="req-kind-fields" style="margin-bottom:var(--bw-3)"></div>
+
+          <div class="eyebrow" style="margin:var(--bw-4) 0 6px">Where it comes from</div>
+          <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+            <label class="bw-field">Specification<input class="bwin" id="req-spec" placeholder="SYN-SPEC-100"></label>
+            <label class="bw-field">Revision<input class="bwin" id="req-specrev" placeholder="C"></label>
+            <label class="bw-field">Clause<input class="bwin" id="req-clause" placeholder="4.2"></label>
+          </div>
+          <label class="bw-field" style="margin-bottom:var(--bw-3)">The clause itself, if you have it
+            <input class="bwin" id="req-spectext" placeholder="Coating thickness 20 to 25 micrometres on external surfaces">
+          </label>
+          <div class="bw-fields" style="margin-bottom:var(--bw-3)">
+            <label class="bw-field">Who or what told you<input class="bwin" id="req-source" placeholder="The enquiry, page 2"></label>
+            <label class="bw-field">A question for the reviewer<input class="bwin" id="req-question" placeholder="First article only, or every batch?"></label>
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button type="button" class="bw-act bw-act-secondary" data-do="scAddRequirement">Add requirement</button>
+            <span id="req-status" role="status" aria-live="polite" style="font-size:12px;line-height:1.6"></span>
+          </div>
+
+          <div id="req-list"></div>
         </div>
 
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
