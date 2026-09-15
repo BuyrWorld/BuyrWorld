@@ -278,7 +278,15 @@ describe("the normalisation panel is wired", () => {
   });
 
   test("it binds when the page is opened", () => {
-    assert.match(html, /p==="tool-quotes"&&typeof qnBind==="function"/);
+    /* The arrival table in go(), not the chain of ifs this used to read.
+       What is being checked has not changed — opening this screen binds it —
+       but the mechanism did. tests/integration/route-guard.test.mjs owns the
+       table itself; this only asserts that tool-quotes is in it. */
+    const at = html.indexOf('ON_ARRIVAL["tool-quotes"]');
+    assert.notEqual(at, -1, "tool-quotes has no arrival entry in go()");
+    const arrival = html.slice(at, at + 400);
+    assert.match(arrival, /qnBind\(\)/,
+      "opening tool-quotes no longer calls qnBind");
   });
 
   test("prices are parsed exactly, never through a float", () => {

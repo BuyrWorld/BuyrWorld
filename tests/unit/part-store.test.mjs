@@ -229,7 +229,15 @@ describe("the parts page is wired", () => {
     assert.match(html, /<div class="page" id="page-parts">/);
     assert.match(html, /\["parts","Parts"\]/);
     assert.match(html, /\n  parts:'<path/);
-    assert.match(html, /p==="parts"&&typeof ptBind==="function"/);
+    /* The arrival table in go(), not the chain of ifs this used to read.
+       What is being checked has not changed — opening this screen binds it —
+       but the mechanism did. tests/integration/route-guard.test.mjs owns the
+       table itself; this only asserts that parts is in it. */
+    const at = html.indexOf('ON_ARRIVAL["parts"]');
+    assert.notEqual(at, -1, "parts has no arrival entry in go()");
+    const arrival = html.slice(at, at + 400);
+    assert.match(arrival, /ptBind\(\)/,
+      "opening parts no longer calls ptBind");
   });
 
   test("the engine and store are mounted", () => {

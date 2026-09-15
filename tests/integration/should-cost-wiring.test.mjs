@@ -111,7 +111,15 @@ describe("it is wired in", () => {
   });
 
   test("it binds on navigation, not with inline handlers", () => {
-    assert.match(html, /p==="shouldcost"&&typeof scBind==="function"/);
+    /* The arrival table in go(), not the chain of ifs this used to read.
+       What is being checked has not changed — opening this screen binds it —
+       but the mechanism did. tests/integration/route-guard.test.mjs owns the
+       table itself; this only asserts that shouldcost is in it. */
+    const at = html.indexOf('ON_ARRIVAL["shouldcost"]');
+    assert.notEqual(at, -1, "shouldcost has no arrival entry in go()");
+    const arrival = html.slice(at, at + 400);
+    assert.match(arrival, /scBind\(\)/,
+      "opening shouldcost no longer calls scBind");
     const page = html.slice(html.indexOf('id="page-shouldcost"'), html.indexOf("<!-- ============ WORKSPACE"));
     assert.equal(/\son(click|input|change)=/.test(page), false, "an inline handler was added to the page");
     assert.match(fnSource("scBind"), /page\.addEventListener\("click"/);

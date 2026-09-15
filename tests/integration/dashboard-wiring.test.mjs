@@ -83,7 +83,15 @@ describe("it is wired in", () => {
   });
 
   test("it renders when the route is opened", () => {
-    assert.match(html, /p==="dash"&&typeof renderDash==="function"/);
+    /* The arrival table in go(), not the chain of ifs this used to read.
+       What is being checked has not changed — opening this screen binds it —
+       but the mechanism did. tests/integration/route-guard.test.mjs owns the
+       table itself; this only asserts that dash is in it. */
+    const at = html.indexOf('ON_ARRIVAL["dash"]');
+    assert.notEqual(at, -1, "dash has no arrival entry in go()");
+    const arrival = html.slice(at, at + 400);
+    assert.match(arrival, /renderDash\(\)/,
+      "opening dash no longer calls renderDash");
   });
 
   test("the public home page was left alone", () => {

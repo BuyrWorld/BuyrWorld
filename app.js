@@ -20,7 +20,94 @@ const NAV_GROUPS=[
   [null,["contact"]]
 ];
 let page="home";
-function go(p){page=p;if(p==='market')setTimeout(()=>{miGo('live');},40);document.querySelectorAll(".page").forEach(el=>el.classList.remove("on"));document.getElementById("page-"+p).classList.add("on");document.getElementById("mobmenu").style.display="none";if(p==="blog"){var bl=document.getElementById("blog-list"),ba=document.getElementById("blog-article");if(bl)bl.style.display="grid";if(ba)ba.style.display="none";if(typeof filterBlog==="function")filterBlog("");}if(p==="shouldcost"&&typeof scBind==="function")scBind();if(p==="tool-quotes"&&typeof qnBind==="function")qnBind();if(p==="parts"&&typeof ptBind==="function")ptBind();if(p==="dash"&&typeof renderDash==="function")renderDash();if(p==="tool-defender"&&typeof defBindAlts==="function"){defBindAlts();if(typeof defShadowBind==="function")defShadowBind();if(typeof bcBindDefender==="function")bcBindDefender();}if(p==="inbox"&&typeof inboxBind==="function")inboxBind();if(p==="tool-defender"&&typeof defRenderCases==="function")defRenderCases();if(p==="academy"){var pw=document.getElementById("pathways"),pd=document.getElementById("pathway-detail");if(pw)pw.style.display="grid";if(pd)pd.style.display="none";if(typeof acadStage==="function")acadStage("all");}renderNav();window.scrollTo({top:0});
+/* What each screen does on arrival, keyed by route.
+
+   A table rather than the chain of if(p==="x") this replaces, for the reason
+   the action dispatcher is one: a chain is where a new screen gets forgotten,
+   and nothing about a missing branch looks wrong. A row here is visibly the
+   same shape as the rows beside it, and a test can read the table and check it
+   against the sections that exist.
+
+   Null-prototype, like ACTIONS, because p can arrive from markup as
+   data-go. The route guard below already refuses a name with no section, so
+   "constructor" cannot reach this — but a defence that depends on another
+   check staying correct is not one.
+
+   Each entry is called only after its page is shown, so anything reading
+   layout measures the visible page. Everything here is optional: these are
+   screens binding themselves, and a screen that has not loaded its code yet
+   should not stop navigation. */
+var ON_ARRIVAL = Object.create(null);
+ON_ARRIVAL["market"] = function(){ setTimeout(function(){ miGo("live"); }, 40); };
+ON_ARRIVAL["shouldcost"] = function(){ if(typeof scBind==="function")scBind(); };
+ON_ARRIVAL["tool-quotes"] = function(){ if(typeof qnBind==="function")qnBind(); };
+ON_ARRIVAL["parts"] = function(){ if(typeof ptBind==="function")ptBind(); };
+ON_ARRIVAL["dash"] = function(){ if(typeof renderDash==="function")renderDash(); };
+ON_ARRIVAL["inbox"] = function(){ if(typeof inboxBind==="function")inboxBind(); };
+ON_ARRIVAL["tool-defender"] = function(){
+  if(typeof defBindAlts==="function")defBindAlts();
+  if(typeof defShadowBind==="function")defShadowBind();
+  if(typeof bcBindDefender==="function")bcBindDefender();
+  if(typeof defRenderCases==="function")defRenderCases();
+};
+/* Blog and Academy each show a list and a detail view in the same section, so
+   arriving has to put the section back to its list. Without this, leaving from
+   an article and returning lands on that article again. */
+ON_ARRIVAL["blog"] = function(){
+  show("blog-list", "grid"); show("blog-article", "none");
+  if(typeof filterBlog==="function")filterBlog("");
+};
+ON_ARRIVAL["academy"] = function(){
+  show("pathways", "grid"); show("pathway-detail", "none");
+  if(typeof acadStage==="function")acadStage("all");
+};
+
+/* typeof at every call site above rather than a call(fn) helper: passing a
+   function by name evaluates the name, so a helper would throw on exactly the
+   undeclared binder the guard is there for. typeof is the only construct that
+   tests a name that may not exist. */
+function show(id, how){ var el = document.getElementById(id); if (el) el.style.display = how; }
+
+var ROUTE_MISSING_TEXT =
+  "That part of the site did not open, because the screen it points at is not in this build. " +
+  "Nothing you have saved is affected.";
+
+/* A route with no section is a fault in the build rather than something the
+   person can fix, so this says what happened and stays out of the way. It does
+   not take over the screen: whatever was open stays open and still works. */
+function routeBanner(p){
+  var id = "bw-route-missing";
+  var el = document.getElementById(id);
+  if (!el) {
+    el = document.createElement("div");
+    el.id = id;
+    el.setAttribute("role", "alert");
+    el.style.cssText = "position:sticky;top:0;z-index:200;background:#3a0f14;border-bottom:1px solid #FF6B6B;"
+      + "color:#FFD9D9;padding:12px 20px;font-size:13.5px;line-height:1.6";
+    if (document.body.firstChild) document.body.insertBefore(el, document.body.firstChild);
+    else document.body.appendChild(el);
+  }
+  el.innerHTML = "<b>" + ciEsc(ROUTE_MISSING_TEXT) + "</b>"
+    + '<br><span style="opacity:.8">' + ciEsc('No section "page-' + p + '" exists.') + "</span>";
+}
+
+function go(p){
+  /* Looked up before anything is hidden. The old order removed .on from every
+     page and then threw on a route with no section, leaving a blank screen
+     with only a console error — the one outcome worse than not navigating. */
+  var target = document.getElementById("page-" + p);
+  if (!target) {
+    routeBanner(p);
+    if (window.console && console.error) console.error("go(): no section for route " + p);
+    return;                       // stay where we are, still working
+  }
+  page = p;
+  document.querySelectorAll(".page").forEach(function(el){ el.classList.remove("on"); });
+  target.classList.add("on");
+  show("mobmenu", "none");
+  if (ON_ARRIVAL[p]) ON_ARRIVAL[p]();
+  renderNav();
+  window.scrollTo({top:0});
   // Without this, activating a nav item changes the page but leaves focus where
   // it was, so a screen reader stays on the old content.
   var m=document.getElementById("main"); if(m)m.focus({preventScroll:true});}

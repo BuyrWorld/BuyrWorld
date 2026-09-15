@@ -90,7 +90,17 @@ if (open !== close) problems.push(`div imbalance: ${open} open vs ${close} close
 const pages = new Set([...html.matchAll(/id="page-([a-z0-9-]+)"/g)].map((x) => x[1]));
 const linksDecl = (page.match(/const LINKS=\[[\s\S]*?\]\];/) || [""])[0];
 const navTargets = [...linksDecl.matchAll(/\["([a-z0-9-]+)"/g)].map((x) => x[1]);
-const goTargets = [...new Set([...page.matchAll(/go\('([a-z0-9-]+)'\)/g)].map((x) => x[1]))];
+/* Every way a route is named, not just the one spelling this used to know.
+   It matched go('x') with single quotes; the page moved to double quotes and
+   then to data-go attributes, so it narrowed to a single hit without ever
+   failing — the same quiet decay as the script and nav-target counts. The
+   arrival table is included because an entry for a screen that does not exist
+   is dead code that looks like wiring. */
+const goTargets = [...new Set([
+  ...[...page.matchAll(/\bgo\(["']([a-z0-9-]+)["']\)/g)].map((x) => x[1]),
+  ...[...page.matchAll(/data-go=["']([a-z0-9-]+)["']/g)].map((x) => x[1]),
+  ...[...page.matchAll(/ON_ARRIVAL\[["']([a-z0-9-]+)["']\]/g)].map((x) => x[1]),
+])];
 
 for (const t of navTargets) if (!pages.has(t)) problems.push(`nav link "${t}" has no page section`);
 for (const t of goTargets) if (!pages.has(t)) problems.push(`go('${t}') has no page section`);
@@ -102,6 +112,7 @@ for (const asset of ["founder.jpg", "buyrworld-phase2.zip", "api/logs"]) {
 
 if (blocks === 0) problems.push("no script was checked at all — this check has stopped looking");
 if (navTargets.length === 0) problems.push("no navigation target was found — this check has stopped looking");
+if (goTargets.length < 5) problems.push(`only ${goTargets.length} route name(s) found — this check has stopped looking`);
 
 console.log(
   `Checked ${blocks} script(s), ${open} divs, ` +
