@@ -2384,19 +2384,19 @@ var SC_FIELD_HELP = {
                                        where:"The order, the schedule or the annual forecast. If it is an annual figure, say so — a year is not one batch."},
   "sc-grade": {name:"materialGrade",  means:"The material specification, as written on the drawing or the enquiry.",
                                        where:"The drawing's title block, or the material note beside the part number."},
-  "sc-bw":    {name:"blankWidth",     means:"The width of the piece released into production, before anything is cut away.",
+  "sc-bw":    {name:"blankWidth",isLength:true,     means:"The width of the piece released into production, before anything is cut away.",
                                        where:"Bigger than the finished part: add whatever machining and handling allowance the process needs."},
-  "sc-bl":    {name:"blankLength",    means:"The length of that same released piece.",
+  "sc-bl":    {name:"blankLength",isLength:true,    means:"The length of that same released piece.",
                                        where:"The drawing, plus the same allowance you added to the width. Blank size and finished size are different numbers and must never be swapped."},
-  "sc-bt":    {name:"blankThickness", means:"The thickness of the stock the blank is cut from.",
+  "sc-bt":    {name:"blankThickness",isLength:true, means:"The thickness of the stock the blank is cut from.",
                                        where:"The plate or sheet you buy, not the finished part. Only needed for a weight or a cost — a piece count does not use it."},
-  "sc-s1":    {name:"stockWidth",     means:"The width of the sheet, plate or bar your supplier actually sells.",
+  "sc-s1":    {name:"stockWidth",isLength:true,     means:"The width of the sheet, plate or bar your supplier actually sells.",
                                        where:"The supplier's stock list. Use a size they hold, not a size you would like."},
-  "sc-s2":    {name:"stockLength",    means:"The length of that same purchased piece.",
+  "sc-s2":    {name:"stockLength",isLength:true,    means:"The length of that same purchased piece.",
                                        where:"The same line of the supplier's stock list as the width. Sheet is sold at set sizes, so use one they actually hold."},
-  "sc-kerf":  {name:"kerf",           means:"How much width the cut itself destroys, between one blank and the next.",
+  "sc-kerf":  {name:"kerf",isLength:true,           means:"How much width the cut itself destroys, between one blank and the next.",
                                        where:"The process: a laser takes a fraction of a millimetre, a bandsaw takes a few. Zero is a real answer for a shear."},
-  "sc-edge":  {name:"edgeMargin",     means:"The strip around the edge of the sheet that cannot be used.",
+  "sc-edge":  {name:"edgeMargin",isLength:true,     means:"The strip around the edge of the sheet that cannot be used.",
                                        where:"Whatever the machine has to clamp or cannot reach. Ask the person who runs it."},
   "sc-dv":    {name:"density",        means:"How heavy the material is for its size. Needed to turn a volume into a weight.",
                                        where:"The material datasheet. Do not guess it from a similar alloy — the whole purchased weight moves with it."}
@@ -2505,6 +2505,171 @@ function scUnknownFields(){
   var out=[];
   for(var id in _scUnknown) if(_scUnknown[id]) out.push(SC_FIELD_HELP[id].name);
   return out;
+}
+
+
+/* --------------------------------------------------------- Studio drafts */
+
+/* The id of the scenario on screen, once it has been saved at least once.
+   Null means unsaved work, which is a normal state and not an error. */
+var _scScenarioId = null;
+
+/* The revision the stored copy was at when we last read or wrote it. Carried
+   so that saving can refuse to overwrite a newer copy rather than silently
+   losing somebody's work — the same rule the store enforces underneath. */
+var _scRevision = 0;
+
+/* Fields that are not in the scenario model but do belong to the scenario:
+   the unit the dimensions were entered in, and the stock form. */
+function scFormScenario(){
+  var B=window.BW;
+  if(!B||!B.scenario) return null;
+
+  var s=B.scenario({
+    id: _scScenarioId || B.scNewId(),
+    name: scVal("sc-grade") || "Untitled scenario",
+    entry: _scEntry === "upload" ? B.SC_ENTRY.UPLOAD : B.SC_ENTRY.MANUAL,
+    unit: scVal("sc-unit") || "mm",
+    revision: _scRevision
+  });
+
+  for(var id in SC_FIELD_HELP){
+    var name=SC_FIELD_HELP[id].name;
+    var el=document.getElementById(id);
+    if(_scUnknown[id]){
+      s=B.withField(s,name,{unknown:true});
+      continue;
+    }
+    var v=el?String(el.value).trim():"";
+    if(v==="") continue;                 // blank stays blank, not zero
+    /* Which fields carry the form's length unit, stated rather than sniffed
+       out of the field name. Deriving it from a substring of "blankWidth"
+       works until somebody adds a field whose name happens to contain one. */
+    s=B.withField(s,name,{
+      value:v,
+      unit: SC_FIELD_HELP[id].isLength ? (scVal("sc-unit")||"mm") : null,
+      source:_scSource[id]||B.SC_SOURCE.MANUAL
+    });
+  }
+  return s;
+}
+
+/** Put a stored scenario back on the form. */
+function scApplyScenario(s){
+  var B=window.BW;
+  if(!s||!B) return;
+
+  _scScenarioId=s.id;
+  _scRevision=s.revision||1;
+  _scUnknown={}; _scSource={};
+
+  var unit=document.getElementById("sc-unit");
+  if(unit&&s.unit)unit.value=s.unit;
+  scEntry(s.entry===B.SC_ENTRY.UPLOAD?"upload":"manual");
+
+  for(var id in SC_FIELD_HELP){
+    var f=s.fields[SC_FIELD_HELP[id].name];
+    var el=document.getElementById(id);
+    if(!f||!el) continue;
+    if(f.unknown){ _scUnknown[id]=true; el.value=""; continue; }
+    el.value = f.value===null ? "" : f.value;
+    if(f.source&&f.source!=="manual") _scSource[id]=f.source;
+  }
+  scRenderFieldStates();
+  scDraftStatus("Reopened " + (s.name||s.id) + ".");
+}
+
+/** One line under the buttons saying what just happened. */
+function scDraftStatus(message, bad){
+  var el=document.getElementById("sc-draft-status");
+  if(!el) return;
+  el.innerHTML='<span style="color:var('+(bad?"--bw-danger":"--bw-muted")+')">'+ciEsc(message)+'</span>';
+}
+
+/** Save what is on the form, finished or not. */
+function scSaveDraft(){
+  var B=window.BW;
+  if(!B||!B.saveScenario){ scDraftStatus("The engine did not load, so nothing can be saved.",true); return; }
+
+  var s=scFormScenario();
+  if(!s){ scDraftStatus("Nothing to save yet.",true); return; }
+  if(!B.scStarted(s)){ scDraftStatus("Enter something first — there is nothing to save yet.",true); return; }
+
+  var r=B.saveScenario(s,null);
+  if(!r.ok){ scDraftStatus(r.error||"It could not be saved.",true); return; }
+
+  _scScenarioId=s.id;
+  _scRevision=s.revision;
+
+  var ready=B.scReadiness(s);
+  scDraftStatus(
+    "Saved as " + s.id + ". "
+    + (ready.quantityPlan.ready
+        ? "The quantity plan is complete."
+        : (ready.quantityPlan.message || "Still incomplete, which is fine — it is a draft.")));
+  scRenderDrafts();
+}
+
+/** Start again, keeping nothing. */
+function scNewDraft(){
+  _scScenarioId=null; _scRevision=0;
+  _scUnknown={}; _scSource={};
+  scClear();
+  scRenderFieldStates();
+  scDraftStatus("Started a new scenario. The one you were on is still saved.");
+  scRenderDrafts();
+}
+
+function scOpenDraft(id){
+  var B=window.BW;
+  if(!B||!B.loadScenario) return;
+  var s=B.loadScenario(id,null);
+  if(!s){ scDraftStatus("That scenario is no longer stored.",true); return; }
+  scApplyScenario(s);
+  scRenderDrafts();
+}
+
+function scDeleteDraft(id){
+  var B=window.BW;
+  if(!B||!B.deleteScenario) return;
+  var r=B.deleteScenario(id,null);
+  if(!r.ok){ scDraftStatus(r.error||"It could not be deleted.",true); return; }
+  if(_scScenarioId===id){ _scScenarioId=null; _scRevision=0; }
+  scDraftStatus("Deleted.");
+  scRenderDrafts();
+}
+
+/** The list of saved work. */
+function scRenderDrafts(){
+  var host=document.getElementById("sc-drafts");
+  if(!host) return;
+  var B=window.BW;
+  if(!B||!B.loadScenarios){ host.innerHTML=""; return; }
+
+  var all=B.loadScenarios(null);
+  if(!all.length){
+    host.innerHTML='<p style="color:var(--bw-muted);font-size:12px;margin:8px 0 0;line-height:1.6">'
+      +'Nothing saved yet. A scenario can be saved part-finished &mdash; you do not have to know '
+      +'everything before you put it down.</p>';
+    return;
+  }
+
+  var rows=all.map(function(s){
+    var r=B.scReadiness(s);
+    var open=s.id===_scScenarioId;
+    return '<li class="bw-draft'+(open?" bw-draft--open":"")+'">'
+      +'<button type="button" class="bw-draft-open" data-do="scOpenDraft" data-a="'+attrEsc(ciEsc(s.id))+'">'
+      +ciEsc(s.name||s.id)+'</button>'
+      +'<span class="bw-draft-state">'
+      +(r.quantityPlan.ready?"Plan ready":"Draft")
+      +(r.unknowns.length?" &middot; "+r.unknowns.length+" not known":"")
+      +'</span>'
+      +'<button type="button" class="bw-draft-del" data-do="scDeleteDraft" data-a="'+attrEsc(ciEsc(s.id))+'"'
+      +' aria-label="Delete '+attrEsc(ciEsc(s.name||s.id))+'">Delete</button>'
+      +'</li>';
+  }).join("");
+
+  host.innerHTML='<ul class="bw-drafts">'+rows+'</ul>';
 }
 
 function scVal(id){var e=document.getElementById(id);return e?String(e.value).trim():"";}
@@ -2826,6 +2991,7 @@ function scBind(){
   scRenderCosts();
   scFormLabels();
   scAnnotate();
+  scRenderDrafts();
   exBind(page);
   page.addEventListener("change",function(e){
     if(e.target&&e.target.id==="sc-form")scFormLabels();
@@ -6180,6 +6346,10 @@ async function send(id,text){
 registerActions({
   scEntry: function (which) { scEntry(which); },
   scDontKnow: function (id) { scDontKnow(id); },
+  scSaveDraft: function () { scSaveDraft(); },
+  scNewDraft: function () { scNewDraft(); },
+  scOpenDraft: function (id) { scOpenDraft(id); },
+  scDeleteDraft: function (id) { scDeleteDraft(id); },
   /* navigation */
   go: go, miGo: miGo, miCommodity: miCommodity, goAgent: goAgent,
   toggleMenu: toggleMenu,

@@ -34,6 +34,11 @@ const ALLOWED = new Map([
   ["elId", "an element id this code chose itself"],
   ["msgs[0]", "loader text from a hardcoded array"],
   ["etaHtml", "loader markup this code built"],
+  ["rows", "saved-scenario rows this code built; the two values that come from "
+    + "a person — the scenario name and its id — go through ciEsc in the text "
+    + "and attrEsc(ciEsc(…)) in every attribute, because attrEsc alone escapes "
+    + "only the quote and leaves raw angle brackets sitting in the attribute. "
+    + "Everything else in the row is a literal or a count"],
 
   // Academy pathway content, hardcoded in this file.
   ["p.lvl", "hardcoded academy pathway data"],

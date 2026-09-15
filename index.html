@@ -119,6 +119,22 @@
 .bw-fieldwhere{color:var(--bw-muted);opacity:.85;margin-top:4px}
 /* A field nobody knows should read as deliberately empty, not as broken. */
 .bw-field .bwin:disabled{opacity:.45;cursor:not-allowed}
+/* Saved scenarios. A row is a name, what state it is in, and a way to
+   remove it — nothing else, because the list is for finding one, not for
+   reading them. */
+.bw-drafts{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.bw-draft{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--bw-r-1);
+  border:1px solid transparent}
+.bw-draft:hover{background:var(--bw-raised)}
+.bw-draft--open{border-color:var(--bw-lime);background:var(--bw-raised)}
+.bw-draft-open{flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;font:inherit;
+  font-size:12.5px;color:var(--bw-text);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bw-draft-open:hover{text-decoration:underline}
+.bw-draft-open:focus-visible,.bw-draft-del:focus-visible{outline:2px solid var(--bw-lime);outline-offset:2px;border-radius:2px}
+.bw-draft-state{font-size:11px;color:var(--bw-muted);flex:none}
+.bw-draft-del{background:none;border:0;padding:0;font:inherit;font-size:11px;color:var(--bw-muted);
+  cursor:pointer;flex:none;text-decoration:underline;text-underline-offset:2px}
+.bw-draft-del:hover{color:var(--bw-danger)}
 
 /* Article prose. The blog body carried its paragraph styling on every single
    paragraph — the same four declarations, 49 times. The container owns it now. */
@@ -1188,6 +1204,21 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       </div>
     <div class="bw-studio">
       <div class="bw-studio-col">
+        <!-- Saved work first: the opening question is whether you are starting
+             something or picking something up. At the bottom of a long form,
+             reopening is a thing you find by scrolling past the work you were
+             trying not to repeat. -->
+        <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+          <div class="bw-panel-head"><div class="bw-panel-title">Your scenarios</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="bw-act bw-act-secondary" data-do="scSaveDraft">Save</button>
+            <button type="button" class="bw-act bw-act-text" data-do="scNewDraft">Start a new one</button>
+          </div>
+          <p id="sc-draft-status" role="status" aria-live="polite"
+             style="font-size:12px;margin:8px 0 0;line-height:1.6;min-height:1.2em"></p>
+          <div id="sc-drafts"></div>
+        </div>
+
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head"><div class="bw-panel-title">1 &middot; The part</div></div>
           <div class="bw-fields" style="margin-bottom:var(--bw-3)">

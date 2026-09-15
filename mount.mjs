@@ -39,6 +39,11 @@
            assumptions as scAssumptions, BASIS, CONFIDENCE, CONSUMES, COST_ELEMENTS } from "./src/calc/should-cost.mjs";
   import { part as makePart, savePart, loadParts, deletePart, storeStatus as partStoreStatus,
            forComparison } from "./src/services/part-store.mjs";
+  import { scenario, withField, readiness as scReadiness, stateOf as scStateOf,
+           started as scStarted, SOURCE as SC_SOURCE, ENTRY as SC_ENTRY,
+           GOAL as SC_GOAL } from "./src/studio/scenario.mjs";
+  import { newId as scNewId, saveScenario, loadScenarios, loadScenario,
+           deleteScenario, storeStatus as scenarioStoreStatus } from "./src/services/studio-store.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
@@ -77,6 +82,10 @@
                 scStage, routeInput, sheetLayout, barLayout, planMaterial, costPlan, scAssumptions,
                 BASIS, CONFIDENCE, CONSUMES, COST_ELEMENTS,
                 makePart, savePart, loadParts, deletePart, partStoreStatus, forComparison,
+                scenario, withField, scReadiness, scStateOf, scStarted,
+                SC_SOURCE, SC_ENTRY, SC_GOAL,
+                scNewId, saveScenario, loadScenarios, loadScenario, deleteScenario,
+                scenarioStoreStatus,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,

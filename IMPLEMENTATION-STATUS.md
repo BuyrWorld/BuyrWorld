@@ -107,6 +107,24 @@ invisible default the pack forbids.
 
 Checks: all 6 passed, 2,048 tests.
 
+### Slice 5 — saving unfinished work, and picking it up again · DONE
+
+- `mount.mjs` — the scenario model and store exposed on `window.BW`
+- `app.js` — `scFormScenario`, `scApplyScenario`, `scSaveDraft`,
+  `scNewDraft`, `scOpenDraft`, `scDeleteDraft`, `scRenderDrafts`
+- `index.html` — a "Your scenarios" panel at the top of the left column
+- `tests/integration/studio-drafts.test.mjs` — 24 tests
+
+The form is the source of truth while you type; the scenario is what gets
+written down. Nothing keeps a third copy.
+
+Saved work sits at the top of the column rather than the bottom: the opening
+question is whether you are starting something or picking something up, and
+at the foot of a long form reopening is a thing you find by scrolling past
+the work you were trying not to repeat.
+
+Checks: all 6 passed, 2,072 tests.
+
 ## Decisions
 
 - **The pack's reference implementations are not adopted.** `material-planning.mjs`
@@ -133,6 +151,6 @@ Checks: all 6 passed, 2,048 tests.
 
 ## Next slice
 
-Slice 5 — draft save and reopen on the page. `studio-store.mjs` and the
-scenario model are built and tested; the form does not yet write to them, so
-the "save it as a draft" the refusal message offers is not yet a button.
+Slice 6 — the later-upload conflict flow. `compareExtraction` and
+`acceptCandidates` are built and tested in the model; the page does not yet
+call them, so uploading a drawing after typing does not yet show conflicts.
