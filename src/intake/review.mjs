@@ -35,6 +35,12 @@ export const METHOD = Object.freeze({
      second source of evidence and not independent proof, because it is
      looking at the same characters the reader already got wrong. */
   MODEL: "model",
+  /* A model reading the picture itself. Genuinely a different claim from the
+     one above — it is not agreeing with a reader, it is looking at the
+     document — and so genuinely a separate source. It is also the one most
+     able to be confidently wrong, because a misread photograph produces a
+     plausible number rather than a gap. */
+  VISION: "vision",
   /* Somebody typed it. Here so a queue can hold a manual value beside a read
      one without pretending the document said it. */
   PERSON: "person",
@@ -315,6 +321,10 @@ export function methodSaid(item) {
     case METHOD.MODEL:
       return "Proposed by a model reading the recognised text. It has not seen the drawing "
            + "itself, so this is a second opinion on the same characters rather than a second source.";
+    case METHOD.VISION:
+      return "Read from the picture by a model, and not verified by anything. It quoted the "
+           + "printed text it took this from — read that rather than the value. A model can "
+           + "misread a photograph, and when it does the answer looks like an answer.";
     case METHOD.PERSON:
       return "Entered by hand.";
     default:
