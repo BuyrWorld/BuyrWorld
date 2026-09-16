@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 55 |
-| Test files | 0 | 91 |
+| Modules under `src/` | 0 | 56 |
+| Test files | 0 | 92 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -272,6 +272,19 @@ decision also belongs to the document it was made about: a new revision, or
 the same file read as saying something else, sends those rows back for review
 and says which ones and why, rather than quietly emptying the ticks. Where a
 typed value and a read value disagree, both are shown and neither wins.
+
+`src/intake/page-text.mjs` says which pages were readable, which is a
+promise the file router was already making and nothing was keeping. The
+extraction counted pages with no text — the right count and the wrong answer,
+since working out which three of twelve means opening the file yourself.
+
+It also has the state the count did not: a scan with a stamped reference
+number in its text layer *has* text, and reading that page as readable makes
+the rules run, find nothing, and the drawing look like one that simply said
+nothing. Sparse is named and grouped with the unreadable, because a stamp
+over a scan is a scan. The wording never implies a page will be read later,
+since there is no reader in this build, and it says plainly that a value
+missing from the reading is not missing from the drawing.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

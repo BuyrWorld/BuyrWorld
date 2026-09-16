@@ -18,6 +18,8 @@
            withinLimits as fileWithinLimits, HANDLING as FILE_HANDLING,
            LIMITS as FILE_LIMITS, HEAD_BYTES } from "./src/intake/file-router.mjs";
   import * as viewer from "./src/intake/viewer.mjs";
+  import { assessDocument, saidPlainly as pagesSaidPlainly,
+           PAGE as PAGE_TEXT } from "./src/intake/page-text.mjs";
   import { queue as reviewQueue, documentRef, needsReReview,
            confirm as reviewConfirm, correct as reviewCorrect,
            markUnknown as reviewUnknown, reject as reviewReject,
@@ -92,6 +94,7 @@
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { identifyFile, fileNextStep, fileWithinLimits,
+                assessDocument, pagesSaidPlainly, PAGE_TEXT,
                 reviewQueue, documentRef, needsReReview,
                 reviewConfirm, reviewCorrect, reviewUnknown, reviewReject,
                 confirmedValues, reviewOutstanding, sourceConflicts,

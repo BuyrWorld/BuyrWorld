@@ -4595,8 +4595,14 @@ async function exRead(which,input){
     var lost=B.needsReReview(B.reviewQueue(result,{method:B.REVIEW_METHOD.RULE,document:doc}),was);
     _exReview[which]=fresh;
 
+    /* Which pages were readable, named rather than counted. The file
+       router already promises that scanned pages cannot be read here and
+       that you will be told which; until now nothing told anybody which. */
+    var seen=B.assessDocument(read.pages,{pagesInDocument:read.pagesInDocument});
+
     if(nameEl)nameEl.textContent=f.name+" — "+read.pages.length+" of "+read.pagesInDocument+" page(s) read";
-    out.innerHTML=note+(lost.length?exReReviewHTML(lost):"")+exResultHTML(which,result);
+    out.innerHTML=note+(lost.length?exReReviewHTML(lost):"")
+      +exPagesHTML(seen)+exResultHTML(which,result);
     input.value="";
     return;
   }
@@ -4851,6 +4857,30 @@ function exDecisionHTML(which,row,c,i){
     +' data-ex="'+attrEsc(which)+'" data-ex-reject="'+attrEsc(c.field)+'"'
     +' title="That is not '+attrEsc(row.label)+'">wrong</button>'
     +'</div>'+trail;
+}
+
+/**
+ * Which pages were read, and which were pictures.
+ *
+ * A count was already there — "3 page(s) carry no text" — and a count is not
+ * something anybody can act on: working out which three means opening the
+ * file yourself. Naming them is the difference between a warning and an
+ * instruction.
+ *
+ * Quiet when everything read, because a banner that always appears is one
+ * nobody reads on the day it matters.
+ */
+function exPagesHTML(seen){
+  if(!seen||seen.pagesRead===0)return "";
+  if(!seen.needsReading.length&&!seen.skipped.length)return "";
+
+  var B=window.BW;
+  var tone=seen.anyReadable?"--bw-warning":"--bw-danger";
+  return '<div style="border:1px solid var('+tone+');background:var(--bw-warning-soft);'
+    +'border-radius:var(--bw-r-sm);padding:12px 14px;margin-bottom:var(--bw-4)">'
+    +'<div class="eyebrow" style="margin:0 0 6px">What was read, and what was not</div>'
+    +'<p style="margin:0;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+    +ciEsc(B.pagesSaidPlainly(seen))+'</p></div>';
 }
 
 /**

@@ -32,6 +32,9 @@ import {
   correct as reviewCorrect, markUnknown as reviewUnknown, reject as reviewReject,
   METHOD as REVIEW_METHOD, DISPOSITION as REVIEW_DISPOSITION,
 } from "../../src/intake/review.mjs";
+import {
+  assessDocument, saidPlainly as pagesSaidPlainly, PAGE as PAGE_TEXT,
+} from "../../src/intake/page-text.mjs";
 
 const html = pageSource();
 
@@ -420,7 +423,7 @@ describe("a file goes where its bytes say it should", () => {
   });
 
   /** Run exRead over one file and report everything it did. */
-  async function read(which, file, before = null) {
+  async function read(which, file, before = null, pdf = null) {
     const shown = [];
     const outEl = { innerHTML: "" };
     const nameEl = { textContent: "" };
@@ -434,6 +437,7 @@ describe("a file goes where its bytes say it should", () => {
           identifyFile, fileNextStep, fileWithinLimits, FILE_HANDLING, HEAD_BYTES,
           extractDocument, EX_TARGET,
           documentRef, reviewQueue, needsReReview, REVIEW_METHOD,
+          assessDocument, pagesSaidPlainly, PAGE_TEXT,
         },
       },
       ciEsc: (x) => String(x),
@@ -447,7 +451,7 @@ describe("a file goes where its bytes say it should", () => {
       exShowImage: (w, f, say, note) => shown.push({ w, name: f.name, say, note }),
       exResultHTML: () => "<table>the rows</table>",
       exViewClose: (w) => box.closed.push(w),
-      scPdfPages: async () => ({ pages: DRAWING_PAGES, pagesInDocument: 1 }),
+      scPdfPages: async () => pdf ?? ({ pages: DRAWING_PAGES, pagesInDocument: 1 }),
       _exReview: { scx: null, ctx: null },
       exFingerprint: async () => "fingerprint",
       exReReviewHTML: () => "<div>needs checking again</div>",
@@ -455,7 +459,7 @@ describe("a file goes where its bytes say it should", () => {
       engineNote: () => "<p>the engine is missing</p>",
     };
     vm.createContext(box);
-    new vm.Script(["exRead", "exErr", "exNote"].map(fnSource).join("\n")).runInContext(box);
+    new vm.Script(["exRead", "exErr", "exNote", "exPagesHTML"].map(fnSource).join("\n")).runInContext(box);
 
     const input = { files: [file], value: "x" };
     box.input = input;
@@ -541,6 +545,49 @@ describe("a file goes where its bytes say it should", () => {
       const r = await read("scx", f);
       assert.equal(r.input.value, "", `the input kept its value after ${f.name}`);
     }
+  });
+
+  test("a mixed PDF names the pages that were not read", async () => {
+    /* The promise the file router already makes — "scanned pages cannot be
+       read in this build, you will be told which" — was not being kept by
+       anything. The count of pages without text was there; which pages was
+       not, and working that out meant opening the file yourself. */
+    const r = await read("scx", fileOf(PDF, "mixed.pdf"), null, {
+      pages: [
+        { page: 1, text: DRAWING_PAGES[0].text },
+        { page: 2, text: "" },
+        { page: 3, text: DRAWING_PAGES[0].text },
+        { page: 4, text: "" },
+      ],
+      pagesInDocument: 6,
+    });
+    assert.match(r.out, /Pages 1 and 3 were read/);
+    assert.match(r.out, /Pages 2 and 4 are a picture with no text/);
+    assert.match(r.out, /Pages 5 and 6 were not read at all/);
+  });
+
+  test("and says the values are missing from the reading, not from the drawing", async () => {
+    const r = await read("scx", fileOf(PDF, "mixed.pdf"), null, {
+      pages: [{ page: 1, text: DRAWING_PAGES[0].text }, { page: 2, text: "" }],
+      pagesInDocument: 2,
+    });
+    assert.match(r.out, /not missing from the drawing; it is missing from what was read/);
+  });
+
+  test("a wholly readable PDF says nothing at all about pages", async () => {
+    /* A banner that always appears is one nobody reads on the day it
+       matters. */
+    const r = await read("scx", fileOf(PDF, "clean.pdf"));
+    assert.equal(/What was read, and what was not/.test(r.out), false);
+  });
+
+  test("a sparse page is named too, since a stamp over a scan is a scan", async () => {
+    const r = await read("scx", fileOf(PDF, "stamped.pdf"), null, {
+      pages: [{ page: 1, text: DRAWING_PAGES[0].text }, { page: 2, text: "QA-4471" }],
+      pagesInDocument: 2,
+    });
+    assert.match(r.out, /Page 2 carries only a few characters/);
+    assert.match(r.out, /Treat it as unread/);
   });
 
   test("with no engine it says so rather than failing silently", async () => {
