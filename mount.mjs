@@ -62,6 +62,12 @@
            OPERATION as EDIT_OPERATION, OUTCOME as EDIT_OUTCOME }
     from "./src/studio/edit-proposal.mjs";
   import { readInstruction, PHRASINGS } from "./src/studio/read-instruction.mjs";
+  /* The provider-backed reader. Exposed, and deliberately given no transport:
+     configuring one needs a credential, a retention decision and an authority
+     that is not this file. With none, proposeEdit reports that and the rule
+     reader answers instead. */
+  import { proposeEdit, PROMPT_VERSION as EDIT_PROMPT_VERSION }
+    from "./src/services/ai/propose-edit.mjs";
   import { updateStudio, initStudio } from "./src/render/studio-view.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
@@ -117,6 +123,7 @@
                 GEOMETRY_FRAME, GEOMETRY_FEATURE,
                 validateProposal, previewProposal, acceptProposal, describeStep, withheld,
                 EDIT_OPERATION, EDIT_OUTCOME, readInstruction, PHRASINGS,
+                proposeEdit, EDIT_PROMPT_VERSION,
                 money, scaleDiv,
                 newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus,
                 storeStatus, CASE_STATUS,

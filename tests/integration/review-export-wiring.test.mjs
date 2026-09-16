@@ -198,3 +198,21 @@ describe("it is on the page", () => {
     assert.equal(/\bfetch\s*\(|XMLHttpRequest|sendBeacon|mailto:/.test(fns), false);
   });
 });
+
+/* --------------------------------------------------- the drawing downloads */
+
+describe("saving the DXF", () => {
+  test("it is offered with its own media type, not as markdown", () => {
+    /* The bytes were right and the label on them was wrong, which works on
+       one machine and confuses a CAD tool on another. */
+    const fn = fnSource("scSaveArtifact", app);
+    assert.match(fn, /\.dxf\$\/\.test\(name\) \? "image\/vnd\.dxf"/);
+  });
+
+  test("and every other type is still what it was", () => {
+    const fn = fnSource("scSaveArtifact", app);
+    assert.match(fn, /application\/json/);
+    assert.match(fn, /text\/html/);
+    assert.match(fn, /text\/markdown/);
+  });
+});

@@ -21,6 +21,7 @@ import {
   accept as acceptProposal,
 } from "../../src/studio/edit-proposal.mjs";
 import { readInstruction } from "../../src/studio/read-instruction.mjs";
+import { proposeEdit } from "../../src/services/ai/propose-edit.mjs";
 import { schedule, requirement, KIND, SCOPE } from "../../src/studio/requirements.mjs";
 import { density } from "../../src/calc/units.mjs";
 
@@ -30,7 +31,7 @@ const page = markup.slice(markup.indexOf('id="sc-mode-material"'), markup.indexO
 
 /* ---------------------------------------------------------------- harness */
 
-function studio({ reqs = [] } = {}) {
+function studio({ reqs = [], bw = {} } = {}) {
   const els = new Map();
   const mk = (id) => ({ id, value: "", innerHTML: "", dataset: {}, setAttribute() {}, style: {} });
   for (const id of ["ai-text", "ai-out", "pb-out", "pb-status", "req-list",
@@ -49,6 +50,12 @@ function studio({ reqs = [] } = {}) {
         geometryMass, geometryHistory, resize, editFeature,
         validateProposal, previewProposal, acceptProposal, readInstruction,
         reqSchedule: schedule, scDensity: density,
+        /* Extra entries a test needs on window.BW — a provider reader and its
+           transport, which this build does not configure. Set on the host
+           object: assigning from inside the vm would reach the sandbox global
+           rather than the host, which is why the first attempt silently kept
+           using the written rules. */
+        ...bw,
       },
     },
   };
@@ -60,7 +67,11 @@ function studio({ reqs = [] } = {}) {
        .map(function(r){ return JSON.parse(JSON.stringify(r), function(k,v){
          return typeof v==="string"&&v.indexOf("__b")===0?BigInt(v.slice(3)):v; }); });`,
     fnSource("scVal", app), fnSource("scUm", app), fnSource("scBuilderStatus", app),
-    fnSource("scAiStatus", app), fnSource("scDescribeChange", app),
+    fnSource("scAiStatus", app),
+    /* The reader in front of scDescribeChange: a provider where one is
+       configured, the written rules otherwise. This harness configures none,
+       so the rules answer — which is the path this build always takes. */
+    fnSource("scReadChange", app), fnSource("scDescribeChange", app),
     fnSource("scRenderPreview", app), fnSource("scAcceptChange", app),
     fnSource("scDiscardChange", app), fnSource("scFeatureIds", app),
     fnSource("scRenderBuilder", app), fnSource("scModelSvg", app),
@@ -72,7 +83,13 @@ function studio({ reqs = [] } = {}) {
   const s = {
     els,
     run: (code) => vm.runInContext(code, sandbox),
-    say: (text) => { els.get("ai-text").value = text; vm.runInContext("scDescribeChange();", sandbox); },
+    /* Returns the promise: scDescribeChange asks a provider first where one
+       is configured, so reading a sentence is asynchronous even when the
+       answer comes from the written rules. */
+    say: (text) => {
+      els.get("ai-text").value = text;
+      return vm.runInContext("scDescribeChange();", sandbox);
+    },
     out: () => els.get("ai-out").innerHTML,
     ids: () => JSON.parse(vm.runInContext("JSON.stringify(scFeatureIds()||[])", sandbox)),
   };
@@ -92,34 +109,34 @@ describe("describing a change applies nothing", () => {
   let s;
   beforeEach(() => { s = studio(); });
 
-  test("a readable instruction shows what it would do, and says so", () => {
-    s.say("add a 6mm hole at 15, 25");
+  test("a readable instruction shows what it would do, and says so", async () => {
+    await s.say("add a 6mm hole at 15, 25");
     assert.match(s.out(), /This would:/);
     assert.match(s.out(), /Add a 6mm hole at 15, 25/);
     assert.match(s.out(), /Nothing has changed yet/);
     assert.deepEqual(s.ids(), [], "and nothing has");
   });
 
-  test("it repeats what was asked, so the reading can be checked", () => {
-    s.say("add a 6mm hole at 15, 25");
+  test("it repeats what was asked, so the reading can be checked", async () => {
+    await s.say("add a 6mm hole at 15, 25");
     assert.match(s.out(), /You asked: <b>add a 6mm hole at 15, 25<\/b>/);
   });
 
-  test("accepting is a separate button", () => {
-    s.say("add a 6mm hole at 15, 25");
+  test("accepting is a separate button", async () => {
+    await s.say("add a 6mm hole at 15, 25");
     assert.match(s.out(), /data-do="scAcceptChange"/);
     assert.match(s.out(), /data-do="scDiscardChange"/);
   });
 
-  test("and then it happens", () => {
-    s.say("add a 6mm hole at 15, 25");
+  test("and then it happens", async () => {
+    await s.say("add a 6mm hole at 15, 25");
     s.run("scAcceptChange();");
     assert.deepEqual(s.ids(), ["hole-1"]);
     assert.match(s.out(), /Undo is in the builder above/);
   });
 
-  test("leaving it changes nothing and clears the proposal", () => {
-    s.say("add a 6mm hole at 15, 25");
+  test("leaving it changes nothing and clears the proposal", async () => {
+    await s.say("add a 6mm hole at 15, 25");
     s.run("scDiscardChange();");
     assert.deepEqual(s.ids(), []);
     assert.match(s.out(), /Left as it was/);
@@ -127,8 +144,8 @@ describe("describing a change applies nothing", () => {
     assert.deepEqual(s.ids(), [], "accepting after discarding does nothing");
   });
 
-  test("the box is emptied once the change is made", () => {
-    s.say("add a 6mm hole at 15, 25");
+  test("the box is emptied once the change is made", async () => {
+    await s.say("add a 6mm hole at 15, 25");
     s.run("scAcceptChange();");
     assert.equal(s.els.get("ai-text").value, "");
   });
@@ -140,41 +157,41 @@ describe("when a sentence does not say enough", () => {
   let s;
   beforeEach(() => { s = studio(); });
 
-  test("it asks, and shows what it can take", () => {
-    s.say("make it better somehow");
+  test("it asks, and shows what it can take", async () => {
+    await s.say("make it better somehow");
     assert.match(s.out(), /design decision rather than a measurement/);
     assert.equal(/Make this change/.test(s.out()), false, "nothing to accept");
   });
 
-  test("an unreadable sentence offers examples", () => {
-    s.say("do the usual thing");
+  test("an unreadable sentence offers examples", async () => {
+    await s.say("do the usual thing");
     assert.match(s.out(), /could not read that as a change/);
     assert.match(s.out(), /add a 6mm hole at 15, 25/);
   });
 
-  test("an ambiguous target asks which one", () => {
-    s.say("add a 6mm hole at 15, 25"); s.run("scAcceptChange();");
-    s.say("add a 6mm hole at 50, 25"); s.run("scAcceptChange();");
-    s.say("remove the hole");
+  test("an ambiguous target asks which one", async () => {
+    await s.say("add a 6mm hole at 15, 25"); s.run("scAcceptChange();");
+    await s.say("add a 6mm hole at 50, 25"); s.run("scAcceptChange();");
+    await s.say("remove the hole");
     assert.match(s.out(), /There are 2 holes/);
     assert.deepEqual(s.ids(), ["hole-1", "hole-2"], "both are still there");
   });
 
-  test("an impossible change is refused with the geometry's own reason", () => {
-    s.say("add a 6mm hole at 900, 25");
+  test("an impossible change is refused with the geometry's own reason", async () => {
+    await s.say("add a 6mm hole at 900, 25");
     assert.match(s.out(), /falls outside the block/);
     assert.deepEqual(s.ids(), []);
   });
 
-  test("with no part it says to build one first", () => {
+  test("with no part it says to build one first", async () => {
     const fresh = studio();
     fresh.run("_scModel=null;");
-    fresh.say("add a 6mm hole at 15, 25");
+    await fresh.say("add a 6mm hole at 15, 25");
     assert.match(fresh.out(), /Build a block first/);
   });
 
-  test('"make this aerospace grade" asks which specification applies', () => {
-    s.say("make this aerospace grade");
+  test('"make this aerospace grade" asks which specification applies', async () => {
+    await s.say("make this aerospace grade");
     assert.match(s.out(), /question for your organisation/);
   });
 });
@@ -182,21 +199,21 @@ describe("when a sentence does not say enough", () => {
 /* --------------------------------------------------- what a change costs */
 
 describe("the preview says what the change would cost", () => {
-  test("removing a hole that carries a requirement warns before it happens", () => {
+  test("removing a hole that carries a requirement warns before it happens", async () => {
     /* The whole chain working at once: geometry knows what the change
        removes, requirements know what pointed at it, and the preview says so
        while there is still a choice. */
     const s = studio({ reqs: [onHole("hole-1")] });
-    s.say("add a 6mm hole at 15, 25"); s.run("scAcceptChange();");
-    s.say("remove hole-1");
+    await s.say("add a 6mm hole at 15, 25"); s.run("scAcceptChange();");
+    await s.say("remove hole-1");
     assert.match(s.out(), /1 requirement\(s\) would be left pointing at nothing/);
     assert.match(s.out(), /because this removes hole-1/);
   });
 
-  test("and a change that strands nothing says nothing about it", () => {
+  test("and a change that strands nothing says nothing about it", async () => {
     const s = studio({ reqs: [onHole("hole-1")] });
-    s.say("add a 6mm hole at 15, 25"); s.run("scAcceptChange();");
-    s.say("move hole-1 10mm along X");
+    await s.say("add a 6mm hole at 15, 25"); s.run("scAcceptChange();");
+    await s.say("move hole-1 10mm along X");
     assert.equal(/pointing at nothing/.test(s.out()), false);
   });
 });
@@ -204,9 +221,9 @@ describe("the preview says what the change would cost", () => {
 /* ------------------------------------------------------------- staleness */
 
 describe("a preview of a part that has since changed", () => {
-  test("is refused at acceptance", () => {
+  test("is refused at acceptance", async () => {
     const s = studio();
-    s.say("add a 6mm hole at 15, 25");
+    await s.say("add a 6mm hole at 15, 25");
     /* Somebody uses the manual controls while the preview is on screen. */
     s.run("_scModel=_scHistory.push(window.BW.addHole(_scModel,{xUm:80000n,yUm:25000n,diameterUm:4000n}).model);");
     s.run("scAcceptChange();");
@@ -249,5 +266,104 @@ describe("it is on the page", () => {
     const fns = ["scDescribeChange", "scRenderPreview", "scAcceptChange"]
       .map((f) => fnSource(f, app)).join("\n");
     assert.equal(/\bfetch\s*\(|XMLHttpRequest|sendBeacon/.test(fns), false);
+  });
+});
+
+/* ------------------------------------------------- where a provider exists */
+
+describe("a provider, when one is configured", () => {
+  /** The harness, with a provider reader and a transport on window.BW. */
+  const withProvider = (transport) => studio({
+    bw: { proposeEdit, aiTransport: transport },
+  });
+
+  const replying = (obj) => () => JSON.stringify(obj);
+
+  test("it is asked, and its proposal is previewed like any other", async () => {
+    const s = withProvider(replying({ operations: [
+      { op: "add-hole", xMm: "30", yMm: "20", diameterMm: "5" }] }));
+    await s.say("put a small hole near the left");
+    assert.match(s.out(), /Add a 5mm hole at 30, 20/);
+    assert.deepEqual(s.ids(), [], "still nothing applied");
+  });
+
+  test("and accepting it goes through the same operations", async () => {
+    /* The point of one validator: a provider's proposal and a typed one
+       reach the geometry by the same path. */
+    const s = withProvider(replying({ operations: [
+      { op: "add-hole", xMm: "30", yMm: "20", diameterMm: "5" }] }));
+    await s.say("put a small hole near the left");
+    s.run("scAcceptChange();");
+    assert.deepEqual(s.ids(), ["hole-1"]);
+  });
+
+  test("a question from the provider is shown, not worked around", async () => {
+    const s = withProvider(replying({ question: "Which corner do you mean?" }));
+    await s.say("put a hole near the corner");
+    assert.match(s.out(), /Which corner do you mean\?/);
+    assert.deepEqual(s.ids(), []);
+  });
+
+  test("an operation it invents is refused by name", async () => {
+    const s = withProvider(replying({ operations: [{ op: "revolve", angle: "90" }] }));
+    await s.say("spin it round");
+    assert.match(s.out(), /not something this can do/);
+  });
+
+  test("a provider that fails does not fall back to guessing", async () => {
+    /* It falls back to nothing. The written rules substitute for a provider
+       that is absent, not for one that broke — a reader that reinterprets a
+       request when the network fails is a reader that changes parts when the
+       network does. */
+    const s = withProvider(() => { throw new Error("down"); });
+    await s.say("add a 6mm hole at 15, 25");
+    assert.match(s.out(), /could not be reached/);
+    assert.deepEqual(s.ids(), []);
+  });
+
+  test("the revision travels with it, so staleness is still caught", async () => {
+    const s = withProvider(replying({ operations: [
+      { op: "add-hole", xMm: "30", yMm: "20", diameterMm: "5" }] }));
+    await s.say("add one");
+    /* Somebody edits by hand while the proposal is on screen. */
+    s.run("_scModel=_scHistory.push(window.BW.addHole(_scModel,"
+      + "{xUm:80000n,yUm:25000n,diameterUm:4000n}).model);");
+    s.run("scAcceptChange();");
+    assert.match(s.out(), /part changed after this was previewed/);
+  });
+});
+
+/* --------------------------------------------------------- no provider here */
+
+describe("with no provider, which is this build", () => {
+  test("the rules answer", async () => {
+    const s = studio();
+    await s.say("add a 6mm hole at 15, 25");
+    assert.match(s.out(), /Add a 6mm hole at 15, 25/);
+  });
+
+  test("and a provider reader with no transport is not asked", async () => {
+    let asked = false;
+    const s = studio({ bw: { proposeEdit, aiTransport: undefined,
+      __watch: () => { asked = true; } } });
+    await s.say("add a 6mm hole at 15, 25");
+    assert.equal(asked, false);
+    assert.match(s.out(), /Add a 6mm hole at 15, 25/);
+  });
+
+  test("the page reads through one function either way", () => {
+    /* Both readers return the same shape, so nothing after this point knows
+       which answered. */
+    const fn = fnSource("scReadChange", app);
+    assert.match(fn, /B\.proposeEdit && B\.aiTransport/);
+    assert.match(fn, /return B\.readInstruction\(text, revision\)/);
+  });
+
+  test("and the mount configures no transport", () => {
+    const mount = readFileSync("mount.mjs", "utf8");
+    assert.match(mount, /\bproposeEdit\b/, "the reader is exposed");
+    assert.equal(/aiTransport\s*[:=]/.test(mount), false,
+      "a transport configured here would send somebody's part to a provider "
+      + "without their say");
   });
 });

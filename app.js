@@ -3229,8 +3229,12 @@ function B_DRAFT_LABEL(){
 function scSaveArtifact(name){
   if(!_scPackage||!_scPackage.files[name]) return;
   var text=_scPackage.files[name];
+  /* A DXF is not text/markdown. The bytes were right and the label on them
+     was wrong, which works on one machine and confuses a CAD tool on another.
+     image/vnd.dxf is the registered type. */
   var type = /\.json$/.test(name) ? "application/json"
-           : /\.html$/.test(name) ? "text/html" : "text/markdown";
+           : /\.html$/.test(name) ? "text/html"
+           : /\.dxf$/.test(name) ? "image/vnd.dxf" : "text/markdown";
   var blob=new Blob([text],{type:type+";charset=utf-8"});
   var a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -3479,8 +3483,33 @@ function scAiStatus(html){
   if(el) el.innerHTML=html;
 }
 
+/**
+ * Read a described change.
+ *
+ * A provider first where one is configured, and the written rules otherwise.
+ * Both return the same shape, so nothing after this point knows which
+ * answered — which is what keeps the rule reader a complete substitute rather
+ * than a fallback with a different contract.
+ *
+ * No provider is configured in this build. The reader says so and the rules
+ * take over, which is the path that runs every time here.
+ */
+async function scReadChange(text, revision){
+  var B=window.BW;
+  if(B.proposeEdit && B.aiTransport){
+    var asked=await B.proposeEdit(_scModel, text, {transport:B.aiTransport});
+    if(!asked.unavailable){
+      /* The revision the request was typed against travels with it, so a
+         proposal worked out while somebody else edited is caught as stale. */
+      if(asked.ok && asked.proposal) asked.proposal.modelRevision=revision;
+      return asked;
+    }
+  }
+  return B.readInstruction(text, revision);
+}
+
 /** Read what was typed, validate it, and preview it. Nothing is applied. */
-function scDescribeChange(){
+async function scDescribeChange(){
   var B=window.BW;
   if(!B||!B.readInstruction){ scAiStatus(scErr("The engine did not load.")); return; }
   if(!_scModel){
@@ -3489,7 +3518,7 @@ function scDescribeChange(){
   }
 
   _scPreview=null;
-  var read=B.readInstruction(scVal("ai-text"), _scModel.revision);
+  var read=await scReadChange(scVal("ai-text"), _scModel.revision);
 
   if(!read.ok){
     /* A question, not a failure. The difference matters: one means try again,
