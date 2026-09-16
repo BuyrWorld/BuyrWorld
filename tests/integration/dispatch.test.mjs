@@ -149,18 +149,63 @@ describe("a name from markup cannot choose a function", () => {
   });
 });
 
+/**
+ * The registered table, brace-matched and stripped of comments.
+ *
+ * Both matter. Slicing to the end of the file instead reads whatever follows
+ * the table as though it were part of it — true by one line today, false as
+ * soon as anything is appended. And a word followed by a colon inside a
+ * comment reads as a registered name: "adapters:" in the note above the
+ * dispatcher is exactly that, and it is not an action.
+ */
+function actionTable() {
+  const at = app.lastIndexOf("registerActions({");
+  assert.ok(at > 0, "the action table is not where this expects it");
+  let depth = 0, quote = null, end = -1;
+  for (let i = app.indexOf("{", at); i < app.length; i++) {
+    const c = app[i];
+    if (quote) { if (c === "\\") i++; else if (c === quote) quote = null; continue; }
+    if (c === '"' || c === "'" || c === "`") { quote = c; continue; }
+    if (c === "{") depth++;
+    else if (c === "}") { depth--; if (depth === 0) { end = i; break; } }
+  }
+  assert.ok(end > at, "the action table does not close");
+  return app.slice(at, end)
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/^\s*\/\/.*$/gm, " ");
+}
+
+/** Every name the markup asks the dispatcher for. */
+const askedFor = () => new Set(
+  [...pageSource().matchAll(/\sdata-(?:do|chg|inp|key)="([A-Za-z_$][\w$]*)"/g)].map((m) => m[1]));
+
 describe("every action the markup asks for exists", () => {
   test("no attribute names an action the table does not hold", () => {
     // The conversion was mechanical, and a typo in it would leave a control
     // that silently does nothing.
-    const asked = new Set(
-      [...html.matchAll(/\sdata-(?:do|chg|inp|key)="([A-Za-z_$][\w$]*)"/g)].map((m) => m[1])
-    );
+    const asked = askedFor();
     assert.ok(asked.size >= 60, `only ${asked.size} actions found; the conversion may be incomplete`);
 
-    const table = app.slice(app.indexOf("registerActions({"));
-    const missing = [...asked].filter((name) => !table.includes(name + ":"));
+    const table = actionTable();
+    /* A plain string search, not a regex. Several action names carry a `$`
+       suffix — `cardKey$event`, `copyMinutes$self` — and `$` is an anchor in a
+       pattern, so interpolating one produces an expression that matches
+       nothing and reports seven working controls as unregistered. */
+    const missing = [...asked].filter((name) => !table.includes(`${name}:`));
     assert.deepEqual(missing, [], `markup asks for actions that are not registered:\n  ${missing.join("\n  ")}`);
+  });
+
+  test("no action is registered that nothing can reach", () => {
+    /* A control wired up without a button, or left behind when its button
+       went. Either way it is dead: the dispatcher can run it and nothing can
+       ask it to. Zero today, which is the moment to hold it there. */
+    const asked = askedFor();
+    const registered = [...actionTable().matchAll(/([A-Za-z_$][\w$]*)\s*:/g)].map((m) => m[1]);
+    assert.ok(registered.length >= 60, `only ${registered.length} registered; the table was not read`);
+
+    const unreachable = [...new Set(registered)].filter((name) => !asked.has(name));
+    assert.deepEqual(unreachable, [],
+      `registered and unreachable from any markup:\n  ${unreachable.join("\n  ")}`);
   });
 
   test("every registered action names something that exists", () => {
