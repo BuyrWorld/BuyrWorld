@@ -92,6 +92,15 @@ function studio({ values = {}, unknown = {} } = {}) {
        screen, and the revision the stored copy was at. Null and zero mean
        unsaved work, which is a normal state rather than an error. */
     "var _scScenarioId=null;",
+    /* scFormScenario carries the part and its requirements now, so a reopened
+       scenario comes back with the geometry and tolerances it was saved with
+       rather than whatever happened to be on screen. */
+    "var _scModel=null; var _scReqs=[];",
+    /* The rest of the per-scenario state scClearSession puts down. Declared
+       here so the harness exercises the real clearing rather than a stub of
+       it — the bug being fixed was a clear that missed some of these. */
+    "var _scHistory=null; var _scPreview=null; var _scPackage=null;",
+    "var _scCompare=null; var _scReadStartedAt=null;",
     "var _scRevision=0;",
     /* When each field was last touched. scFormScenario stamps it onto every
        field so a late extraction can be recognised as late — see
@@ -109,6 +118,10 @@ function studio({ values = {}, unknown = {} } = {}) {
        than this harness models. A stub keeps the test on the draft code. */
     "function scClear(){ for(var i=0;i<IDS.length;i++){var e=document.getElementById(IDS[i]); if(e)e.value='';} }",
     `var IDS=${JSON.stringify(FIELD_IDS)};`,
+    /* Drawn by the real code on reopen; this harness is about the record, not
+       the picture. */
+    "function scRenderBuilder(){} function scAiStatus(){}",
+    fnSource("scClearSession", app),
   ].join("\n"), sandbox);
 
   return {

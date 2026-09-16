@@ -2564,7 +2564,18 @@ function scFormScenario(){
       at:_scEdited[id]||null
     });
   }
-  return s;
+
+  /* The part and its requirements, attached last.
+   *
+   * They were attached before this loop to begin with, and withField() rebuilds
+   * the scenario through scenario(), which keeps only the fields it knows
+   * about — so the first value entered dropped them both, silently, and every
+   * save stored a scenario with no part. Anything added to a scenario that
+   * scenario() does not know about has to go on after the last withField. */
+  return Object.freeze(Object.assign({}, s, {
+    model: _scModel || null,
+    requirements: _scReqs.slice()
+  }));
 }
 
 /** Put a stored scenario back on the form. */
@@ -2572,9 +2583,19 @@ function scApplyScenario(s){
   var B=window.BW;
   if(!s||!B) return;
 
+  /* Put the previous scenario down first. Restoring on top of it is how one
+     project's part ends up under another project's name. */
+  scClearSession();
+
   _scScenarioId=s.id;
   _scRevision=s.revision||1;
-  _scUnknown={}; _scSource={}; _scEdited={};
+
+  /* The engineering record, where the saved copy had one. A scenario saved by
+     an older build has neither, and comes back with neither rather than
+     inheriting what was on screen. */
+  _scReqs = s.requirements ? s.requirements.slice() : [];
+  _scModel = s.model || null;
+  _scHistory = _scModel && B.geometryHistory ? B.geometryHistory(_scModel) : null;
 
   var unit=document.getElementById("sc-unit");
   if(unit&&s.unit)unit.value=s.unit;
@@ -2589,7 +2610,11 @@ function scApplyScenario(s){
     if(f.source&&f.source!=="manual") _scSource[id]=f.source;
   }
   scRenderFieldStates();
-  scDraftStatus("Reopened " + (s.name||s.id) + ".");
+  scRenderBuilder();
+  scDraftStatus("Reopened " + (s.name||s.id) + "."
+    + (s.savedSchema === 1
+      ? " It was saved before the part and its requirements were stored, so it has neither."
+      : ""));
 }
 
 /** One line under the buttons saying what just happened. */
@@ -2623,14 +2648,36 @@ function scSaveDraft(){
   scRenderDrafts();
 }
 
-/** Start again, keeping nothing. */
-function scNewDraft(){
+/**
+ * Put down everything belonging to the scenario on screen.
+ *
+ * One function rather than a line in each caller, because the failure this
+ * fixes was a caller that cleared four things out of nine. Anything added to
+ * the Studio's per-scenario state belongs in here, and the test that counts
+ * the module-level _sc variables against this list will say so.
+ */
+function scClearSession(){
   _scScenarioId=null; _scRevision=0;
   _scUnknown={}; _scSource={}; _scEdited={};
+  _scReqs=[];
+  _scModel=null; _scHistory=null;
+  _scPreview=null; _scPackage=null;
+  _scCompare=null; _scReadStartedAt=null;
+  /* The last calculated plan and cost. bcSave reads it, so leaving it behind
+     lets the previous part's calculation be saved as this one's estimate. */
+  _scLast=null;
   scClear();
+}
+
+/** Start again, keeping nothing. */
+function scNewDraft(){
+  scClearSession();
   scRenderFieldStates();
   scDraftStatus("Started a new scenario. The one you were on is still saved.");
   scRenderDrafts();
+  scRenderBuilder();
+  scAiStatus("");
+  var out=document.getElementById("rev-out"); if(out)out.innerHTML="";
 }
 
 function scOpenDraft(id){

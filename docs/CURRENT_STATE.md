@@ -113,7 +113,7 @@ Every figure below came from the working tree on the date above.
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
 | Modules under `src/` | 0 | 50 |
-| Test files | 0 | 83 |
+| Test files | 0 | 84 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
