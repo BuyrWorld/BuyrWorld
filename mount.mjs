@@ -62,6 +62,7 @@
            OPERATION as EDIT_OPERATION, OUTCOME as EDIT_OUTCOME }
     from "./src/studio/edit-proposal.mjs";
   import { readInstruction, PHRASINGS } from "./src/studio/read-instruction.mjs";
+  import { updateStudio, initStudio } from "./src/render/studio-view.mjs";
   import { newCase, saveCase, loadCase, loadCases, listCases, deleteCase, setStatus, linkOutcome,
            storeStatus, STATUS as CASE_STATUS } from "./src/services/case-store.mjs";
   import { parseSpendCsv, analyseSpend as analyseSpendExact, indicativeSavings } from "./src/calc/spend.mjs";
@@ -125,6 +126,7 @@
                 extractClaim, confirmField, FIELD_RULES, DRIVER_RULES,
                 aiAdapter: createAdapter({ transport: httpTransport() }),
                 saveOutcome, loadOutcomes, clearOutcomes, exportOutcomes,
-                SAMPLE_INDEX: STEEL_A };
+                updateStudio, SAMPLE_INDEX: STEEL_A };
+  initStudio();
   if (typeof defRenderDrivers === "function") defRenderDrivers();
   if (typeof defRenderOutcomes === "function") defRenderOutcomes();

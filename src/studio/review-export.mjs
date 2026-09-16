@@ -113,6 +113,8 @@ export function snapshot(input = {}) {
     /* Null rather than a number: there is no model, and a model revision of 1
        would imply one exists. */
     modelRevision: input.modelRevision ?? null,
+    model: input.model ?? null,
+    material: input.material ? Object.freeze({ ...input.material }) : null,
     units: input.units ?? "mm",
     preparedBy: input.preparedBy ?? null,
     at: input.at ?? new Date().toISOString(),
@@ -199,8 +201,7 @@ ${gaps ? `<h2>What is unresolved</h2><ul class="gaps">\n${gaps}\n</ul>` : ""}
 <footer>
 <p>This package is a draft prepared for technical review. It does not authorise manufacture,
 record a review decision, or commit anyone to anything. Nothing has been sent to anybody.</p>
-<p>It contains no solid model and no dimensioned drawing: this build has no geometry engine,
-so the dimensions and limits in the table above are the authoritative record.</p>
+<p>${snap.model ? "A parametric model snapshot accompanies this schedule as part-model.json. Its dimensions are in micrometres; it is not a STEP solid or a manufacturing drawing." : "It contains no solid model and no dimensioned drawing; the dimensions and limits in the table above are the authoritative record."}</p>
 </footer>
 </body></html>`;
 }
@@ -306,6 +307,20 @@ export async function buildPackage(snap) {
     "requirement-schedule.json": scheduleJson(snap),
     "review-notes.md": reviewNotes(snap),
   };
+  if (snap.model) {
+    files["part-model.json"] = JSON.stringify({
+      schema: "buyrworld-part-review/1",
+      ...header(snap),
+      geometryUnits: "um",
+      model: snap.model,
+      material: snap.material,
+      requirementSchedule: JSON.parse(scheduleJson(snap)),
+      displayRows: snap.schedule.rows,
+      limitations: ["Parametric primitives only. Not a STEP solid.",
+        "Draft for technical review; not a manufacturing drawing.",
+        "Costs and stock purchasing quantities are not derived from this preview."]
+    }, (key, value) => typeof value === "bigint" ? value.toString() : value, 2);
+  }
 
   /* Every artifact carries the label, checked rather than assumed — it is the
      one thing that stops a draft being read as a decision. */

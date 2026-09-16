@@ -3108,7 +3108,11 @@ async function scExportReview(){
       units:scVal("sc-unit")||"mm",
       preparedBy:scVal("rev-by")||null,
       requirements:_scReqs,
-      features:[]
+      features:typeof _scModel!=="undefined"&&_scModel ? _scModel.features.map(function(f){return f.id;}) : [],
+      model:typeof _scModel!=="undefined" ? _scModel : null,
+      modelRevision:typeof _scModel!=="undefined"&&_scModel ? _scModel.revision : null,
+      material:{name:scVal("sc-grade")||null,density:scVal("sc-dv")||null,
+        densityUnit:scVal("sc-du")||null,source:scVal("sc-ds")||null}
     });
     _scPackage=await B.buildReviewPackage(snap);
   }catch(e){
@@ -3135,6 +3139,7 @@ function scRenderPackage(){
       +'</li>';
   }).join("");
 
+  files+='<li class="bw-rev-file"><button type="button" class="bw-rev-save" data-do="scSaveArtifact" data-a="manifest.json">manifest.json</button><span class="bw-rev-what">File hashes and export metadata</span></li>';
   var absent=m.notIncluded.map(function(f){
     return '<li><b>'+ciEsc(f.name)+'</b> &mdash; '+ciEsc(f.what)+'. '+ciEsc(f.why)+'</li>';
   }).join("");
@@ -3148,7 +3153,7 @@ function scRenderPackage(){
     +'<div class="bw-rev-label">'+ciEsc(B_DRAFT_LABEL())+'</div>'
     +'<p class="bw-rev-lead">Nothing has been sent. These are files to hand to somebody '
     +'technical; saving them does not approve the part or record a review.</p>'
-    +'<div class="bw-rev-head">'+m.files.length+' file'+(m.files.length===1?'':'s')+'</div>'
+    +'<div class="bw-rev-head">'+(m.files.length+1)+' files</div>'
     +'<ul class="bw-rev-files">'+files+'</ul>'
     +(absent?'<div class="bw-rev-head">Not included</div><ul class="bw-rev-absent">'+absent+'</ul>':'')
     +(omissions?'<div class="bw-rev-head">'+(m.complete?'':'This package is incomplete')
@@ -3336,6 +3341,7 @@ function scRenderBuilder(){
   var B=window.BW;
 
   if(!_scModel){
+    if(B&&B.updateStudio) B.updateStudio(null);
     host.innerHTML='<p style="color:var(--bw-muted);font-size:12px;margin:10px 0 0;line-height:1.6">'
       +'No model yet. You do not need one &mdash; requirements, quantities and costs all work '
       +'without it. Build one when a shape would help somebody understand the part.</p>';
@@ -3344,6 +3350,7 @@ function scRenderBuilder(){
   }
 
   var v=B.volume(_scModel);
+  if(B.updateStudio) B.updateStudio(_scModel);
   var d=null;
   try{
     if(scVal("sc-dv")!==""&&scVal("sc-ds")!=="") d=B.scDensity(scVal("sc-dv"),scVal("sc-du")||"g/cm3",scVal("sc-ds"));

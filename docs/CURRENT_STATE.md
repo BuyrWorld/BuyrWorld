@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 48 |
-| Test files | 0 | 82 |
+| Modules under `src/` | 0 | 50 |
+| Test files | 0 | 83 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -301,3 +301,26 @@ handling**; that section is the one to read before anything else here.
 - **The Upstash purge is outstanding.** See `SECURITY_REVIEW.md`.
 - **No scanned document can be read**, and there is no CAD parser. Both are
   stated on the page rather than implied away.
+
+## Studio visual and review update — 15 September 2026
+
+`src/render/part-view.mjs` projects the existing block, holes and pockets into
+rotatable SVG views. `src/render/studio-view.mjs` connects those views to the
+existing form, with feature selection and a clearly marked resize preview.
+Neither renderer computes commercial quantities or costs.
+
+Review exports now pass the actual model revision and active feature ids.
+When a model exists, part-model.json carries exact micrometre dimensions, the
+material as entered, requirement records and display rows from one snapshot.
+The manifest is now downloadable. scripts/build_part_review.py uses that JSON
+offline to produce dimensioned review illustrations, HTML and a hashed ZIP.
+It does not provide STEP, a CAD kernel, manufacturing approval or standards
+verification. Saved scenarios still preserve core fields only, not the full
+model, requirements and route. Download the review snapshot to retain these
+engineering records. A later complete persistence increment is still needed.
+
+Feature identities now survive deletion of the last hole and branching after
+undo; a new feature cannot inherit a requirement from a discarded feature id.
+The live baseline was inspected in a browser. Local browser preview was blocked
+by the environment, so the supplied generated images are visual targets only.
+Check the Vercel preview at desktop and mobile widths before deployment.

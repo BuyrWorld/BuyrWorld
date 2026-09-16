@@ -291,10 +291,11 @@ describe("bars", () => {
 describe("the page is honest about what this release is", () => {
   const page = html.slice(html.indexOf('id="page-shouldcost"'), html.indexOf("<!-- ============ WORKSPACE"));
 
-  test("it says there is no document extraction, rather than implying there is", () => {
-    assert.match(page, /There is no document extraction in this build/);
-    assert.match(page, /does not contain recoverable 3D geometry/);
-    assert.match(page, /no dimension or certificate value here was recovered from one/);
+  test("it distinguishes PDF text extraction from CAD reconstruction", () => {
+    assert.match(page, /read labelled text from a PDF/);
+    assert.match(page, /confirm each proposed value/);
+    assert.match(page, /does not reconstruct CAD from a drawing/);
+    assert.doesNotMatch(page, /There is no document extraction in this build/);
   });
 
   test("all three releases are built, so nothing is described as coming", () => {
@@ -310,8 +311,8 @@ describe("the page is honest about what this release is", () => {
   });
 
   test("what is still absent is named, since that has not changed", () => {
-    assert.match(page, /There is no document extraction in this build/);
-    assert.match(page, /Everything you record stays in this browser/);
+    assert.match(page, /Scanned images need manual entry/);
+    assert.match(page, /Studio processing is local to this browser/);
   });
 
   test("nothing on the page claims a real supplier, price or certificate", () => {

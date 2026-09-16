@@ -110,8 +110,8 @@ function big(v, what) {
 function nextId(model, kind) {
   const prefix = kind === FEATURE.HOLE ? "hole" : "pocket";
   let highest = 0;
-  for (const f of model.features) {
-    const m = new RegExp(`^${prefix}-(\\d+)$`).exec(f.id);
+  for (const id of [...(model.issuedIds ?? []), ...model.features.map(f => f.id)]) {
+    const m = new RegExp(`^${prefix}-(\\d+)$`).exec(id);
     if (m) highest = Math.max(highest, Number(m[1]));
   }
   return `${prefix}-${highest + 1}`;
@@ -202,6 +202,8 @@ function place(model, feature) {
     model: Object.freeze({
       ...model,
       features: Object.freeze([...model.features, feature]),
+      issuedIds: Object.freeze([...new Set([...(model.issuedIds ?? []),
+        ...model.features.map(f => f.id), feature.id])]),
       revision: model.revision + 1,
     }),
   };
@@ -351,14 +353,24 @@ export function mass(model, density) {
  * are small.
  */
 export function history(initial, limit = 50) {
-  let stack = [initial];
+  // Issued identities survive deletion AND branching after undo. Otherwise a
+  // new hole can inherit a requirement attached to a discarded hole.
+  const issued = new Set([...(initial.issuedIds ?? []), ...initial.features.map(f => f.id)]);
+  function tracked(model) {
+    for (const id of [...(model.issuedIds ?? []), ...model.features.map(f => f.id)]) issued.add(id);
+    if ([...issued].every(id => (model.issuedIds ?? []).includes(id))) return model;
+    return Object.freeze({ ...model, issuedIds: Object.freeze([...issued]) });
+  }
+  let stack = [tracked(initial)];
   let at = 0;
+  const current = () => (stack[at] = tracked(stack[at]));
   return Object.freeze({
-    current: () => stack[at],
+    current,
     revision: () => stack[at].revision,
     canUndo: () => at > 0,
     canRedo: () => at < stack.length - 1,
     push(model) {
+      model = tracked(model);
       /* Anything redone from here is gone, which is what everyone expects
          after editing from a point in the past. */
       stack = [...stack.slice(0, at + 1), model];
@@ -366,8 +378,8 @@ export function history(initial, limit = 50) {
       at = stack.length - 1;
       return model;
     },
-    undo() { if (at > 0) at--; return stack[at]; },
-    redo() { if (at < stack.length - 1) at++; return stack[at]; },
+    undo() { if (at > 0) at--; return current(); },
+    redo() { if (at < stack.length - 1) at++; return current(); },
     depth: () => stack.length,
   });
 }

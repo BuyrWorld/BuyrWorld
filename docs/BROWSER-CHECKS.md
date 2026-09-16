@@ -94,20 +94,39 @@ contains a different width.
       field then reads *User confirmed*.
 - [ ] Choosing an entry path clears nothing either way.
 
-## 5 · The Part Builder — 15 minutes
+## 5 · The Part Builder and its preview — 25 minutes
 
-`PART-REVIEW-CHECKS.md`: *"A supported shape updates from numeric inputs with
-explicit units and origin; invalid input preserves last valid geometry."*
+`acceptance/PART-REVIEW-CHECKS.md`: *"A supported shape updates from numeric
+inputs with explicit units and origin; invalid input preserves last valid
+geometry."*
 
-- [ ] A block of 100 × 50 × 10 draws a plan view to scale.
+**The largest untested surface in the product.** The 16 September update
+added an isometric view, rotation, top and front projections, feature
+selection and a pending resize preview. None of it has been in a browser,
+and a projection that looks plausible and is wrong is worse than no picture —
+somebody will trust the picture.
+
+- [ ] A block of 100 × 60 × 10 draws. Try **3D**, **Top** and **Front**, and
+      the rotation slider. Front shows the envelope only, which is correct.
+- [ ] Add a hole at 15, 20 ⌀8 and a pocket at 40, 10 of 20 × 20 × 3 deep.
+      Both appear where the numbers say, and in the right proportion to the
+      block. Measure one against the stated size if anything looks off.
+- [ ] Select `hole-1`. Its coordinates appear and match what you entered.
+- [ ] Change the width to 120. It must say **Preview · not applied** and the
+      committed model must not move until **Set the block**.
+- [ ] Try width 5. The part stays as it was and an explanation appears —
+      the hole would fall outside, and nothing is moved to make it fit.
 - [ ] A hole at 900, 25 is refused, the drawing does not change, and **the
       numbers you typed are still in the boxes**.
 - [ ] Volume shows a *range* once a hole exists, and a single figure before.
-      A bracket displayed as one number is the thing the engine avoided.
+      A bracket displayed as one number is what the engine avoided.
 - [ ] Add a tolerance scoped to `hole-1`, then delete `hole-1`. The
-      requirement reports **Needs reattaching** and the builder says one
-      requirement now points at nothing.
-- [ ] Undo brings the hole back.
+      requirement reports **Needs reattaching**.
+- [ ] Delete the *highest-numbered* hole, then add another. It must **not**
+      reuse that id. This was a real defect — a tolerance written for a
+      deleted hole silently attached itself to a new one — and the fix is
+      worth confirming by eye as well as by test.
+- [ ] Undo, then add a different feature. Again, no id is reused.
 
 ## 6 · Describing a change — 10 minutes
 
@@ -123,12 +142,33 @@ explicit units and origin; invalid input preserves last valid geometry."*
 falsely complete package"*, *"No reviewer email… is sent merely by
 exporting."*
 
-- [ ] **Prepare review package** lists four files and, above them, the two it
-      does not contain with reasons.
+- [ ] **Prepare review package** lists five files — including `manifest.json`
+      and `part-model.json` — and, above them, the two it does not contain
+      with reasons.
+- [ ] With a model built, the schedule does **not** say every requirement
+      needs reattaching. It did until 16 September: the export passed an
+      empty feature list, so it told a reviewer that every requirement had
+      lost its target while the part still had the holes.
+- [ ] `part-model.json` carries the model revision and the feature ids.
 - [ ] Every file downloads and opens. The HTML schedule renders.
 - [ ] The word *approved* appears nowhere in any of them.
 - [ ] Nothing is sent. Check the network tab if you want to be sure — the
       module has no way to, and a test asserts it never grows one.
+
+## 8 · The Python review tool — 10 minutes, and NOT RUN here
+
+`scripts/build_part_review.py` came with the 16 September update. **Python
+is not installed on the machine this work was done on**, so its six tests
+have never been executed here and neither has the script. The pack reports
+them passing in its own environment; that is its evidence, not mine.
+
+- [ ] `python -m unittest discover -s tests/python -v` — six tests.
+- [ ] Download `part-model.json` from a real package, then
+      `python scripts/build_part_review.py <file> --out my-part-review`.
+- [ ] Open `my-part-review/review.html`. The dimensioned view matches the
+      part you built.
+- [ ] Run it twice with the same output name. It must refuse rather than
+      overwrite.
 
 ---
 
@@ -136,7 +176,9 @@ exporting."*
 
 Not repeated above, so a browser pass does not spend time on it:
 
-- Every calculation, refusal and provenance rule — 2,399 tests.
+- Every calculation, refusal and provenance rule — 2,407 tests.
+- That feature ids are never reused, including after deleting the highest
+  and after branching from an Undo.
 - The engine's agreement with the pack's reference fixture, run against the
   deployed modules rather than the local copies.
 - That the served `app.js` parses and its dispatch table resolves.
