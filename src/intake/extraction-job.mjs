@@ -101,6 +101,12 @@ export async function submit(file, sub, { transport } = {}) {
       state: res?.state ?? JOB.QUEUED,
       jobId: res?.jobId ?? null,
       submission: sub,
+      /* A worker that answers in one round trip hands its reading back here
+         rather than through a second call. Carried rather than dropped: the
+         state machine is the same either way, and a synchronous reader that
+         had to be polled for an answer it already gave would be silly. */
+      text: res?.text ?? null,
+      truncated: Boolean(res?.truncated),
       said: "Sent to be read. Nothing it finds will be used until you confirm it.",
     });
   } catch (e) {

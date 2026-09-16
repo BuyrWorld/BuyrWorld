@@ -18,6 +18,9 @@
            withinLimits as fileWithinLimits, HANDLING as FILE_HANDLING,
            LIMITS as FILE_LIMITS, HEAD_BYTES } from "./src/intake/file-router.mjs";
   import * as viewer from "./src/intake/viewer.mjs";
+  import { readingsFrom, droppedSaid, downscaleTo, SAID as VISION_SAID,
+           CONSENT_SAID, CONSENT_CHOICES, PROMPT_VERSION as VISION_PROMPT_VERSION
+         } from "./src/intake/vision-read.mjs";
   import { submission as jobSubmission, submit as submitExtraction,
            applicable as resultApplicable, asComparison as resultAsComparison,
            canRetry as jobCanRetry, retryOf as jobRetryOf,
@@ -100,6 +103,8 @@
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { identifyFile, fileNextStep, fileWithinLimits,
+                readingsFrom, droppedSaid, downscaleTo, VISION_SAID,
+                CONSENT_SAID, CONSENT_CHOICES, VISION_PROMPT_VERSION,
                 jobSubmission, submitExtraction, resultApplicable, resultAsComparison,
                 jobCanRetry, jobRetryOf, workerConfigured, JOB, JOB_FAILURE,
                 RESULT_REFUSED, WORKER_UNAVAILABLE_SAID,

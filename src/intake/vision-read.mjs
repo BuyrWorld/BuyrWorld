@@ -261,3 +261,68 @@ export function droppedSaid(dropped) {
   return `${dropped.length} reading${dropped.length > 1 ? "s were" : " was"} discarded before `
        + `you saw ${dropped.length > 1 ? "them" : "it"}: ${parts.join("; ")}.`;
 }
+
+/* ------------------------------------------------------------- consent */
+
+/**
+ * What somebody is agreeing to, said before they agree to it.
+ *
+ * `specs/03`: *"Explain cloud processing before upload where applicable"* and
+ * *"truthful local/cloud handling copy"*. The page said, twice, that the file
+ * never leaves this browser. For a PDF read by rule that is still true and
+ * still worth saying. For this route it is not, and leaving the old sentence
+ * up while quietly adding an upload would be the worst thing in this file.
+ *
+ * So the sentence is specific about the three things somebody would want to
+ * know and would not otherwise be told: that the document leaves the
+ * computer, who reads it, and that the reading is a proposal rather than an
+ * answer. It does not argue for the choice. Typing the values is a real
+ * option and is offered as one.
+ */
+export const CONSENT_SAID = Object.freeze({
+  what: "Nothing on a picture can be read in this browser. Sending it for reading "
+      + "uploads this document from your computer to BuyrWorld's reader, which asks "
+      + "a language model to read the printed text off it.",
+  kept: "The image is sent for the reading and is not stored afterwards. What is read "
+      + "is never used until you confirm it, value by value.",
+  limits: "A model can misread a photograph, and when it does the answer looks like an "
+        + "answer rather than a gap. Every value comes back with the printed text it was "
+        + "taken from, and that is the thing to check.",
+  instead: "You can read the document here yourself and type the values instead. "
+         + "Nothing is uploaded if you do.",
+});
+
+/** The two answers, in the words the buttons use. */
+export const CONSENT_CHOICES = Object.freeze({
+  SEND: "Send it to be read",
+  TYPE: "I'll type the values",
+});
+
+/**
+ * How large to send it.
+ *
+ * The reader downsamples anything bigger than about 1,568 pixels on the long
+ * edge, so sending more than that costs upload time and buys nothing. Sending
+ * less loses small printed text, which on a drawing is most of what matters.
+ *
+ * Nothing is ever enlarged. A small photograph stays small — scaling it up
+ * would invent pixels, and a reader that then reports a dimension from them
+ * is doing the one thing route 6 forbids.
+ */
+export const LONG_EDGE = 1568;
+
+export function downscaleTo(width, height) {
+  const w = Number(width) || 0;
+  const h = Number(height) || 0;
+  if (w <= 0 || h <= 0) return null;
+
+  const longest = Math.max(w, h);
+  if (longest <= LONG_EDGE) return { width: w, height: h, scaled: false };
+
+  const k = LONG_EDGE / longest;
+  return {
+    width: Math.max(1, Math.round(w * k)),
+    height: Math.max(1, Math.round(h * k)),
+    scaled: true,
+  };
+}

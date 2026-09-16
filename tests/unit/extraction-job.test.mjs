@@ -224,3 +224,41 @@ describe("a refused reading is kept, not thrown away", () => {
     assert.equal(asComparison(ready(), v).offer, null);
   });
 });
+
+/* -------------------------------------------- a reader that answers at once */
+
+describe("a worker that answers in one round trip", () => {
+  test("the reply comes through with the result", async () => {
+    /* The state machine is the same whether an answer arrives now or after
+       polling. A synchronous reader that had to be polled for an answer it
+       already gave would be silly, so the text rides along. */
+    const r = await submit({}, sub(), {
+      transport: async () => ({ state: JOB.REVIEW_READY, text: '{"candidates":[]}' }),
+    });
+    assert.equal(r.state, JOB.REVIEW_READY);
+    assert.equal(r.text, '{"candidates":[]}');
+  });
+
+  test("a truncated reply is carried as truncated", async () => {
+    const r = await submit({}, sub(), {
+      transport: async () => ({ state: JOB.REVIEW_READY, text: "{", truncated: true }),
+    });
+    assert.equal(r.truncated, true);
+  });
+
+  test("a reader that gives no text is not described as having given some", async () => {
+    const r = await submit({}, sub(), { transport: async () => ({ state: JOB.QUEUED }) });
+    assert.equal(r.text, null);
+    assert.equal(r.truncated, false);
+  });
+
+  test("and such a result still goes through the same applicability check", async () => {
+    /* Arriving in one round trip does not exempt it: the case can still have
+       changed between the click and the answer. */
+    const r = await submit({}, sub(), {
+      transport: async () => ({ state: JOB.REVIEW_READY, text: "{}" }),
+    });
+    assert.equal(applicable(r, at({ caseId: "case-2" })).refused, REFUSED.OTHER_CASE);
+    assert.equal(applicable(r, at()).ok, true);
+  });
+});

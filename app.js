@@ -4552,6 +4552,9 @@ async function exRead(which,input){
 
   exViewClose(which);
   _exState[which]=null;
+  /* A new document is a new revision, so a reading of the last one that
+     arrives late is recognised as being of the last one. */
+  if(typeof _exRevision!=="undefined")_exRevision[which]=(_exRevision[which]||0)+1;
   if(nameEl)nameEl.textContent=f.name+" — checking…";
   /* The moment the read began. Anything edited after this has been seen by a
      person more recently than by the reader, so a proposal for it is stale
@@ -4664,10 +4667,23 @@ function exShowImage(which,file,say,note){
   msg.style.cssText="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6";
   msg.textContent=say;
 
+  /* Nothing on a picture can be read here, and this is the offer to have it
+     read elsewhere. It asks before it sends anything. */
+  var offer=document.createElement("button");
+  offer.type="button";
+  offer.className="bw-act bw-act-secondary";
+  offer.style.cssText="margin:var(--bw-3) 0 0";
+  offer.textContent="Read this document for me";
+  offer.addEventListener("click",function(){
+    offer.disabled=true;
+    exAskToSend(which,file,host);
+  });
+
   if(note){ var n=document.createElement("div"); n.innerHTML=note; host.appendChild(n); }
   host.appendChild(pane);
   host.appendChild(bar);
   host.appendChild(msg);
+  host.appendChild(offer);
 
   var view=null;
   var draw=function(){
@@ -4903,6 +4919,228 @@ function exReReviewHTML(lost){
     +'</ul></div>';
 }
 
+
+/* ------------------------------------------------ reading a picture, elsewhere */
+
+/**
+ * When each path's fields were last touched by a person.
+ *
+ * The adapter refuses a reading that arrives after somebody typed into the
+ * fields it would fill. That rule needs a time, and nothing was recording
+ * one, which would have made the refusal unreachable — the shape of dead
+ * guard this codebase has already had to dig out five times.
+ */
+var _exEditedAt={scx:0,ctx:0};
+
+/** A revision, so a reading of a replaced document is recognised as stale. */
+var _exRevision={scx:0,ctx:0};
+
+/**
+ * Send one image to be read.
+ *
+ * Downscaled first, to the long edge the reader works at. Sending more buys
+ * nothing and costs upload time; sending less loses the small printed text,
+ * which on a drawing is most of what matters. Nothing is ever enlarged.
+ */
+async function exImagePayload(file){
+  var B=window.BW;
+  var bitmap=await createImageBitmap(file);
+  var plan=B.downscaleTo(bitmap.width,bitmap.height);
+  if(!plan){ bitmap.close&&bitmap.close(); throw new Error("That image has no readable size."); }
+
+  var canvas=document.createElement("canvas");
+  canvas.width=plan.width; canvas.height=plan.height;
+  var ctx=canvas.getContext("2d");
+  ctx.drawImage(bitmap,0,0,plan.width,plan.height);
+  bitmap.close&&bitmap.close();
+
+  var url=canvas.toDataURL("image/jpeg",0.9);
+  var comma=url.indexOf(",");
+  return {image:url.slice(comma+1),mediaType:"image/jpeg",scaled:plan.scaled};
+}
+
+/** The transport the adapter talks through. One endpoint, one purpose. */
+function exReaderTransport(){
+  return async function(job){
+    var payload=await exImagePayload(job.file);
+    var res=await fetch("/api/read-document",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        image:payload.image,
+        mediaType:payload.mediaType,
+        target:job.submission.target||"drawing"
+      })
+    });
+    var body=await res.json().catch(function(){ return {}; });
+    if(!res.ok){
+      /* The endpoint says whether this is worth trying again; the adapter
+         classifies on the message, so the message carries it. */
+      throw new Error((body.permanent?"unsupported: ":"")+(body.error||("The reader returned "+res.status)));
+    }
+    return {state:window.BW.JOB.REVIEW_READY,text:body.text,truncated:Boolean(body.truncated)};
+  };
+}
+
+/**
+ * Ask before sending anything.
+ *
+ * `specs/03`: explain cloud processing before upload. The wording lives in
+ * the module so it can be read in a diff and tested; this only places it.
+ * Both answers are buttons of equal weight — consent copy that leads
+ * somewhere is not consent copy.
+ */
+function exAskToSend(which,file,host){
+  var B=window.BW,C=B.CONSENT_SAID;
+  var box=document.createElement("div");
+  box.style.cssText="border:1px solid var(--bw-warning);background:var(--bw-warning-soft);"
+    +"border-radius:var(--bw-r-sm);padding:14px 16px;margin-top:var(--bw-4)";
+
+  var head=document.createElement("div");
+  head.className="eyebrow";
+  head.style.cssText="margin:0 0 8px";
+  head.textContent="Before this leaves your computer";
+  box.appendChild(head);
+
+  ["what","kept","limits","instead"].forEach(function(k){
+    var p=document.createElement("p");
+    p.style.cssText="margin:0 0 8px;font-size:12.5px;line-height:1.7;color:var(--bw-body)";
+    p.textContent=C[k];
+    box.appendChild(p);
+  });
+
+  var row=document.createElement("div");
+  row.style.cssText="display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--bw-3)";
+
+  var send=document.createElement("button");
+  send.type="button"; send.className="bw-act bw-act-primary"; send.style.margin="0";
+  send.textContent=B.CONSENT_CHOICES.SEND;
+
+  var no=document.createElement("button");
+  no.type="button"; no.className="bw-act bw-act-secondary"; no.style.margin="0";
+  no.textContent=B.CONSENT_CHOICES.TYPE;
+
+  row.appendChild(send); row.appendChild(no);
+  box.appendChild(row);
+  host.appendChild(box);
+
+  no.addEventListener("click",function(){ box.remove(); });
+  send.addEventListener("click",function(){
+    send.disabled=true; no.disabled=true;
+    send.textContent="Reading…";
+    exCloudRead(which,file,box);
+  });
+}
+
+/**
+ * Send it, and decide whether the answer that comes back still applies.
+ *
+ * The check is not ceremony. Between the click and the reply somebody can
+ * start a new case, replace the drawing, or type the values themselves — and
+ * a reading applied quietly after any of those is indistinguishable from the
+ * software changing a number on its own.
+ */
+async function exCloudRead(which,file,box){
+  var B=window.BW;
+  var host=document.getElementById(which+"-out");
+  if(!B||!host)return;
+
+  var sub=B.jobSubmission({
+    caseId:which==="scx"?(_scScenarioId||"scx"):"ctx",
+    revision:_exRevision[which],
+    documentId:(_exReview[which]&&_exReview[which][0]&&_exReview[which][0].document.fingerprint)||null
+  });
+  sub=Object.assign({},sub,{target:which==="ctx"?"certificate":"drawing"});
+
+  var result=await B.submitExtraction(file,sub,{transport:exReaderTransport()});
+
+  if(box)box.remove();
+
+  if(!result.ok){
+    host.appendChild(exNoteEl(result.said,B.jobCanRetry(result)?function(){
+      exAskToSend(which,file,host);
+    }:null));
+    return;
+  }
+
+  var verdict=B.resultApplicable(result,{
+    caseId:which==="scx"?(_scScenarioId||"scx"):"ctx",
+    revision:_exRevision[which],
+    editedAt:_exEditedAt[which]
+  });
+  if(!verdict.ok){
+    host.appendChild(exNoteEl(verdict.why,null));
+    return;
+  }
+
+  var reading=B.readingsFrom(result.text);
+  if(!reading.ok){ host.appendChild(exNoteEl(reading.why,null)); return; }
+  if(!reading.candidates.length){
+    host.appendChild(exNoteEl("Nothing on this picture was read into a field this product knows. "
+      +"That is not a failure of the drawing \u2014 enter the values yourself.",null));
+    return;
+  }
+
+  exApplyReading(which,file,reading,result);
+}
+
+/** A remark under the viewer, with an optional way to try again. */
+function exNoteEl(text,retry){
+  var p=document.createElement("div");
+  p.style.cssText="margin-top:var(--bw-4);font-size:12.5px;line-height:1.7;color:var(--bw-body)";
+  var say=document.createElement("p");
+  say.style.cssText="margin:0";
+  say.textContent=text;
+  p.appendChild(say);
+  if(retry){
+    var again=document.createElement("button");
+    again.type="button"; again.className="bw-act bw-act-secondary";
+    again.style.cssText="margin-top:10px";
+    again.textContent="Try again";
+    again.addEventListener("click",function(){ p.remove(); retry(); });
+    p.appendChild(again);
+  }
+  return p;
+}
+
+/**
+ * Put a picture's readings into the same queue everything else goes through.
+ *
+ * Deliberately the same queue. A reading is a reading — it arrives proposed,
+ * it carries the printed text it came from, and it cannot be used until
+ * somebody confirms it. The only difference is the method, and the method is
+ * what the row says about how much to trust it.
+ */
+function exApplyReading(which,file,reading,result){
+  var B=window.BW;
+  var host=document.getElementById(which+"-out");
+  var doc=B.documentRef({filename:file.name,revision:String(_exRevision[which]),
+                         fingerprint:result.submission.idempotencyKey});
+
+  _exState[which]=Object.freeze({
+    filename:file.name,
+    target:which==="ctx"?B.EX_TARGET.CERTIFICATE:B.EX_TARGET.DRAWING,
+    candidates:reading.candidates,
+    coverage:{pagesProvided:1,pagesWithText:1,pagesInDocument:1,complete:true,unread:0,withoutText:0},
+    conflicts:[],
+    blockers:[],
+    method:B.VISION_SAID
+  });
+  _exReview[which]=B.reviewQueue(_exState[which],
+    {method:B.REVIEW_METHOD.VISION,document:doc});
+
+  var panel=document.createElement("div");
+  panel.style.marginTop="var(--bw-4)";
+  var dropped=B.droppedSaid(reading.dropped);
+  panel.innerHTML=(result.truncated
+      ?exNote("The reading was cut short, so it is incomplete. What is below is what arrived; "
+             +"anything absent was not looked at rather than not found.")
+      :"")
+    +(dropped?exNote(dropped):"")
+    +exResultHTML(which,_exState[which]);
+  host.appendChild(panel);
+}
+
 /* Which form field each extracted field fills. Anything not named here is
    read and shown, and filled in by hand — a mapping nobody wrote is not a
    mapping to guess at. */
@@ -5017,6 +5255,9 @@ function exBind(page){
       return c===row.best?Object.assign({},c,{value:t.value,state:"proposed",confirmedBy:null,edited:true}):c;
     });
     _exState[which]=Object.assign({},r,{candidates:next});
+    /* The adapter refuses a reading that arrives after this. Recording the
+       time is what makes that refusal reachable rather than decorative. */
+    if(typeof _exEditedAt!=="undefined")_exEditedAt[which]=Date.now();
 
     /* And in the queue, where the reading it replaced is kept. The extraction
        above still overwrites its own value — that is what the form binds to —

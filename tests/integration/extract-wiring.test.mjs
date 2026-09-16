@@ -347,9 +347,58 @@ describe("the document is content, and it is escaped", () => {
 describe("what the page must keep saying", () => {
   const panel = () => html.slice(html.indexOf('id="ctx-file"') - 1400, html.indexOf('id="ctx-out"'));
 
-  test("it says the file never leaves the browser", () => {
-    assert.match(panel(), /never leaves this browser/);
+  test("the local claim is scoped to the route where it is true", () => {
+    /* This said "The file never leaves this browser", unscoped, and it was
+       true when a PDF read by rule was the only route. It stopped being true
+       the moment a picture could be sent to be read, and an unscoped promise
+       that has quietly become conditional is worse than no promise — it is
+       the one somebody relies on. */
+    assert.match(panel(), /A PDF is read entirely in this browser/);
     assert.match(panel(), /no upload, no extraction service and no prompt/);
+  });
+
+  test("no blanket promise that the file never leaves is left anywhere", () => {
+    /* The regression this exists to prevent, checked across the whole page
+       rather than this panel: one of the two copies being updated and the
+       other left standing is exactly how this would go wrong. */
+    assert.equal(/never leaves (this|your) (browser|computer)/i.test(html), false,
+      "an unscoped local-only promise is still on the page");
+  });
+
+  test("the upload is disclosed where the upload is offered", () => {
+    assert.match(panel(), /you may send it to be read, which does upload it/);
+    assert.match(panel(), /you are asked first/);
+  });
+
+  test("both panels say the same thing, because both do the same thing", () => {
+    const scx = html.slice(html.indexOf('id="scx-file"') - 1400, html.indexOf('id="scx-out"'));
+    for (const claim of [/A PDF is read entirely in this browser/, /does upload it/]) {
+      assert.match(scx, claim, "the drawing panel and the certificate panel disagree");
+    }
+  });
+
+  test("nothing is sent without being asked first", () => {
+    /* The button offers; it does not send. Everything that reaches the
+       network goes through the consent step, and a path around it would make
+       the disclosure above a lie. */
+    const offer = fnSource("exShowImage");
+    assert.match(offer, /exAskToSend\(which,file,host\)/);
+    assert.equal(/exCloudRead|fetch\(/.test(offer), false,
+      "the viewer can reach the network without passing through consent");
+
+    const ask = fnSource("exAskToSend");
+    assert.match(ask, /send\.addEventListener\("click"/);
+    assert.match(ask, /exCloudRead\(which,file,box\)/);
+  });
+
+  test("the consent wording comes from the module, not from the page", () => {
+    /* So it is reviewed in one diff and tested in one place. A second copy
+       here would drift from the one the tests assert on. */
+    const ask = fnSource("exAskToSend");
+    assert.match(ask, /B\.CONSENT_SAID/);
+    assert.match(ask, /B\.CONSENT_CHOICES\.SEND/);
+    assert.equal(/uploads this document|language model/.test(ask), false,
+      "the page carries its own copy of the consent wording");
   });
 
   test("it says nothing found is used until confirmed", () => {

@@ -122,12 +122,33 @@ page beyond the read limit, with both counts.
 Four refusals: another case, an old revision, fields edited since the job was
 sent, and a cancellation that raced the result.
 
-**Real JPG and scanned-PDF extraction with a configured backend — blocked.**
-This repository is static HTML and JS on Vercel with Node serverless
-functions. OCR needs a binary runtime and PDF rasterisation, behind
-authenticated same-origin job endpoints. The pack says so itself: *"A Python
-script in a static repository is not a deployed service."* Per `specs/02`,
-preview and manual entry stay usable and the gate is recorded blocked.
+**Real JPG extraction — met, by a different route than the spec assumes.**
+The spec assumes a self-hosted OCR worker. This repository is static HTML and
+JS on Vercel with Node serverless functions, and OCR needs a binary runtime
+and PDF rasterisation it has not got — the pack says so itself: *"A Python
+script in a static repository is not a deployed service."*
+
+So the reading is done by a multimodal model through `api/read-document.js`,
+which is `specs/03` route 4 rather than route 3. That is a real difference
+and worth being precise about: there is no OCR layer, so there are no
+character bounding boxes, and therefore still no source regions from this
+route either. What there is instead is a quoted line of printed text per
+value, which the browser checks actually contains the value before the
+reading is shown at all.
+
+**The privacy copy changed, and that is the part to review.** The page said
+"The file never leaves this browser", unscoped. It was true when a rule-read
+PDF was the only route. It is now scoped to the route where it is true, the
+upload is disclosed where it is offered, and nothing is sent without an
+explicit per-document consent step that says what leaves the computer, who
+reads it, and that a model can misread a photograph. A test fails if an
+unscoped local-only promise reappears anywhere on the page.
+
+**Scanned PDFs — still not read.** A scanned page has no text layer and
+nothing rasterises it to an image here, so the cloud route cannot be handed
+one. `page-text.mjs` names those pages; they remain manual entry. Rasterising
+PDF pages to canvas with the pdf.js already loaded is the obvious next step
+and is not done.
 
 ## Still open in Phase 1
 

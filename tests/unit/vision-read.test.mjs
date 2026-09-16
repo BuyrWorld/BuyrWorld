@@ -21,6 +21,7 @@ import assert from "node:assert/strict";
 import {
   instruction, parseReply, checkCandidate, readingsFrom, droppedSaid,
   FIELDS, DROPPED, PROMPT_VERSION, SAID,
+  CONSENT_SAID, CONSENT_CHOICES, downscaleTo, LONG_EDGE,
 } from "../../src/intake/vision-read.mjs";
 
 import { reviewItem, documentRef, usable, methodSaid, METHOD } from "../../src/intake/review.mjs";
@@ -249,5 +250,90 @@ describe("what a vision reading is allowed to be", () => {
     /* Provider confidence is not calibrated probability, and showing one as
        though it were is how a 94% becomes a reason not to check. */
     assert.equal(/\d+\s*%|confidence of|probability/i.test(SAID), false);
+  });
+});
+
+/* -------------------------------------------------------------- consent */
+
+describe("what somebody agrees to before anything is sent", () => {
+  test("it says the document leaves the computer, in those words", () => {
+    /* The page says twice that the file never leaves this browser. Adding an
+       upload while that sentence stands would be the worst thing in this
+       feature, so the replacement has to be unmistakable. */
+    assert.match(CONSENT_SAID.what, /uploads this document from your computer/);
+  });
+
+  test("it says who reads it", () => {
+    assert.match(CONSENT_SAID.what, /asks a language model to read/);
+  });
+
+  test("it says a model can misread, and where to look instead", () => {
+    assert.match(CONSENT_SAID.limits, /can misread a photograph/);
+    assert.match(CONSENT_SAID.limits, /the answer looks like an answer rather than a gap/);
+    assert.match(CONSENT_SAID.limits, /printed text it was taken from/);
+  });
+
+  test("it offers typing them as a real option rather than a fallback", () => {
+    assert.match(CONSENT_SAID.instead, /type the values instead/);
+    assert.match(CONSENT_SAID.instead, /Nothing is uploaded if you do/);
+  });
+
+  test("nothing in it argues for sending", () => {
+    /* Consent copy that sells the choice is not consent copy. */
+    const all = Object.values(CONSENT_SAID).join(" ");
+    assert.equal(/recommend|best|faster|save time|easier|just click/i.test(all), false);
+  });
+
+  test("and nothing in it claims the result is verified", () => {
+    const all = Object.values(CONSENT_SAID).join(" ");
+    assert.equal(/verified|accurate|reliable|guarantee/i.test(all), false);
+  });
+
+  test("both choices are offered by name", () => {
+    assert.equal(CONSENT_CHOICES.SEND, "Send it to be read");
+    assert.match(CONSENT_CHOICES.TYPE, /type the values/);
+  });
+});
+
+describe("how large it is sent", () => {
+  test("a big photograph comes down to the long edge the reader uses", () => {
+    const p = downscaleTo(4000, 3000);
+    assert.equal(p.width, LONG_EDGE);
+    assert.equal(p.height, 1176);
+    assert.equal(p.scaled, true);
+  });
+
+  test("a tall one is scaled on its own long edge", () => {
+    const p = downscaleTo(3000, 4000);
+    assert.equal(p.height, LONG_EDGE);
+    assert.equal(p.scaled, true);
+  });
+
+  test("the shape is kept, so nothing printed is stretched", () => {
+    const p = downscaleTo(4000, 3000);
+    assert.ok(Math.abs(p.width / p.height - 4000 / 3000) < 0.01);
+  });
+
+  test("a small photograph is never enlarged", () => {
+    /* Scaling up invents pixels, and a reader reporting a dimension from
+       invented pixels is doing the one thing route 6 forbids. */
+    const p = downscaleTo(800, 600);
+    assert.deepEqual(p, { width: 800, height: 600, scaled: false });
+  });
+
+  test("one exactly at the edge is left alone", () => {
+    assert.equal(downscaleTo(LONG_EDGE, 900).scaled, false);
+  });
+
+  test("a nonsense size is refused rather than divided by", () => {
+    for (const [w, h] of [[0, 100], [100, 0], [-1, 5], [NaN, 5]]) {
+      assert.equal(downscaleTo(w, h), null, `${w}x${h}`);
+    }
+  });
+
+  test("an extreme shape still produces a usable image", () => {
+    const p = downscaleTo(20000, 30);
+    assert.equal(p.width, LONG_EDGE);
+    assert.ok(p.height >= 1, "the short side rounded away to nothing");
   });
 });
