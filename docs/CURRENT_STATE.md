@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 51 |
-| Test files | 0 | 87 |
+| Modules under `src/` | 0 | 52 |
+| Test files | 0 | 88 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -237,6 +237,15 @@ older revision is refused, and so is accepting a preview of a part that has
 since moved on. What a model is not allowed to decide — a tolerance value, a
 specification revision, whether something is confirmed — is held back and
 reported rather than quietly dropped.
+
+`src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
+reader. It asks a model and then refuses most of what comes back: the reply
+must name an operation from the closed list, only the fields an operation may
+carry survive, and everything else — the numbers, the targets, the staleness —
+is checked by the same validator that checks a typed instruction. With no
+transport it reports that no provider is configured and the rule reader
+carries on, which is the ordinary state of this build. It cannot reach a
+network on its own; every call goes through a transport it is handed.
 
 `src/studio/dxf-export.mjs` writes the top view as DXF, which is the one CAD
 format this can be exactly right about: the supported geometry is rectangles
