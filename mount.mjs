@@ -46,7 +46,8 @@
   import { MATERIAL_GAP, buildUpShares, compareToBuildUp, questionsFrom } from "./src/calc/build-up.mjs";
   import { estimateFrom, asCostPlan, saveEstimate, loadEstimates, loadEstimate,
            deleteEstimate, storeStatus as estimateStoreStatus } from "./src/services/estimate-store.mjs";
-  import { extractDocument, confirmCandidate, readiness, reviewTable,
+  import { findConflicts,
+           extractDocument, confirmCandidate, readiness, reviewTable,
            CONFIDENCE as EX_CONFIDENCE, TARGET as EX_TARGET } from "./src/intake/extract-document.mjs";
   import { lotRecord, lotFromReview, millPerformance, rank as millRank, uniqueLots,
            DECISION as MILL_DECISION, RESPONSIBILITY, SCOPE as MILL_SCOPE,
@@ -103,7 +104,7 @@
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { identifyFile, fileNextStep, fileWithinLimits,
-                readingsFrom, droppedSaid, downscaleTo, VISION_SAID,
+                readingsFrom, droppedSaid, downscaleTo, VISION_SAID, findConflicts,
                 CONSENT_SAID, CONSENT_CHOICES, VISION_PROMPT_VERSION,
                 jobSubmission, submitExtraction, resultApplicable, resultAsComparison,
                 jobCanRetry, jobRetryOf, workerConfigured, JOB, JOB_FAILURE,

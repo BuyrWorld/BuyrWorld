@@ -106,6 +106,11 @@ export async function submit(file, sub, { transport } = {}) {
          state machine is the same either way, and a synchronous reader that
          had to be polled for an answer it already gave would be silly. */
       text: res?.text ?? null,
+      /* A document read page by page comes back as several replies rather
+         than one. Both shapes travel; which one arrived is the caller's
+         question, not this module's. */
+      pages: res?.pages ?? null,
+      failedPages: res?.failedPages ?? null,
       truncated: Boolean(res?.truncated),
       said: "Sent to be read. Nothing it finds will be used until you confirm it.",
     });

@@ -35,6 +35,10 @@ import {
 import {
   assessDocument, saidPlainly as pagesSaidPlainly, PAGE as PAGE_TEXT,
 } from "../../src/intake/page-text.mjs";
+import {
+  readingsFrom, downscaleTo,
+} from "../../src/intake/vision-read.mjs";
+import { findConflicts } from "../../src/intake/extract-document.mjs";
 
 const html = pageSource();
 
@@ -388,7 +392,7 @@ describe("what the page must keep saying", () => {
 
     const ask = fnSource("exAskToSend");
     assert.match(ask, /send\.addEventListener\("click"/);
-    assert.match(ask, /exCloudRead\(which,file,box\)/);
+    assert.match(ask, /exCloudRead\(which,file,box,pages\)/);
   });
 
   test("the consent wording comes from the module, not from the page", () => {
@@ -504,6 +508,9 @@ describe("a file goes where its bytes say it should", () => {
       _exReview: { scx: null, ctx: null },
       exFingerprint: async () => "fingerprint",
       exReReviewHTML: () => "<div>needs checking again</div>",
+      /* The offer to have unread pages read elsewhere. It has its own tests;
+         here it only needs to exist so the reading path runs. */
+      exOfferScannedRead: () => {},
       scReadStarted: () => {},
       engineNote: () => "<p>the engine is missing</p>",
     };
@@ -797,5 +804,141 @@ describe("a reading can be ruled out, not only ticked", () => {
     s.box._exReview.scx = null;
     vm.runInContext('_render = exResultHTML("scx", _exState.scx);', s.box);
     assert.match(s.box._render, /data-ex-unknown="thickness"/);
+  });
+});
+
+/* ------------------------------------------- pages this browser cannot read */
+
+/**
+ * The offer to have scanned pages read elsewhere.
+ *
+ * A scanned page has no text layer, the rule reader finds nothing on it, and
+ * `page-text.mjs` names it. Once pdf.js draws it to a canvas it is the same
+ * problem as a photograph, and the photograph route already exists — so this
+ * is mostly about what is offered and what is said, not about new machinery.
+ */
+describe("offering to read the pages this browser could not", () => {
+  function offerInto(seen) {
+    const appended = [];
+    const host = { appendChild: (el) => appended.push(el) };
+    const box = {
+      window: { BW: { assessDocument, pagesSaidPlainly, downscaleTo } },
+      document: {
+        createElement: () => ({
+          style: {}, addEventListener() {}, set textContent(v) { this._t = v; },
+          get textContent() { return this._t; },
+        }),
+      },
+      console, host, seen,
+      exAskToSend: () => {},
+      EX_MAX_PAGES_SENT: 4,
+    };
+    vm.createContext(box);
+    new vm.Script(fnSource("exOfferScannedRead")).runInContext(box);
+    vm.runInContext('exOfferScannedRead("scx", {name:"d.pdf"}, seen, host);', box);
+    return appended.map((el) => el.textContent).join(" | ");
+  }
+
+  const page = (n, text) => ({ page: n, text });
+  const REAL = "Drawing No: BRK-A-102 Rev: B  Material: FG-300  Thickness 5 mm  Width 200 mm";
+
+  test("nothing is offered when every page was read here", () => {
+    /* An offer to upload a document that has already been read is an invitation
+       to send something for no reason. */
+    assert.equal(offerInto(assessDocument([page(1, REAL)])), "");
+  });
+
+  test("the unread pages are named in the offer itself", () => {
+    const said = offerInto(assessDocument([page(1, REAL), page(2, ""), page(3, "")]));
+    assert.match(said, /Read pages 2, 3 for me/);
+  });
+
+  test("one page is offered in the singular", () => {
+    assert.match(offerInto(assessDocument([page(1, REAL), page(2, "")])), /Read page 2 for me/);
+  });
+
+  test("it says the pages leave the computer", () => {
+    /* The same disclosure as a photograph, because it is the same thing
+       happening to part of a document instead of all of one. */
+    assert.match(offerInto(assessDocument([page(1, REAL), page(2, "")])),
+      /sends that page from your computer to be read/);
+  });
+
+  test("more pages than are sent at once is stated, not discovered", () => {
+    /* Six requests a minute and one request per page: a twenty-page scan sent
+       in full would be refused halfway with no way to tell which half. */
+    const many = [page(1, REAL)];
+    for (let n = 2; n <= 9; n++) many.push(page(n, ""));
+    const said = offerInto(assessDocument(many));
+    assert.match(said, /Read pages 2, 3, 4, 5 for me/);
+    assert.match(said, /8 pages could not be read here and 4 are sent at a time/);
+    assert.match(said, /the rest stay yours to enter/);
+  });
+
+  test("a sparse page is offered too, since a stamp over a scan is a scan", () => {
+    assert.match(offerInto(assessDocument([page(1, REAL), page(2, "QA-4471")])),
+      /Read page 2 for me/);
+  });
+});
+
+describe("several pages read separately", () => {
+  /** exReadingFromPages, run against real replies. */
+  function merge(replies) {
+    const box = {
+      window: { BW: { readingsFrom, findConflicts } },
+      console,
+    };
+    vm.createContext(box);
+    new vm.Script(fnSource("exReadingFromPages")).runInContext(box);
+    box.replies = replies;
+    vm.runInContext("_out = exReadingFromPages(replies);", box);
+    return box._out;
+  }
+
+  const said = (field, value, quote) =>
+    JSON.stringify({ candidates: [{ field, value, unit: null, quote, legible: "clear" }] });
+
+  test("each reading keeps the page it came from", () => {
+    const r = merge([
+      { page: 2, text: said("material", "FG-300", "Material: FG-300") },
+      { page: 5, text: said("partNumber", "BRK-A-102", "Drawing No: BRK-A-102") },
+    ]);
+    /* Spread first: .map inside the vm returns an array with the vm's own
+       Array prototype, and deepStrictEqual compares prototypes. */
+    assert.deepEqual([...r.candidates].map((c) => [c.field, c.page]),
+      [["material", 2], ["partNumber", 5]]);
+  });
+
+  test("two pages disagreeing are both kept, and the disagreement surfaces", () => {
+    /* Choosing between them here would be the quiet resolution this product
+       refuses everywhere else — and it goes through the same function the
+       rule-read path uses, rather than a second idea of what a conflict is. */
+    const r = merge([
+      { page: 1, text: said("material", "FG-300", "Material: FG-300") },
+      { page: 2, text: said("material", "FG-400", "Material: FG-400") },
+    ]);
+    assert.equal(r.candidates.length, 2);
+    const clashes = findConflicts(r.candidates);
+    assert.equal(clashes.length, 1);
+    assert.equal(clashes[0].field, "material");
+  });
+
+  test("a page whose reply was unusable does not lose the pages that worked", () => {
+    const r = merge([
+      { page: 1, text: said("material", "FG-300", "Material: FG-300") },
+      { page: 2, text: "the model wrote prose instead" },
+    ]);
+    assert.equal(r.ok, true);
+    assert.equal(r.candidates.length, 1);
+    assert.deepEqual([...r.failedPages].map((f) => f.page), [2]);
+  });
+
+  test("no page producing anything is a failure, not an empty reading", () => {
+    /* "Nothing was on those pages" and "nothing came back in the right form"
+       are different, and showing the second as the first would say the
+       document was blank. */
+    const r = merge([{ page: 1, text: "prose" }, { page: 2, text: "more prose" }]);
+    assert.equal(r.ok, false);
+    assert.match(r.why, /in the form asked for/);
   });
 });

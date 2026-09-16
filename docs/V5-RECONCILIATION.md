@@ -144,11 +144,25 @@ explicit per-document consent step that says what leaves the computer, who
 reads it, and that a model can misread a photograph. A test fails if an
 unscoped local-only promise reappears anywhere on the page.
 
-**Scanned PDFs — still not read.** A scanned page has no text layer and
-nothing rasterises it to an image here, so the cloud route cannot be handed
-one. `page-text.mjs` names those pages; they remain manual entry. Rasterising
-PDF pages to canvas with the pdf.js already loaded is the obvious next step
-and is not done.
+**Scanned PDFs — read, page by page.** pdf.js was already loaded for the
+text layer and can draw a page to a canvas, which makes a scanned page the
+same problem as a photograph and lets it use the route that already exists.
+`page-text.mjs` names the pages this browser could not read and the offer
+names them back; four are sent at a time, because the reader allows six
+requests a minute and each page is one request. A twenty-page scan sent in
+full would be refused halfway with no way to tell which half, so the limit is
+stated in the offer instead of discovered.
+
+Each page is sent on its own rather than four to a request: a reader given
+four pages at once has to keep track of which answer belongs to which, and
+that is a thing it can get wrong. One page per request cannot be confused. A
+page that fails does not lose the pages that worked, and two pages
+disagreeing about one field are both kept and surfaced through the same
+`findConflicts` the rule-read path uses.
+
+So the Phase 1 format list — JPEG, PNG, PDF text, scanned and mixed — is
+met. A mixed PDF reads its text pages here and offers its scanned pages to be
+read elsewhere, and the two sets of readings end up in one queue.
 
 ## Still open in Phase 1
 

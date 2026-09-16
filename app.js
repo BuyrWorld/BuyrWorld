@@ -4606,6 +4606,9 @@ async function exRead(which,input){
     if(nameEl)nameEl.textContent=f.name+" — "+read.pages.length+" of "+read.pagesInDocument+" page(s) read";
     out.innerHTML=note+(lost.length?exReReviewHTML(lost):"")
       +exPagesHTML(seen)+exResultHTML(which,result);
+    /* Pages this browser could not read are the ones a reader elsewhere
+       could. Offered, never taken. */
+    exOfferScannedRead(which,f,seen,out);
     input.value="";
     return;
   }
@@ -4920,6 +4923,97 @@ function exReReviewHTML(lost){
 }
 
 
+
+/* ------------------------------------------------ scanned pages of a PDF */
+
+/**
+ * How many pages of one document are sent to be read at once.
+ *
+ * The reader allows six requests a minute and each page is one request, so a
+ * twenty-page scan sent in full would be refused halfway through with no way
+ * to tell which half. Four is under the limit with room for a retry, and the
+ * count is stated rather than discovered.
+ */
+var EX_MAX_PAGES_SENT=4;
+
+/**
+ * Draw pages of a PDF as images.
+ *
+ * pdf.js is already loaded for the text layer. A page with no text is a
+ * picture of a page, and once drawn it is the same problem as a photograph —
+ * which already has a route.
+ */
+async function scPdfPageImages(file,pageNumbers){
+  var B=window.BW;
+  var buf=await file.arrayBuffer();
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc=await verifiedWorkerURL("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js");
+  var pdf=await pdfjsLib.getDocument({data:buf}).promise;
+
+  var out=[];
+  for(var i=0;i<pageNumbers.length;i++){
+    var n=pageNumbers[i];
+    if(n<1||n>pdf.numPages)continue;
+    var page=await pdf.getPage(n);
+
+    /* Rendered at the size the reader works at rather than at whatever the
+       page happens to be. A scan drawn at 72dpi is unreadable; drawn at 600
+       it is a large upload of the same characters. */
+    var base=page.getViewport({scale:1});
+    var plan=B.downscaleTo(base.width,base.height);
+    var scale=plan.scaled?Math.min(plan.width/base.width,plan.height/base.height):1;
+    /* A page smaller than the target is drawn larger, which is not the same
+       as enlarging a photograph: this is re-rendering vector geometry at a
+       higher resolution, not inventing pixels. A scanned image inside it
+       cannot gain detail, and nothing downstream is told otherwise. */
+    if(!plan.scaled)scale=Math.min(3,1568/Math.max(base.width,base.height));
+
+    var viewport=page.getViewport({scale:scale});
+    var canvas=document.createElement("canvas");
+    canvas.width=Math.round(viewport.width);
+    canvas.height=Math.round(viewport.height);
+    await page.render({canvasContext:canvas.getContext("2d"),viewport:viewport}).promise;
+
+    var url=canvas.toDataURL("image/jpeg",0.9);
+    out.push({page:n,image:url.slice(url.indexOf(",")+1)});
+  }
+  return out;
+}
+
+/**
+ * Offer to have the unread pages read, and do it if asked.
+ *
+ * The same consent step as a photograph, because it is the same thing
+ * happening: the document leaves the computer. The only difference is that
+ * here it is some pages of it rather than all of it, and the offer says
+ * which.
+ */
+function exOfferScannedRead(which,file,seen,host){
+  var B=window.BW;
+  if(!B||!seen||!seen.needsReading.length)return;
+
+  var pages=seen.needsReading.slice(0,EX_MAX_PAGES_SENT);
+  var offer=document.createElement("button");
+  offer.type="button";
+  offer.className="bw-act bw-act-secondary";
+  offer.style.cssText="margin:var(--bw-3) 0 0";
+  offer.textContent="Read page"+(pages.length>1?"s":"")+" "+pages.join(", ")+" for me";
+  offer.addEventListener("click",function(){
+    offer.disabled=true;
+    exAskToSend(which,file,host,pages);
+  });
+
+  var note=document.createElement("p");
+  note.style.cssText="margin:6px 0 0;font-size:11.5px;color:var(--bw-muted);line-height:1.6";
+  note.textContent=seen.needsReading.length>pages.length
+    ? seen.needsReading.length+" pages could not be read here and "+pages.length
+      +" are sent at a time, so the rest stay yours to enter."
+    : "This sends "+(pages.length>1?"those pages":"that page")+" from your computer to be read.";
+
+  host.appendChild(offer);
+  host.appendChild(note);
+}
+
 /* ------------------------------------------------ reading a picture, elsewhere */
 
 /**
@@ -4982,6 +5076,53 @@ function exReaderTransport(){
   };
 }
 
+
+/**
+ * Several pages, read one at a time.
+ *
+ * One request per page, because a reader given four pages at once has to be
+ * told which answer belongs to which, and asking it to keep them apart is a
+ * thing it can get wrong. One page per request cannot be confused.
+ *
+ * A page that fails does not lose the pages that worked. Whatever was read is
+ * kept and the failure is reported beside it, which is the difference between
+ * a partial answer and nothing at all.
+ */
+function exPagesTransport(pages){
+  return async function(job){
+    var B=window.BW;
+    var images=await scPdfPageImages(job.file,pages);
+    if(!images.length)throw new Error("unsupported: none of those pages could be drawn.");
+
+    var replies=[],failed=[];
+    for(var i=0;i<images.length;i++){
+      try{
+        var res=await fetch("/api/read-document",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({image:images[i].image,mediaType:"image/jpeg",
+                               target:job.submission.target||"drawing"})
+        });
+        var body=await res.json().catch(function(){ return {}; });
+        if(!res.ok){ failed.push({page:images[i].page,why:body.error||("status "+res.status)}); continue; }
+        replies.push({page:images[i].page,text:body.text,truncated:Boolean(body.truncated)});
+      }catch(e){
+        failed.push({page:images[i].page,why:String((e&&e.message)||e)});
+      }
+    }
+
+    if(!replies.length){
+      throw new Error(failed.length?failed[0].why:"No page could be read.");
+    }
+    return {
+      state:B.JOB.REVIEW_READY,
+      pages:replies,
+      failedPages:failed,
+      truncated:replies.some(function(r){ return r.truncated; })
+    };
+  };
+}
+
 /**
  * Ask before sending anything.
  *
@@ -4990,7 +5131,7 @@ function exReaderTransport(){
  * Both answers are buttons of equal weight — consent copy that leads
  * somewhere is not consent copy.
  */
-function exAskToSend(which,file,host){
+function exAskToSend(which,file,host,pages){
   var B=window.BW,C=B.CONSENT_SAID;
   var box=document.createElement("div");
   box.style.cssText="border:1px solid var(--bw-warning);background:var(--bw-warning-soft);"
@@ -5028,7 +5169,7 @@ function exAskToSend(which,file,host){
   send.addEventListener("click",function(){
     send.disabled=true; no.disabled=true;
     send.textContent="Reading…";
-    exCloudRead(which,file,box);
+    exCloudRead(which,file,box,pages);
   });
 }
 
@@ -5040,7 +5181,7 @@ function exAskToSend(which,file,host){
  * a reading applied quietly after any of those is indistinguishable from the
  * software changing a number on its own.
  */
-async function exCloudRead(which,file,box){
+async function exCloudRead(which,file,box,pages){
   var B=window.BW;
   var host=document.getElementById(which+"-out");
   if(!B||!host)return;
@@ -5052,7 +5193,9 @@ async function exCloudRead(which,file,box){
   });
   sub=Object.assign({},sub,{target:which==="ctx"?"certificate":"drawing"});
 
-  var result=await B.submitExtraction(file,sub,{transport:exReaderTransport()});
+  var result=await B.submitExtraction(file,sub,{
+    transport:pages&&pages.length?exPagesTransport(pages):exReaderTransport()
+  });
 
   if(box)box.remove();
 
@@ -5073,8 +5216,14 @@ async function exCloudRead(which,file,box){
     return;
   }
 
-  var reading=B.readingsFrom(result.text);
+  var reading=result.pages?exReadingFromPages(result.pages):B.readingsFrom(result.text);
   if(!reading.ok){ host.appendChild(exNoteEl(reading.why,null)); return; }
+
+  if(result.failedPages&&result.failedPages.length){
+    host.appendChild(exNoteEl("Page"+(result.failedPages.length>1?"s ":" ")
+      +result.failedPages.map(function(f){ return f.page; }).join(", ")
+      +" could not be read. What was read from the others is below; those pages stay yours to enter.",null));
+  }
   if(!reading.candidates.length){
     host.appendChild(exNoteEl("Nothing on this picture was read into a field this product knows. "
       +"That is not a failure of the drawing \u2014 enter the values yourself.",null));
@@ -5082,6 +5231,44 @@ async function exCloudRead(which,file,box){
   }
 
   exApplyReading(which,file,reading,result);
+}
+
+/** What a picture-read actually covered, stated rather than assumed complete. */
+function exReadCoverage(reading){
+  var pages={};
+  for(var i=0;i<reading.candidates.length;i++)pages[reading.candidates[i].page||1]=true;
+  var n=Object.keys(pages).length||1;
+  return {pagesProvided:n,pagesWithText:n,pagesInDocument:n,complete:true,unread:0,withoutText:0};
+}
+
+/**
+ * Several pages' readings, put together.
+ *
+ * Each page is read on its own, so two pages can disagree about the same
+ * field — one scan of a title block and a continuation sheet that repeats it
+ * differently. Choosing between them here would be the quiet resolution this
+ * product refuses everywhere else, so both are kept, each with the page it
+ * came from, and `findConflicts` surfaces the disagreement above the table
+ * exactly as it does for a rule-read document.
+ */
+function exReadingFromPages(pages){
+  var B=window.BW;
+  var candidates=[],dropped=[],failedPages=[];
+
+  for(var i=0;i<pages.length;i++){
+    var one=B.readingsFrom(pages[i].text);
+    if(!one.ok){ failedPages.push({page:pages[i].page,why:one.why}); continue; }
+    for(var j=0;j<one.candidates.length;j++){
+      candidates.push(Object.assign({},one.candidates[j],{page:pages[i].page}));
+    }
+    for(var k=0;k<one.dropped.length;k++)dropped.push(one.dropped[k]);
+  }
+
+  if(!candidates.length&&failedPages.length){
+    return {ok:false,why:"None of those pages produced a reading in the form asked for.",
+            candidates:[],dropped:dropped};
+  }
+  return {ok:true,candidates:candidates,dropped:dropped,failedPages:failedPages,why:null};
 }
 
 /** A remark under the viewer, with an optional way to try again. */
@@ -5121,8 +5308,11 @@ function exApplyReading(which,file,reading,result){
     filename:file.name,
     target:which==="ctx"?B.EX_TARGET.CERTIFICATE:B.EX_TARGET.DRAWING,
     candidates:reading.candidates,
-    coverage:{pagesProvided:1,pagesWithText:1,pagesInDocument:1,complete:true,unread:0,withoutText:0},
-    conflicts:[],
+    coverage:exReadCoverage(reading),
+    /* Two pages disagreeing about one field is a question for whoever owns
+       the document, not something to resolve here — the same rule the
+       rule-read path follows, through the same function. */
+    conflicts:B.findConflicts(reading.candidates),
     blockers:[],
     method:B.VISION_SAID
   });
