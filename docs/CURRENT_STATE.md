@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 52 |
-| Test files | 0 | 88 |
+| Modules under `src/` | 0 | 53 |
+| Test files | 0 | 89 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -237,6 +237,16 @@ older revision is refused, and so is accepting a preview of a part that has
 since moved on. What a model is not allowed to decide — a tolerance value, a
 specification revision, whether something is confirmed — is held back and
 reported rather than quietly dropped.
+
+`src/intake/file-router.mjs` answers what a file actually is, from its
+first bytes rather than the end of its name. The drawing reader decides by
+filename in two places, and the v5 gap matrix notes that widening the input
+alone would not fix it because the handler rejects the file separately.
+Deciding by content fixes both. A name that disagrees with the bytes is
+reported rather than silently resolved either way — somebody who believes
+they uploaded a JPEG and a system that read a PNG will disagree later about
+something worse. Formats it knows and cannot use are named with what to do
+instead; limits are stated rather than met by surprise.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
