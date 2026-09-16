@@ -48,7 +48,10 @@ export function updateStudio(model) {
 }
 export function initStudio() {
   const host=el("studio-viewport"); if(!host) return;
-  document.getElementById("page-shouldcost").classList.add("bw-studio-enhanced");
+  /* Guarded like the host above it. This is a styling hook, not something the
+     preview needs, so its absence is not a reason to stop. */
+  const enhanced=el("page-shouldcost");
+  if(enhanced) enhanced.classList.add("bw-studio-enhanced");
   host.innerHTML='<div class="bw-panel-head"><div><div class="bw-viewport-eyebrow">SHOULD-COST STUDIO</div><h3 class="bw-panel-title">Your part, in view</h3></div><span id="studio-model-state" class="bw-preview-state"></span></div>'+
     '<div id="studio-view-buttons" class="bw-view-buttons" role="group" aria-label="Part view"></div>'+
     '<div id="studio-canvas" class="bw-canvas"></div>'+
@@ -65,12 +68,17 @@ export function initStudio() {
     });
     b.setAttribute("aria-pressed",String(key===view)); el("studio-view-buttons").append(b);
   }
-  el("studio-angle").addEventListener("input",event=>{angle=Number(event.target.value);render();});
+  const angleInput=el("studio-angle");
+  if(angleInput) angleInput.addEventListener("input",event=>{angle=Number(event.target.value);render();});
   el("studio-canvas").addEventListener("click",event=>{
     const id=event.target.closest("[data-feature]")?.dataset.feature;
     if(shown?.features.some(f=>f.id===id)) select(id);
   });
-  for(const id of ["pb-w","pb-l","pb-t"]) el(id).addEventListener("input",()=>{
+  /* The Part Builder's dimension inputs, watched for a resize preview. They
+     live in markup this module does not own, so each is checked first —
+     reaching through a null here threw, and a throw here reached the rest of
+     the mount. */
+  for(const input of ["pb-w","pb-l","pb-t"].map(el).filter(Boolean)) input.addEventListener("input",()=>{
     if(!committed) return;
     const dims=["pb-w","pb-l","pb-t"].map(value);
     if(!dims.every(v=>/^\d+(\.\d{1,3})?$/.test(v))) {
@@ -89,14 +97,19 @@ export function initStudio() {
     }
   });
   // Long teaching copy is one click away; the original controls and labels stay in place.
+  /* Everything below decorates markup this module does not own: collapsing
+     the intro, collapsing the builder help, adding the step bar. All of it is
+     enhancement — if an element is not there, the preview still works — so
+     each lookup is checked rather than assumed. */
   const page=el("page-shouldcost");
-  const introPanel=page.querySelector(".wrap > .bw-panel");
+  const introPanel=page?page.querySelector(".wrap > .bw-panel"):null;
   if(introPanel) {
     const details=document.createElement("details"); details.className="bw-studio-help";
     const summary=document.createElement("summary"); summary.textContent="How this studio works · local processing · supported shapes";
     introPanel.before(details); details.append(summary,introPanel);
   }
-  const builder=el("pb-w").closest(".bw-panel");
+  const widthInput=el("pb-w");
+  const builder=widthInput?widthInput.closest(".bw-panel"):null;
   const paragraph=builder?.querySelector(":scope > p");
   if(paragraph) {
     const details=document.createElement("details");details.className="bw-studio-help";
@@ -110,6 +123,7 @@ export function initStudio() {
       if(target){target.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth",block:"center"});target.focus({preventScroll:true});}
     }));
   }
-  el("sc-mode-material").prepend(bar);
+  const modePanel=el("sc-mode-material");
+  if(modePanel) modePanel.prepend(bar);
   render();
 }

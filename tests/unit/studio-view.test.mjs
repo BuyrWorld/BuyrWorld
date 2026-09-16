@@ -21,6 +21,8 @@
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
+import { readFileSync } from "node:fs";
+
 import { block, addHole, addPocket, removeFeature } from "../../src/studio/geometry.mjs";
 
 const mm = (x) => BigInt(Math.round(x * 1000));
@@ -52,7 +54,15 @@ function fakeDom(ids) {
       setAttribute(k, v) { this.attrs[k] = String(v); },
       addEventListener(kind, fn) { (this.listeners[kind] ||= []).push(fn); },
       classList: { add() {}, remove() {} },
+      /* Not-found is the honest answer from a stub: initStudio decorates
+         markup it does not own, and every one of these returning null is the
+         case worth checking. */
       querySelector: () => null,
+      closest: () => null,
+      prepend(...kids) { this.children.unshift(...kids); },
+      before() {},
+      focus() {},
+      scrollIntoView() {},
     };
     return node;
   };
@@ -290,5 +300,76 @@ describe("when things are not as expected", () => {
     const { updateStudio } = await load();
     updateStudio(null);
     assert.equal(/revision/i.test(text("studio-model-state")), false);
+  });
+});
+
+/* ------------------------------------------------- starting the preview */
+
+describe("initStudio reaches into markup it does not own", () => {
+  /**
+   * A page with everything except the named ids.
+   *
+   * Only elements initStudio does *not* create are varied. The ones it builds
+   * itself through innerHTML — the canvas, the buttons, the status lines —
+   * exist by construction in a browser, and removing them here would test the
+   * stub rather than the module.
+   */
+  function pageWithout(missing) {
+    const external = ["studio-viewport", "page-shouldcost", "pb-w", "pb-l", "pb-t",
+      "sc-mode-material", "sc-stages", "req-kind", "rev-partrev"];
+    const internal = ["studio-view-buttons", "studio-angle", "studio-canvas",
+      "studio-model-state", "studio-export-hint", "studio-feature-picks", "studio-selection"];
+    const nodes = fakeDom([...external.filter((id) => !missing.includes(id)), ...internal]);
+    globalThis.matchMedia = () => ({ matches: false });
+    return nodes;
+  }
+
+  test("with everything present it starts", async () => {
+    pageWithout([]);
+    const { initStudio } = await load();
+    assert.doesNotThrow(() => initStudio());
+  });
+
+  test("with no viewport it does nothing at all", async () => {
+    /* The page this module was not asked to enhance. */
+    pageWithout(["studio-viewport"]);
+    const { initStudio } = await load();
+    assert.doesNotThrow(() => initStudio());
+  });
+
+  test("a missing Part Builder input does not stop it", async () => {
+    /* It watches those three for a resize preview. Reaching through a null
+       here used to throw — and a throw here reached the rest of the mount. */
+    for (const id of ["pb-w", "pb-l", "pb-t"]) {
+      pageWithout([id]);
+      const { initStudio } = await load();
+      assert.doesNotThrow(() => initStudio(), `it threw without ${id}`);
+    }
+  });
+
+  test("nor a missing page, mode panel or step target", async () => {
+    for (const id of ["page-shouldcost", "sc-mode-material", "sc-stages"]) {
+      pageWithout([id]);
+      const { initStudio } = await load();
+      assert.doesNotThrow(() => initStudio(), `it threw without ${id}`);
+    }
+  });
+
+  test("nor all of them at once", async () => {
+    pageWithout(["page-shouldcost", "pb-w", "pb-l", "pb-t", "sc-mode-material"]);
+    const { initStudio } = await load();
+    assert.doesNotThrow(() => initStudio());
+  });
+
+  test("the mount does not let a failure here reach what follows", () => {
+    /* Where this actually bit. mount.mjs assigns window.BW, calls initStudio,
+       then renders the Defender's drivers and outcomes. A throw in the middle
+       leaves BW assigned — so the engine-missing banner stays correctly quiet
+       — while two tables never render and nothing says why. */
+    const mount = readFileSync("mount.mjs", "utf8");
+    assert.match(mount, /try \{ initStudio\(\); \} catch/);
+    const at = mount.indexOf("initStudio()");
+    assert.ok(mount.indexOf("defRenderDrivers", at) > at,
+      "the renders this protects must come after it");
   });
 });

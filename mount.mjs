@@ -134,6 +134,12 @@
                 aiAdapter: createAdapter({ transport: httpTransport() }),
                 saveOutcome, loadOutcomes, clearOutcomes, exportOutcomes,
                 updateStudio, SAMPLE_INDEX: STEEL_A };
-  initStudio();
+  /* Isolated, like the two calls below it. It builds markup it does not own,
+     and a throw would leave window.BW assigned — so the engine-missing banner
+     stays correctly quiet — while the renders after it never run, leaving a
+     page that looks fine with two tables empty and nothing saying why. */
+  try { initStudio(); } catch (e) {
+    console.error("The Studio preview did not start:", e && e.message);
+  }
   if (typeof defRenderDrivers === "function") defRenderDrivers();
   if (typeof defRenderOutcomes === "function") defRenderOutcomes();
