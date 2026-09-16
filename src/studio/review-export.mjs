@@ -35,6 +35,7 @@
  */
 
 import { schedule, labelOfKind, serialiseRequirements } from "./requirements.mjs";
+import { toDxf, checkDxf } from "./dxf-export.mjs";
 
 /** The words that go on every artifact. Never softened, never parameterised. */
 export const DRAFT_LABEL = "DRAFT — FOR TECHNICAL REVIEW";
@@ -77,17 +78,26 @@ export const FORMATS = Object.freeze({
     available: true,
     what: "Every file in this package, with its SHA-256",
   }),
+  "drawing.dxf": Object.freeze({
+    available: true,
+    what: "The top view as 2D geometry, in millimetres",
+    /* Produced only when there is a model, and checked against it first. */
+    needsModel: true,
+  }),
   "model.step": Object.freeze({
     available: false,
     what: "The solid model",
-    why: "No geometry engine is integrated in this build, so there is no model to export. "
-       + "The dimensions in the schedule are the authoritative record.",
+    why: "A block with through-holes could be written as an extruded profile, but a blind "
+       + "pocket cannot — subtracting one needs a boolean operation, and that needs a CAD "
+       + "kernel this build does not have. Emitting STEP for the parts that happen to be "
+       + "expressible would produce a file that opens cleanly and describes a different part.",
   }),
   "drawing.pdf": Object.freeze({
     available: false,
     what: "A dimensioned drawing",
-    why: "Generating a drawing needs geometry to dimension. Nothing here can produce views, "
-       + "and a sheet of numbers laid out like a drawing would be a drawing in appearance only.",
+    why: "drawing.dxf carries the geometry, and a dimensioned drawing is more than geometry: "
+       + "it needs dimensions, tolerances and annotations placed where a reader expects them. "
+       + "Those are in the requirement schedule instead, which is where they are authoritative.",
   }),
 });
 
@@ -259,6 +269,18 @@ export function reviewNotes(snap) {
     "It is not an approval, it does not release anything for manufacture, and",
     "nothing in it has been sent to anyone.",
     "",
+    ...(snap.model ? [
+      "## The drawing in this package",
+      "",
+      "`drawing.dxf` is the top view as 2D geometry, in millimetres, on separate",
+      "layers for the outline, the holes and the pockets. It was checked against the",
+      "model before it was included.",
+      "",
+      "**It is not a dimensioned drawing.** There are no dimensions, tolerances or",
+      "annotations in it, and none are implied by it. The requirement schedule is the",
+      "authoritative record of what this part must satisfy.",
+      "",
+    ] : []),
     "## What it does not contain",
     "",
     ...unavailable().map((f) => `- **${f.name}** — ${f.what}. ${f.why}`),
@@ -307,6 +329,21 @@ export async function buildPackage(snap) {
     "requirement-schedule.json": scheduleJson(snap),
     "review-notes.md": reviewNotes(snap),
   };
+
+  /* The top view, where there is a part to draw. Verified against the model it
+     came from before it is offered: a package that carries a drawing
+     disagreeing with its own schedule is worse than one carrying neither. */
+  const dxfProblems = [];
+  if (snap.model) {
+    try {
+      const dxf = toDxf(snap.model);
+      const check = checkDxf(dxf, snap.model);
+      if (check.ok) files["drawing.dxf"] = dxf;
+      else dxfProblems.push(`drawing.dxf was not included: ${check.problems.join(" ")}`);
+    } catch (e) {
+      dxfProblems.push(`drawing.dxf could not be produced: ${e.message}`);
+    }
+  }
   if (snap.model) {
     files["part-model.json"] = JSON.stringify({
       schema: "buyrworld-part-review/1",
@@ -325,7 +362,10 @@ export async function buildPackage(snap) {
   /* Every artifact carries the label, checked rather than assumed — it is the
      one thing that stops a draft being read as a decision. */
   for (const [name, text] of Object.entries(files)) {
-    if (!text.includes(DRAFT_LABEL)) {
+    /* A DXF has nowhere to put a sentence. Its status travels in the manifest
+       and in the review notes, both of which accompany it, and the notes say
+       what it is and is not. */
+    if (name !== "drawing.dxf" && !text.includes(DRAFT_LABEL)) {
       throw new Error(`${name} does not carry "${DRAFT_LABEL}". Every artifact must.`);
     }
     for (const pattern of FORBIDDEN) {
@@ -349,6 +389,7 @@ export async function buildPackage(snap) {
 
   const s = snap.schedule;
   const omissions = [
+    ...dxfProblems,
     ...unavailable().map((f) => `${f.name}: ${f.why}`),
     ...(s.conflicts.length ? [`${s.conflicts.length} unresolved conflict(s) between requirements.`] : []),
     ...(s.detached.length ? [`${s.detached.length} requirement(s) have lost the feature they applied to.`] : []),

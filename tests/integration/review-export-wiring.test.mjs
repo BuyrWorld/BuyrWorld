@@ -98,7 +98,7 @@ describe("preparing a package", () => {
     await s.runAsync("scExportReview();");
     assert.match(s.out(), /Not included/);
     assert.match(s.out(), /model\.step/);
-    assert.match(s.out(), /No geometry engine is integrated/);
+    assert.match(s.out(), /needs a CAD kernel this build does not have/);
     assert.match(s.out(), /drawing\.pdf/);
   });
 

@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 50 |
-| Test files | 0 | 86 |
+| Modules under `src/` | 0 | 51 |
+| Test files | 0 | 87 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -216,6 +216,17 @@ is refused by saying what this builds. When a real adapter is configured it
 produces proposals in the same shape and goes through the same validation;
 this stays as the path that works without one.
 
+`src/studio/read-instruction.mjs` reads a typed instruction into that
+proposal shape, by written rule and with no model — the same reasoning
+`extract-document.mjs` gives about drawings, and sharper here because the
+sentence is about to become a change to a part. It knows five phrasings and
+refuses the rest, showing what it can take. The requests the pack names are
+answered by name: "make this aerospace grade" asks which specification
+applies, "tighten the tolerance" asks by how much and on what, and a fillet
+is refused by saying what this builds. When a real adapter is configured it
+produces proposals in the same shape and goes through the same validation;
+this stays as the path that works without one.
+
 `src/studio/edit-proposal.mjs` turns a described change into a proposal and
 refuses to turn it into code. Every operation a proposal may contain is on a
 closed list checked by name, so nothing is evaluated and an instruction with
@@ -226,6 +237,16 @@ older revision is refused, and so is accepting a preview of a part that has
 since moved on. What a model is not allowed to decide — a tolerance value, a
 specification revision, whether something is confirmed — is held back and
 reported rather than quietly dropped.
+
+`src/studio/dxf-export.mjs` writes the top view as DXF, which is the one CAD
+format this can be exactly right about: the supported geometry is rectangles
+and circles, and both are DXF primitives at integer micrometre precision. It
+reads its own output back and checks every coordinate against the model before
+the file is offered, so a package never carries a drawing that disagrees with
+its own schedule. It is geometry, not a dimensioned drawing, and says so.
+There is no STEP: a block with through-holes could be an extruded profile, but
+a blind pocket needs a boolean subtraction and that needs a kernel — emitting
+STEP for the expressible part would describe a different part.
 
 `src/studio/geometry.mjs` is a deliberately small parametric part: a
 rectangular block, through-holes and rectangular pockets, and nothing that
