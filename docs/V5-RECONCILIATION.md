@@ -83,3 +83,58 @@ unavailable/manual states, and label live provider validation blocked.
 An image that cannot be read must say so and offer manual entry. It must not
 produce a fabricated value, and it must not silently do nothing, which is
 what it does today.
+
+---
+
+# v5 Phase 1 — what was built, and what is blocked
+
+`specs/02-ROADMAP.md` Phase 1: *"upload router, image/PDF viewer, extraction
+worker adapter and confirmation queue… Gate: reviewable fields with source
+regions; no silent pages or stale writes; real JPG and scanned-PDF extraction
+demonstrated with a configured backend. If backend unavailable, record that
+gate blocked while keeping preview/manual usable."*
+
+## Built
+
+| Piece | Module | What it changed |
+|---|---|---|
+| Upload router | `src/intake/file-router.mjs` | Format comes from the first sixteen bytes. Both inputs accepted `.pdf` only and the handler rejected everything else by filename, so widening one alone fixed nothing. |
+| Viewer | `src/intake/viewer.mjs` | Zoom, pan, quarter turns, fit, pages, and regions anchored to the document rather than the screen. |
+| Confirmation queue | `src/intake/review.mjs` | Four answers instead of two. Corrections keep the reading they replaced; decisions carry who, when and what from; a changed document sends its rows back for review and says which. |
+| Page assessment | `src/intake/page-text.mjs` | Which pages were read, named rather than counted, with the sparse middle state a presence check misses. |
+| Worker adapter | `src/intake/extraction-job.mjs` | The job states, the honest unavailable answer, retryable against permanent failure, and the rule for a result that arrives too late to apply. |
+
+## The gate, line by line
+
+**Reviewable fields with source regions — partly.** Fields are reviewable
+with the four actions. Regions are supported end to end: the viewer produces
+them in document coordinates, and `review.mjs` stores one on the evidence.
+Nothing produces one yet, and `region` is `null` rather than a box covering
+the page, because a crop that proves nothing is worse than an absent one. A
+rule reader is handed a page's text and never sees geometry; regions arrive
+with OCR, or with a PDF text layer read with its geometry retained.
+
+**No silent pages — met.** `page-text.mjs` names every page that was not
+read, every page that carries too little text to have been read, and every
+page beyond the read limit, with both counts.
+
+**No stale writes — met in the adapter, untested against a real worker.**
+Four refusals: another case, an old revision, fields edited since the job was
+sent, and a cancellation that raced the result.
+
+**Real JPG and scanned-PDF extraction with a configured backend — blocked.**
+This repository is static HTML and JS on Vercel with Node serverless
+functions. OCR needs a binary runtime and PDF rasterisation, behind
+authenticated same-origin job endpoints. The pack says so itself: *"A Python
+script in a static repository is not a deployed service."* Per `specs/02`,
+preview and manual entry stay usable and the gate is recorded blocked.
+
+## Still open in Phase 1
+
+- **Full case envelope and migration**, and the vertical slice surviving
+  refresh, reopen, new-case reset and worker failure. New-case reset is
+  covered — the queue, the extraction and the preview are all cleared, and a
+  test fails if one is missed. Refresh and reopen are not: the review queue
+  lives in memory and does not persist with the scenario.
+- **Region selection wired to a control.** Built and tested; not yet
+  connected, because the thing that consumes a crop is an OCR result.

@@ -18,6 +18,12 @@
            withinLimits as fileWithinLimits, HANDLING as FILE_HANDLING,
            LIMITS as FILE_LIMITS, HEAD_BYTES } from "./src/intake/file-router.mjs";
   import * as viewer from "./src/intake/viewer.mjs";
+  import { submission as jobSubmission, submit as submitExtraction,
+           applicable as resultApplicable, asComparison as resultAsComparison,
+           canRetry as jobCanRetry, retryOf as jobRetryOf,
+           configured as workerConfigured, JOB, FAILURE as JOB_FAILURE,
+           REFUSED as RESULT_REFUSED, UNAVAILABLE_SAID as WORKER_UNAVAILABLE_SAID
+         } from "./src/intake/extraction-job.mjs";
   import { assessDocument, saidPlainly as pagesSaidPlainly,
            PAGE as PAGE_TEXT } from "./src/intake/page-text.mjs";
   import { queue as reviewQueue, documentRef, needsReReview,
@@ -94,6 +100,9 @@
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { identifyFile, fileNextStep, fileWithinLimits,
+                jobSubmission, submitExtraction, resultApplicable, resultAsComparison,
+                jobCanRetry, jobRetryOf, workerConfigured, JOB, JOB_FAILURE,
+                RESULT_REFUSED, WORKER_UNAVAILABLE_SAID,
                 assessDocument, pagesSaidPlainly, PAGE_TEXT,
                 reviewQueue, documentRef, needsReReview,
                 reviewConfirm, reviewCorrect, reviewUnknown, reviewReject,

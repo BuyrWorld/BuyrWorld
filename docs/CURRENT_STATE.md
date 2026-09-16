@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 56 |
-| Test files | 0 | 92 |
+| Modules under `src/` | 0 | 57 |
+| Test files | 0 | 93 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -285,6 +285,23 @@ nothing. Sparse is named and grouped with the unreadable, because a stamp
 over a scan is a scan. The wording never implies a page will be read later,
 since there is no reader in this build, and it says plainly that a value
 missing from the reading is not missing from the drawing.
+
+`src/intake/extraction-job.mjs` is the adapter for a document worker that
+does not exist here, and it is deliberate rather than speculative. The v5
+spec wants an isolated Python worker with OCR and PDF rasterisation behind
+authenticated endpoints; that needs a binary runtime this repository has not
+got, and the roadmap's own instruction for that case is to keep preview and
+manual entry usable and mark the gate blocked. So the honest unavailable
+state is the one this build actually returns.
+
+The part that is not plumbing is the rule about a result that finally
+arrives. A reading that comes back for a case nobody is looking at, or for a
+drawing since replaced, or against fields somebody has typed into since, is
+not a slow success — it is a wrong answer arriving quietly, and the seam
+where it lands is the only place to stop it. A refused reading is kept and
+offered as a comparison rather than discarded, because somebody waited for
+it. A failure says whether trying again is worth anything: offering a retry
+on a format that will never work wastes an afternoon politely.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
