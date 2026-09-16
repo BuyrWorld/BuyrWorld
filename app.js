@@ -355,6 +355,18 @@ const PILLARS=[
 ["Workflows","RFQs, quote comparisons, contract reviews, spend analysis, negotiation prep — done in minutes.","tools",'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2.2"/><circle cx="8" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/>',"tools"],
 ["Learn","Structured Academy pathways and a weekly blog — from first PO to category leadership and CIPS.","academy",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/>',"academy"],
 ["Method","Every figure is calculated in the open, labelled supplied, derived or assumed, and checked by tests.","about",'<path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9z"/><path d="M8.5 12.2l2.4 2.4 4.6-4.9"/>',"about"]];
+/* Counted from the list rather than written beside it. It said "Four ways
+   in" above five pillars — true when it was written, and wrong from the day
+   somebody added one. A number in prose next to the thing it counts will
+   drift again; a number derived from it cannot. */
+var PILLAR_WORDS=["No","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten"];
+(function(){
+  var intro=document.getElementById("pillars-intro");
+  if(!intro) return;
+  var n=PILLARS.length;
+  intro.textContent=(PILLAR_WORDS[n]||String(n))+" ways in, depending on the job in front of you.";
+})();
+
 document.getElementById("pillars").innerHTML=PILLARS.map(([t,d,_ic,icon,dest])=>`
 <div class="card glow-hover" role="button" tabindex="0" data-key="cardKey$event" style="cursor:pointer" data-do="go" data-a="${dest}">
   <svg viewBox="0 0 24 24" aria-hidden="true" style="width:26px;height:26px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;margin-bottom:12px">${icon}</svg>
