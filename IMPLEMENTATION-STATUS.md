@@ -278,6 +278,16 @@ rule-based reader stays as the path that works without one.
   check this*, *Assumed*, *Missing*. The repository's existing `provenance.mjs`
   already distinguishes these; the labels are a presentation mapping onto it.
 
+## The programme is complete
+
+All four v4 increments and all six v3 Studio slices have engines, interfaces
+and tests. 2,399 tests, all six checks pass, every module verified against the
+bytes the site actually serves.
+
+**`docs/BROWSER-CHECKS.md` is the handover.** It lists what executing code
+cannot settle, in the order worth doing it, each item mapped to the pack
+acceptance line it closes. About a hundred minutes of work.
+
 ## Limitations
 
 - No extraction service is configured. `src/intake/extract-document.mjs` reads
@@ -286,8 +296,14 @@ rule-based reader stays as the path that works without one.
   pretending an AI service exists.
 - No browser testing has been performed in this programme. Verification so far
   is the repository's own checks plus execution of served bytes under `node:vm`.
-- No CAD kernel, geometry engine or export service exists yet. Part Builder
-  (v4 C2/C3/C4) is specified, not built.
+- The geometry is deliberately bounded: rectangular blocks, through-holes and
+  rectangular pockets. No freeform surface, no fillet, no chamfer. A volume
+  containing a round feature is reported as an interval rather than a rounded
+  figure, because pi is not rational.
+- No solid-model or drawing export. The review package names both as absent
+  with reasons and is never marked complete.
+- No AI provider is configured. Instructions are read by written rule, which
+  is the path that must keep working after one is.
 
 ## Next slice
 
