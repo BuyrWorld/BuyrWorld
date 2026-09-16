@@ -30,7 +30,6 @@ const ALLOWED = new Map([
   // Three navigation entries used to sit here. The sidebar rewrite escapes nav
   // labels with ciEsc and builds the active state by concatenation rather than
   // interpolation, so there is nothing left to excuse.
-  ["MAX_FILE_MB", "a module constant, and the whole message is escaped by exErr before it reaches innerHTML"],
   ["elId", "an element id this code chose itself"],
   ["msgs[0]", "loader text from a hardcoded array"],
   ["etaHtml", "loader markup this code built"],

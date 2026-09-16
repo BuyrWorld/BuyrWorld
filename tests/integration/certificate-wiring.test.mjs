@@ -18,7 +18,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-import { pageSource } from "../helpers/page.mjs";
+import { pageSource, fnSource as pageFnSource } from "../helpers/page.mjs";
 
 import {
   quantity as ctQuantity, requirement as ctRequirement, observation as ctObservation,
@@ -32,12 +32,9 @@ import { length as scLength } from "../../src/calc/units.mjs";
 
 const html = pageSource();
 
-function fnSource(name) {
-  const start = html.indexOf(`function ${name}(`);
-  if (start < 0) throw new Error(`${name} not found`);
-  const end = html.indexOf("\nfunction ", start + 1);
-  return html.slice(start, end < 0 ? html.length : end);
-}
+/** The page's own source for one function. `html` is this file's copy of the page. */
+const fnSource = (name) => pageFnSource(name, html);
+
 
 /** The synthetic example the page itself loads, as the row arrays it stores. */
 const EXAMPLE_OBS = [

@@ -17,21 +17,22 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-import { pageSource } from "../helpers/page.mjs";
+import { pageSource, fnSource as pageFnSource } from "../helpers/page.mjs";
 
 import {
   extractDocument, confirmCandidate, readiness, reviewTable,
   CONFIDENCE as EX_CONFIDENCE, TARGET as EX_TARGET,
 } from "../../src/intake/extract-document.mjs";
+import {
+  identify as identifyFile, nextStep as fileNextStep, withinLimits as fileWithinLimits,
+  HANDLING as FILE_HANDLING, HEAD_BYTES,
+} from "../../src/intake/file-router.mjs";
 
 const html = pageSource();
 
-function fnSource(name) {
-  const start = html.indexOf(`function ${name}(`);
-  if (start < 0) throw new Error(`${name} not found`);
-  const end = html.indexOf("\nfunction ", start + 1);
-  return html.slice(start, end < 0 ? html.length : end);
-}
+/** The page's own source for one function. `html` is this file's copy of the page. */
+const fnSource = (name) => pageFnSource(name, html);
+
 
 const CERT_PAGES = [
   { page: 1, text: "CERTIFICATE No: SYN-CERT-0001\nManufacturer: Northgate Steelworks (synthetic)\n" +
@@ -122,9 +123,17 @@ describe("it is wired in", () => {
     }
   });
 
-  test("both modes have an upload, and both accept only PDFs", () => {
+  test("both modes take a photograph as well as a PDF", () => {
+    /* This was `accept=".pdf,application/pdf"` on both, which is half of the
+       defect the v5 gap matrix names: the input refused the file before the
+       handler got a chance to, so fixing the handler alone would have changed
+       nothing a person could see. */
     for (const which of ["scx", "ctx"]) {
-      assert.match(html, new RegExp(`id="${which}-file" accept="\\.pdf,application/pdf"`));
+      const accept = new RegExp(`id="${which}-file" accept="([^"]*)"`).exec(html);
+      assert.ok(accept, `${which} has no upload`);
+      for (const kind of ["application/pdf", "image/jpeg", "image/png"]) {
+        assert.ok(accept[1].includes(kind), `${which} does not accept ${kind}`);
+      }
     }
   });
 
@@ -341,9 +350,203 @@ describe("what the page must keep saying", () => {
     assert.match(out, /No model was asked, nothing was uploaded anywhere/);
   });
 
-  test("an image file is refused with the reason", () => {
+  test("the format is decided by the file's bytes, not by its name", () => {
+    /* The other half. `exRead` gated on `/\.pdf$/i` and returned an error
+       before opening anything, so a JPEG was refused whatever the input
+       accepted — and a PDF saved as ".bin" was refused too. */
     const fn = fnSource("exRead");
-    assert.match(fn, /no dimension may be derived from its pixels/);
-    assert.match(fn, /Enter the values by hand instead/);
+    assert.equal(/\\\.pdf\$/i.test(fn), false, "a format decision is still being made from a filename");
+    assert.match(fn, /B\.identifyFile\(new Uint8Array\(head\),f\.name\)/);
+    assert.match(fn, /f\.slice\(0,B\.HEAD_BYTES\)\.arrayBuffer\(\)/);
+  });
+
+  test("and nothing is claimed to have been read off it", () => {
+    /* The honest state, and the one that must not drift: an image is shown so
+       a person can read it, and the values stay theirs to type. A viewer that
+       implied a reading was coming would be worse than the refusal it
+       replaced. */
+    const say = fnSource("exShowImage");
+    assert.match(say, /msg\.textContent=say/, "the message comes from the router, not from here");
+    assert.match(say, /Nothing on it has been read/);
+    assert.equal(/verified|confirmed automatically/i.test(say), false);
+  });
+
+  test("the previous document is closed when the next one opens", () => {
+    /* An object URL holds the file alive until it is revoked, and a preview
+       left behind is the last case's drawing still on screen. */
+    assert.match(fnSource("exViewClose"), /URL\.revokeObjectURL\(open\.url\)/);
+    assert.match(fnSource("exRead"), /exViewClose\(which\);/);
+    assert.match(fnSource("scClearSession"), /exViewClose\("scx"\); exViewClose\("ctx"\);/);
+  });
+
+  test("a name that disagrees with the contents is reported, not resolved quietly", () => {
+    const fn = fnSource("exRead");
+    assert.match(fn, /id\.mismatch\?exNote\(id\.mismatchNote\)/);
+    assert.match(fnSource("exNote"), /ciEsc\(m\)/, "the note is escaped like every other filename");
+  });
+});
+
+/* ------------------------------------------------- the routing, executed */
+
+/**
+ * `exRead` run for real, against the real router.
+ *
+ * Matching the source of the branch was not enough: replacing the image test
+ * with `if(false&&id.handling===…)` left every assertion passing, because a
+ * dead branch reads exactly like a live one. The only way to know a file
+ * reaches the right handler is to hand one over and see where it lands.
+ */
+describe("a file goes where its bytes say it should", () => {
+  const bytesOf = (...prefix) => new Uint8Array([...prefix, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+
+  const JPEG = bytesOf(0xFF, 0xD8, 0xFF);
+  const PNG = bytesOf(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A);
+  const PDF = bytesOf(0x25, 0x50, 0x44, 0x46, 0x2D);
+  const TIFF = bytesOf(0x49, 0x49, 0x2A, 0x00);
+
+  /** A File, as much of one as this function touches. */
+  const fileOf = (bytes, name, size) => ({
+    name,
+    size: size === undefined ? bytes.length : size,
+    slice: (from, to) => ({ arrayBuffer: async () => bytes.slice(from, to).buffer }),
+  });
+
+  /** Run exRead over one file and report everything it did. */
+  async function read(which, file, before = null) {
+    const shown = [];
+    const outEl = { innerHTML: "" };
+    const nameEl = { textContent: "" };
+    const box = {
+      document: {
+        getElementById: (id) =>
+          (id === `${which}-out` ? outEl : id === `${which}-name` ? nameEl : null),
+      },
+      window: {
+        BW: {
+          identifyFile, fileNextStep, fileWithinLimits, FILE_HANDLING, HEAD_BYTES,
+          extractDocument, EX_TARGET,
+        },
+      },
+      ciEsc: (x) => String(x),
+      console,
+      _exState: { scx: before, ctx: before },
+      closed: [],
+      shown,
+      /* Two spies. What is being tested is where a file goes, and each of
+         these has its own tests; running the whole viewer here would test the
+         DOM rather than the routing. */
+      exShowImage: (w, f, say, note) => shown.push({ w, name: f.name, say, note }),
+      exResultHTML: () => "<table>the rows</table>",
+      exViewClose: (w) => box.closed.push(w),
+      scPdfPages: async () => ({ pages: DRAWING_PAGES, pagesInDocument: 1 }),
+      scReadStarted: () => {},
+      engineNote: () => "<p>the engine is missing</p>",
+    };
+    vm.createContext(box);
+    new vm.Script(["exRead", "exErr", "exNote"].map(fnSource).join("\n")).runInContext(box);
+
+    const input = { files: [file], value: "x" };
+    box.input = input;
+    await vm.runInContext("exRead(" + JSON.stringify(which) + ", input);", box);
+    return { out: outEl.innerHTML, name: nameEl.textContent, shown, state: box._exState[which],
+             closed: box.closed, input };
+  }
+
+  test("a JPEG reaches the viewer rather than an error", async () => {
+    const r = await read("scx", fileOf(JPEG, "drawing-photo.jpg"));
+    assert.equal(r.shown.length, 1, "the image branch did not run");
+    assert.equal(r.shown[0].name, "drawing-photo.jpg");
+    assert.equal(r.out, "", "nothing was written to the error area");
+  });
+
+  test("and it is told plainly that nothing will be read for it", async () => {
+    const r = await read("scx", fileOf(PNG, "scan.png"));
+    assert.match(r.shown[0].say, /No text reader is configured/);
+    assert.match(r.shown[0].say, /nothing will be read for you/);
+    /* Not "verified", and not a reading that is merely coming later. The
+       refusal this replaced was at least honest, and a viewer that implied a
+       reading was on its way would be a step backwards. */
+    assert.equal(/verified|will be read here|read for you to check/i.test(r.shown[0].say), false);
+  });
+
+  test("a PDF still goes to the reader, and still reads", async () => {
+    const r = await read("scx", fileOf(PDF, "drawing.pdf"));
+    assert.equal(r.shown.length, 0, "a PDF was sent to the image viewer");
+    assert.ok(r.state && r.state.candidates.length > 0, "nothing was extracted");
+    assert.match(r.name, /1 of 1 page/);
+  });
+
+  test("a PDF named something else is read as a PDF", async () => {
+    /* The name was the only evidence before, and this file would have been
+       refused for not ending in .pdf. */
+    const r = await read("scx", fileOf(PDF, "drawing.bin"));
+    assert.ok(r.state && r.state.candidates.length > 0, "the bytes were ignored");
+  });
+
+  test("a PNG named .jpg is read as a PNG, and the disagreement is shown", async () => {
+    const r = await read("scx", fileOf(PNG, "png-renamed.jpg"));
+    assert.equal(r.shown.length, 1);
+    assert.match(r.shown[0].note, /named \.jpg and its contents are image\/png/);
+  });
+
+  test("a format this cannot use says what to do instead", async () => {
+    const r = await read("ctx", fileOf(TIFF, "scan.tif"));
+    assert.equal(r.shown.length, 0);
+    assert.match(r.out, /Export it as a PNG or a PDF/);
+  });
+
+  test("an oversized file is refused before anything is opened", async () => {
+    const r = await read("scx", fileOf(JPEG, "huge.jpg", 400 * 1024 * 1024));
+    assert.equal(r.shown.length, 0);
+    assert.match(r.out, /the limit is/);
+  });
+
+  test("the previous document is closed before the next one is opened", async () => {
+    /* Seeded, because a sandbox that starts empty makes "it was cleared" a
+       claim that cannot fail — which is the shape of vacuous test this suite
+       has now found five times. */
+    const stale = { candidates: [{ label: "the last drawing" }] };
+    const r = await read("scx", fileOf(JPEG, "second.jpg"), stale);
+    assert.deepEqual(r.closed, ["scx"], "the previous preview was left open");
+    assert.equal(r.state, null, "the previous reading survived into this one");
+  });
+
+  test("and it is cleared even when the new file cannot be used at all", async () => {
+    /* The worse version: a file that fails leaves the last drawing's values
+       on screen, offered for confirmation against a document nobody is
+       looking at any more. */
+    const stale = { candidates: [{ label: "the last drawing" }] };
+    const r = await read("scx", fileOf(TIFF, "scan.tif"), stale);
+    assert.equal(r.state, null);
+    assert.match(r.out, /Export it as a PNG or a PDF/);
+  });
+
+  test("the input is cleared, so the same file can be chosen again", async () => {
+    /* A change event does not fire for the same file twice. Somebody who
+       picks the wrong drawing, then picks the right one, then picks the first
+       again would otherwise get nothing at all. */
+    for (const f of [fileOf(JPEG, "a.jpg"), fileOf(PDF, "a.pdf"), fileOf(TIFF, "a.tif")]) {
+      const r = await read("scx", f);
+      assert.equal(r.input.value, "", `the input kept its value after ${f.name}`);
+    }
+  });
+
+  test("with no engine it says so rather than failing silently", async () => {
+    const shown = [];
+    const outEl = { innerHTML: "" };
+    const box = {
+      document: { getElementById: (id) => (id === "scx-out" ? outEl : null) },
+      window: {},
+      console, _exState: { scx: null }, shown,
+      exShowImage: () => shown.push(1), exViewClose: () => {},
+      engineNote: () => "<p>the engine is missing</p>",
+      ciEsc: (x) => String(x),
+    };
+    vm.createContext(box);
+    new vm.Script(["exRead", "exErr", "exNote"].map(fnSource).join("\n")).runInContext(box);
+    box.input = { files: [fileOf(JPEG, "d.jpg")], value: "x" };
+    await vm.runInContext('exRead("scx", input);', box);
+    assert.match(outEl.innerHTML, /the engine is missing/);
+    assert.equal(shown.length, 0);
   });
 });

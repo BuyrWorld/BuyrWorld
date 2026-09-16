@@ -13,13 +13,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-import { pageSource } from "../helpers/page.mjs";
+import { pageSource, fnSource as pageFnSource } from "../helpers/page.mjs";
 
 import {
   newCase, saveCase, loadCase, listCases, deleteCase, storeStatus, STATUS,
 } from "../../src/services/case-store.mjs";
 
 const html = pageSource();
+
+/** The page's own source for one function. `html` is this file's copy of the page. */
+const fnSource = (name) => pageFnSource(name, html);
 
 /**
  * The source of one named function.
@@ -30,12 +33,6 @@ const html = pageSource();
  * back empty or backwards. This finds the function and reads to the next
  * top-level declaration, so there is no second anchor to get wrong.
  */
-function fnSource(name) {
-  const start = html.indexOf(`function ${name}(`);
-  if (start < 0) throw new Error(`${name} not found in index.html`);
-  const end = html.indexOf("\nfunction ", start + 1);
-  return html.slice(start, end < 0 ? html.length : end);
-}
 
 /** Every def-* control the Defender page actually declares. */
 function declaredFields() {

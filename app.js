@@ -2678,6 +2678,13 @@ function scClearSession(){
   /* The last calculated plan and cost. bcSave reads it, so leaving it behind
      lets the previous part's calculation be saved as this one's estimate. */
   _scLast=null;
+  /* The last document read and the preview of it. Both outlived a new case
+     before this: the previous part's extracted values were still offered for
+     confirmation, and the previous drawing was still on screen. */
+  if(typeof _exState!=="undefined"){ _exState.scx=null; _exState.ctx=null; }
+  if(typeof exViewClose==="function"){ exViewClose("scx"); exViewClose("ctx"); }
+  var exOut=document.getElementById("scx-out"); if(exOut)exOut.innerHTML="";
+  var exName=document.getElementById("scx-name"); if(exName)exName.textContent="";
   scClear();
 }
 
@@ -4417,40 +4424,232 @@ async function scPdfPages(file){
   return {pages:pages,pagesInDocument:pdf.numPages};
 }
 
+/**
+ * What is open, per reading path, so the previous document can be closed.
+ *
+ * An object URL holds the file alive until it is revoked, and a preview left
+ * behind when the next one opens is both a leak and the previous case's
+ * drawing still on screen.
+ */
+var _exView={scx:null,ctx:null};
+
+/** Close whatever is open on this path. */
+function exViewClose(which){
+  var open=_exView[which];
+  if(!open)return;
+  if(open.url)URL.revokeObjectURL(open.url);
+  if(open.off)open.off();
+  _exView[which]=null;
+}
+
+/**
+ * Read a document, whatever kind it turns out to be.
+ *
+ * The format comes from the file's first bytes rather than the end of its
+ * name. That is the fix: the input used to accept only .pdf and this function
+ * rejected everything else by filename, so widening the input alone would
+ * have changed nothing.
+ */
 async function exRead(which,input){
   var out=document.getElementById(which+"-out");
   var nameEl=document.getElementById(which+"-name");
   var f=input&&input.files&&input.files[0];
   if(!out||!f)return;
+  var B=window.BW;
+  if(!B||!B.identifyFile){ out.innerHTML=engineNote(); return; }
 
-  if(nameEl)nameEl.textContent=f.name+" — reading…";
+  exViewClose(which);
+  _exState[which]=null;
+  if(nameEl)nameEl.textContent=f.name+" — checking…";
   /* The moment the read began. Anything edited after this has been seen by a
      person more recently than by the reader, so a proposal for it is stale
      however the results happen to come back. */
   if(which==="scx"&&typeof scReadStarted==="function")scReadStarted();
-  if(f.size>MAX_FILE_MB*1024*1024){
+
+  var size=B.fileWithinLimits(f.size);
+  if(!size.ok){ if(nameEl)nameEl.textContent=f.name; out.innerHTML=exErr(size.why); return; }
+
+  var id;
+  try{
+    var head=await f.slice(0,B.HEAD_BYTES).arrayBuffer();
+    id=B.identifyFile(new Uint8Array(head),f.name);
+  }catch(e){
     if(nameEl)nameEl.textContent=f.name;
-    out.innerHTML=exErr("That file is "+(f.size/1024/1024).toFixed(1)+"MB; the limit is "+MAX_FILE_MB+"MB.");
-    return;
-  }
-  if(!/\.pdf$/i.test(f.name)){
-    if(nameEl)nameEl.textContent=f.name;
-    out.innerHTML=exErr("This reads PDFs. An image is a picture of a document: no dimension may be derived from its pixels, so it is refused rather than guessed at. Enter the values by hand instead.");
+    out.innerHTML=exErr("That file could not be read from this computer: "+String((e&&e.message)||e));
     return;
   }
 
-  var read;
-  try{ read=await scPdfPages(f); }
-  catch(e){ if(nameEl)nameEl.textContent=f.name; out.innerHTML=exErr("That PDF could not be opened: "+String(e.message||e)); return; }
+  var note=id.mismatch?exNote(id.mismatchNote):"";
+  var step=B.fileNextStep(id,{ocr:false});
 
-  var target=which==="ctx"?window.BW.EX_TARGET.CERTIFICATE:window.BW.EX_TARGET.DRAWING;
-  var result=window.BW.extractDocument(read.pages,{
-    filename:f.name,target:target,pagesInDocument:read.pagesInDocument
-  });
-  _exState[which]=result;
-  if(nameEl)nameEl.textContent=f.name+" — "+read.pages.length+" of "+read.pagesInDocument+" page(s) read";
-  out.innerHTML=exResultHTML(which,result);
+  if(id.handling===B.FILE_HANDLING.PDF){
+    if(nameEl)nameEl.textContent=f.name+" — reading…";
+    var read;
+    try{ read=await scPdfPages(f); }
+    catch(e2){ if(nameEl)nameEl.textContent=f.name; out.innerHTML=note+exErr("That PDF could not be opened: "+String((e2&&e2.message)||e2)); return; }
+
+    var target=which==="ctx"?B.EX_TARGET.CERTIFICATE:B.EX_TARGET.DRAWING;
+    var result=B.extractDocument(read.pages,{
+      filename:f.name,target:target,pagesInDocument:read.pagesInDocument
+    });
+    _exState[which]=result;
+    if(nameEl)nameEl.textContent=f.name+" — "+read.pages.length+" of "+read.pagesInDocument+" page(s) read";
+    out.innerHTML=note+exResultHTML(which,result);
+    input.value="";
+    return;
+  }
+
+  if(id.handling===B.FILE_HANDLING.IMAGE){
+    if(nameEl)nameEl.textContent=f.name;
+    exShowImage(which,f,step.say,note);
+    input.value="";
+    return;
+  }
+
+  if(nameEl)nameEl.textContent=f.name;
+  out.innerHTML=note+exErr(step.say);
   input.value="";
+}
+
+/** A remark that is not an error — a name that disagrees with its contents. */
+function exNote(m){
+  return '<p style="color:var(--bw-warning);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">'+ciEsc(m)+'</p>';
+}
+
+/**
+ * Show a picture of a document.
+ *
+ * Nothing is read off it, and the panel says so. What it does instead is the
+ * part that was missing: a drawing photographed on a phone is legible if you
+ * can enlarge and turn it, and somebody who can read it can type what it
+ * says. Before this, that file was refused and the case stopped there.
+ */
+function exShowImage(which,file,say,note){
+  var host=document.getElementById(which+"-out");
+  if(!host)return;
+  var V=window.BW&&window.BW.viewer;
+  if(!V){ host.innerHTML=engineNote(); return; }
+
+  host.innerHTML="";
+  var url=URL.createObjectURL(file);
+  var img=document.createElement("img");
+  img.alt="The uploaded document. Nothing on it has been read; the values are yours to enter.";
+  img.style.position="absolute";
+  img.style.transformOrigin="50% 50%";
+  img.draggable=false;
+
+  var pane=document.createElement("div");
+  pane.tabIndex=0;
+  pane.setAttribute("role","group");
+  pane.setAttribute("aria-label","Document preview. Drag to move, plus and minus to zoom, R to turn.");
+  pane.style.cssText="position:relative;overflow:hidden;height:420px;background:var(--bw-panel);"
+    +"border:1px solid var(--bw-line);border-radius:var(--bw-r-2);cursor:grab;touch-action:none";
+  pane.appendChild(img);
+
+  var bar=document.createElement("div");
+  bar.style.cssText="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:var(--bw-3) 0 0";
+
+  var readout=document.createElement("span");
+  readout.style.cssText="font-size:12px;color:var(--bw-muted);margin-left:auto;font-variant-numeric:tabular-nums";
+
+  var msg=document.createElement("p");
+  msg.style.cssText="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6";
+  msg.textContent=say;
+
+  if(note){ var n=document.createElement("div"); n.innerHTML=note; host.appendChild(n); }
+  host.appendChild(pane);
+  host.appendChild(bar);
+  host.appendChild(msg);
+
+  var view=null;
+  var draw=function(){
+    if(!view)return;
+    var t=V.transform(view),p=view.pages[view.page];
+    var w=p.w*t.scale,h=p.h*t.scale;
+    img.style.width=w+"px";
+    img.style.height=h+"px";
+    img.style.left=(t.x+t.w/2-w/2)+"px";
+    img.style.top=(t.y+t.h/2-h/2)+"px";
+    img.style.transform="rotate("+t.turn+"deg)";
+    readout.textContent=Math.round(t.scale*100)+"%"+(t.fitted?" · fits":"")+(t.turn?" · "+t.turn+"°":"");
+  };
+  var apply=function(next){ view=next; draw(); };
+
+  var btn=function(label,title,fn){
+    var b=document.createElement("button");
+    b.type="button"; b.className="bw-act bw-act-secondary";
+    b.style.cssText="padding:4px 10px;font-size:12px;margin:0";
+    b.textContent=label; b.title=title; b.setAttribute("aria-label",title);
+    b.addEventListener("click",function(){ if(view)fn(); });
+    bar.appendChild(b);
+    return b;
+  };
+
+  btn("\u2212","Zoom out",function(){ apply(V.zoomOut(view)); });
+  btn("+","Zoom in",function(){ apply(V.zoomIn(view)); });
+  btn("Fit","Fit the whole page",function(){ apply(V.fit(view)); });
+  btn("100%","Actual size",function(){ apply(V.actual(view)); });
+  btn("\u21ba","Turn left",function(){ apply(V.turn(view,-90)); });
+  btn("\u21bb","Turn right",function(){ apply(V.turn(view,90)); });
+  bar.appendChild(readout);
+
+  /* Drag to move. Pointer capture rather than listeners on the document: a
+     drag that leaves the pane keeps working, and stops when the button is
+     released wherever that happens. */
+  var from=null;
+  pane.addEventListener("pointerdown",function(e){
+    if(!view)return;
+    from={x:e.clientX,y:e.clientY};
+    pane.setPointerCapture(e.pointerId);
+    pane.style.cursor="grabbing";
+  });
+  pane.addEventListener("pointermove",function(e){
+    if(!from||!view)return;
+    apply(V.pan(view,e.clientX-from.x,e.clientY-from.y));
+    from={x:e.clientX,y:e.clientY};
+  });
+  var release=function(e){
+    if(!from)return;
+    from=null; pane.style.cursor="grab";
+    try{ pane.releasePointerCapture(e.pointerId); }catch(err){}
+  };
+  pane.addEventListener("pointerup",release);
+  pane.addEventListener("pointercancel",release);
+
+  pane.addEventListener("wheel",function(e){
+    if(!view)return;
+    e.preventDefault();
+    var box=pane.getBoundingClientRect();
+    var at={x:e.clientX-box.left,y:e.clientY-box.top};
+    apply(e.deltaY<0?V.zoomIn(view,at):V.zoomOut(view,at));
+  },{passive:false});
+
+  /* The same moves from the keyboard, because a drawing you cannot enlarge
+     without a mouse is a drawing you cannot read. */
+  pane.addEventListener("keydown",function(e){
+    if(!view)return;
+    var step=60,by={ArrowLeft:[step,0],ArrowRight:[-step,0],ArrowUp:[0,step],ArrowDown:[0,-step]}[e.key];
+    if(by){ e.preventDefault(); apply(V.pan(view,by[0],by[1])); return; }
+    if(e.key==="+"||e.key==="="){ e.preventDefault(); apply(V.zoomIn(view)); }
+    else if(e.key==="-"){ e.preventDefault(); apply(V.zoomOut(view)); }
+    else if(e.key==="0"){ e.preventDefault(); apply(V.fit(view)); }
+    else if(e.key==="r"||e.key==="R"){ e.preventDefault(); apply(V.turn(view,e.shiftKey?-90:90)); }
+  });
+
+  var onResize=function(){ if(view)apply(V.resize(view,{w:pane.clientWidth,h:pane.clientHeight})); };
+  window.addEventListener("resize",onResize);
+
+  img.addEventListener("load",function(){
+    apply(V.open({pages:[{w:img.naturalWidth,h:img.naturalHeight}]},
+                 {w:pane.clientWidth||800,h:pane.clientHeight||420}));
+  });
+  img.addEventListener("error",function(){
+    host.innerHTML=exErr("That image could not be displayed. It may be damaged. "
+      +"You can still enter the values by hand.");
+  });
+  img.src=url;
+
+  _exView[which]={url:url,off:function(){ window.removeEventListener("resize",onResize); }};
 }
 
 function exErr(m){

@@ -1293,10 +1293,10 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <div class="bw-panel" id="sc-upload-panel" hidden style="margin-bottom:var(--bw-4)">
         <div class="bw-panel-head"><div class="bw-panel-title">Read it off the drawing</div>
           <span class="bw-status bw-status--derived">values need confirming</span></div>
-        <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Upload a PDF and the labelled values on it are read out, each with the page and the exact characters it came from. <b style="color:var(--bw-text)">The file never leaves this browser</b> &mdash; there is no upload, no extraction service and no prompt, so nothing written in the document can change what is read. Nothing found is used until you confirm it.</p>
+        <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Upload a PDF and the labelled values on it are read out, each with the page and the exact characters it came from. A photograph or a scan is shown here instead, large enough to read, so you can type what it says &mdash; nothing is read off a picture, because no dimension can be recovered from pixels. <b style="color:var(--bw-text)">The file never leaves this browser</b> &mdash; there is no upload, no extraction service and no prompt, so nothing written in the document can change what is read. Nothing found is used until you confirm it.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <label class="bw-act bw-act-secondary" style="cursor:pointer;margin:0">
-            Choose a PDF<input type="file" id="scx-file" accept=".pdf,application/pdf" style="display:none">
+            Choose a file<input type="file" id="scx-file" accept=".pdf,application/pdf,.jpg,.jpeg,.png,image/jpeg,image/png" style="display:none">
           </label>
           <span id="scx-name" style="font-size:12.5px;color:var(--bw-muted)"></span>
         </div>
@@ -1593,10 +1593,10 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       <div class="bw-panel" style="margin-bottom:var(--bw-4)">
         <div class="bw-panel-head"><div class="bw-panel-title">0 &middot; Read it off the document</div>
           <span class="bw-status bw-status--derived">optional</span></div>
-        <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Upload a PDF and the labelled values on it are read out, each with the page and the exact characters it came from. <b style="color:var(--bw-text)">The file never leaves this browser</b> &mdash; there is no upload, no extraction service and no prompt, so nothing written in the document can change what is read. Nothing found is used until you confirm it.</p>
+        <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Upload a PDF and the labelled values on it are read out, each with the page and the exact characters it came from. A photograph or a scan is shown here instead, large enough to read, so you can type what it says &mdash; nothing is read off a picture, because no claim can be recovered from pixels. <b style="color:var(--bw-text)">The file never leaves this browser</b> &mdash; there is no upload, no extraction service and no prompt, so nothing written in the document can change what is read. Nothing found is used until you confirm it.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <label class="bw-act bw-act-secondary" style="cursor:pointer;margin:0">
-            Choose a PDF<input type="file" id="ctx-file" accept=".pdf,application/pdf" style="display:none">
+            Choose a file<input type="file" id="ctx-file" accept=".pdf,application/pdf,.jpg,.jpeg,.png,image/jpeg,image/png" style="display:none">
           </label>
           <span id="ctx-name" style="font-size:12.5px;color:var(--bw-muted)"></span>
         </div>

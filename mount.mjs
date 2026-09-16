@@ -14,6 +14,10 @@
   import { mapExposure, costShock, shareFrom, parseAmount } from "./src/calc/shock.mjs";
   import { learningCorpus, whatWorks, captureGaps } from "./src/calc/learning.mjs";
   import { classify, nextActions } from "./src/intake/classify.mjs";
+  import { identify as identifyFile, nextStep as fileNextStep,
+           withinLimits as fileWithinLimits, HANDLING as FILE_HANDLING,
+           LIMITS as FILE_LIMITS, HEAD_BYTES } from "./src/intake/file-router.mjs";
+  import * as viewer from "./src/intake/viewer.mjs";
   import { alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL } from "./src/calc/batna.mjs";
   import { comparablePart, compare, findComparable, priceGap, ATTRIBUTES } from "./src/calc/comparable.mjs";
   import { scanOpportunities, SEVERITY } from "./src/calc/radar.mjs";
@@ -80,7 +84,9 @@
   import { saveOutcome, loadOutcomes, clearOutcomes, exportOutcomes } from "./src/services/outcome-store.mjs";
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
-  window.BW = { costBridge, partialAcceptance, delayEffect, formatPercent,
+  window.BW = { identifyFile, fileNextStep, fileWithinLimits,
+                FILE_HANDLING, FILE_LIMITS, HEAD_BYTES, viewer,
+                costBridge, partialAcceptance, delayEffect, formatPercent,
                 pc: ratioFromPercent, moneyFromDecimal, moneyToDecimalString,
                 createSeries, movementBetween, assessEvidence, formatWeight, fxRate,
                 labelFor, assumptionsToVerify, LEGEND,

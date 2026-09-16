@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 53 |
-| Test files | 0 | 89 |
+| Modules under `src/` | 0 | 54 |
+| Test files | 0 | 90 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -247,6 +247,15 @@ reported rather than silently resolved either way — somebody who believes
 they uploaded a JPEG and a system that read a PNG will disagree later about
 something worse. Formats it knows and cannot use are named with what to do
 instead; limits are stated rather than met by surprise.
+
+`src/intake/viewer.mjs` is the other half of reading a picture, and most of
+what makes showing one worth doing: zoom, pan, quarter turns, fit and pages,
+with two properties it is built around. A region is stored against the
+document rather than the screen, so a source crop still marks the same
+characters after the drawing has been zoomed, turned and panned — the
+coordinate round trip is the thing its tests actually pin down, at every
+rotation. And panning stops at the edges, because a viewer that lets the page
+slide out of sight reads as a failed upload.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

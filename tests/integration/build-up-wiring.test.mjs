@@ -18,7 +18,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-import { pageSource } from "../helpers/page.mjs";
+import { pageSource, fnSource as pageFnSource } from "../helpers/page.mjs";
 
 import { ratioFromPercent, ratioToPercentString, moneyFromDecimal } from "../../src/calc/exact.mjs";
 import { BASIS } from "../../src/calc/should-cost.mjs";
@@ -30,12 +30,9 @@ import {
 
 const html = pageSource();
 
-function fnSource(name) {
-  const start = html.indexOf(`function ${name}(`);
-  if (start < 0) throw new Error(`${name} not found`);
-  const end = html.indexOf("\nfunction ", start + 1);
-  return html.slice(start, end < 0 ? html.length : end);
-}
+/** The page's own source for one function. `html` is this file's copy of the page. */
+const fnSource = (name) => pageFnSource(name, html);
+
 
 function fakeStore() {
   const m = new Map();
