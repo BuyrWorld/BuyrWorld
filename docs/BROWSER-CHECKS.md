@@ -135,6 +135,10 @@ somebody will trust the picture.
 - [ ] `make this aerospace grade` asks which specification applies.
 - [ ] `remove hole-1` while a tolerance points at it warns *before* the
       button is pressed.
+- [ ] Every one of these is read by written rule. **No provider is
+      configured**, and the network tab should show nothing leaving the page
+      when you describe a change. If it does, something has been wired that
+      should not have been.
 
 ## 7 · The review package — 10 minutes
 
@@ -150,6 +154,18 @@ exporting."*
       empty feature list, so it told a reviewer that every requirement had
       lost its target while the part still had the holes.
 - [ ] `part-model.json` carries the model revision and the feature ids.
+- [ ] With a model built, `drawing.dxf` is offered too, and the package says
+      it is 2D geometry rather than a dimensioned drawing.
+- [ ] Download it and **open it in a CAD tool**. This is the one check here
+      that reaches outside the browser, and it is the only way to know the
+      file is readable by the thing it exists for. The outline, the holes
+      and the pockets should be on three named layers, in millimetres, with
+      the origin at the bottom-left corner.
+- [ ] Measure a hole. It must match what you typed exactly — the export
+      checks itself before offering the file, so a mismatch here means the
+      check is wrong, which is worth knowing.
+- [ ] `model.step` and `drawing.pdf` are still listed as absent, each with
+      a reason naming what would have to change.
 - [ ] Every file downloads and opens. The HTML schedule renders.
 - [ ] The word *approved* appears nowhere in any of them.
 - [ ] Nothing is sent. Check the network tab if you want to be sure — the
@@ -183,6 +199,11 @@ Not repeated above, so a browser pass does not spend time on it:
   deployed modules rather than the local copies.
 - That the served `app.js` parses and its dispatch table resolves.
 - That `design-handoff/` returns 404 and the strategy pack is unpublished.
+- That the DXF describes the model it came from, checked by reading it back
+  and comparing every coordinate.
+- That `initStudio` survives a page missing any of the elements it decorates,
+  so a failure there cannot stop the mount.
+- That starting a new scenario leaves nothing of the previous one behind.
 - That the export module cannot send anything.
 
 ## What nothing here can settle
