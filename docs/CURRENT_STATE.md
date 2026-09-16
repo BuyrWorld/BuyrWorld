@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 54 |
-| Test files | 0 | 90 |
+| Modules under `src/` | 0 | 55 |
+| Test files | 0 | 91 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -256,6 +256,22 @@ characters after the drawing has been zoomed, turned and panned — the
 coordinate round trip is the thing its tests actually pin down, at every
 rotation. And panning stops at the edges, because a viewer that lets the page
 slide out of sight reads as a failed upload.
+
+`src/intake/review.mjs` is the confirmation queue, and the four answers a
+person can give about a reading rather than two. A tick and an editable box
+covered "it says this and it is right" and "it says this and the right value
+is that"; neither covered "the drawing does not give this" or "that reading
+is not this field at all", and both of those were landing as an untouched
+row, indistinguishable from one nobody had looked at.
+
+Correcting used to overwrite the reading in place, so the moment anybody
+disagreed with a drawing, what the drawing said was gone. Evidence is frozen
+at the point of reading now and never written to again; every decision is a
+revision on top of it, carrying who, when, and what it was changed from. A
+decision also belongs to the document it was made about: a new revision, or
+the same file read as saying something else, sends those rows back for review
+and says which ones and why, rather than quietly emptying the ticks. Where a
+typed value and a read value disagree, both are shown and neither wins.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

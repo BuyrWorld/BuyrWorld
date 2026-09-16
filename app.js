@@ -2682,6 +2682,7 @@ function scClearSession(){
      before this: the previous part's extracted values were still offered for
      confirmation, and the previous drawing was still on screen. */
   if(typeof _exState!=="undefined"){ _exState.scx=null; _exState.ctx=null; }
+  if(typeof _exReview!=="undefined"){ _exReview.scx=null; _exReview.ctx=null; }
   if(typeof exViewClose==="function"){ exViewClose("scx"); exViewClose("ctx"); }
   var exOut=document.getElementById("scx-out"); if(exOut)exOut.innerHTML="";
   var exName=document.getElementById("scx-name"); if(exName)exName.textContent="";
@@ -4433,6 +4434,97 @@ async function scPdfPages(file){
  */
 var _exView={scx:null,ctx:null};
 
+/**
+ * What a person has decided about each reading, per path.
+ *
+ * Kept beside the extraction rather than inside it. The extraction is what
+ * the document says and does not change; this is what somebody did about it,
+ * and it carries the audit trail — what a value was corrected from, by whom,
+ * and when. Correcting used to overwrite the reading in place, so the moment
+ * anybody disagreed with a drawing, what the drawing said was gone.
+ */
+var _exReview={scx:null,ctx:null};
+
+/** The one name this product can honestly record. There is no sign-in. */
+var EX_REVIEWER="this browser";
+
+/** A fingerprint of what was actually read, so a re-read can be recognised. */
+async function exFingerprint(file){
+  try{
+    var buf=await file.arrayBuffer();
+    var hash=await crypto.subtle.digest("SHA-256",buf);
+    return Array.prototype.map.call(new Uint8Array(hash),function(b){
+      return ("0"+b.toString(16)).slice(-2);
+    }).join("").slice(0,16);
+  }catch(e){
+    /* No subtle crypto, or the file could not be re-read. Size and modified
+       time still separate two different files far better than a name does,
+       and saying so is better than claiming a hash there is not. */
+    return "size-"+file.size+"-"+(file.lastModified||0);
+  }
+}
+
+/** The decision made about one field, or null if nobody has made one. */
+function exItem(which,field){
+  var q=_exReview[which];
+  if(!q)return null;
+  for(var i=0;i<q.length;i++)if(q[i].field===field)return q[i];
+  return null;
+}
+
+/** Replace one item, keeping the rest of the queue as it was. */
+function exSetItem(which,next){
+  var q=_exReview[which];
+  if(!q)return;
+  _exReview[which]=q.map(function(it){ return it.field===next.field?next:it; });
+}
+
+/** Re-render whichever table this path owns. */
+function exRerender(which){
+  var out=document.getElementById(which+"-out");
+  if(out&&_exState[which])out.innerHTML=exResultHTML(which,_exState[which]);
+}
+
+/** One of the four decisions, applied to both the queue and the extraction. */
+function exDecide(which,field,action){
+  var B=window.BW,item=exItem(which,field);
+  if(!B||!item)return;
+  var next=action==="unknown"
+    ?B.reviewUnknown(item,EX_REVIEWER,"Not given on this document")
+    :B.reviewReject(item,EX_REVIEWER,"This reading is not that field");
+  exSetItem(which,next);
+
+  /* The extraction's own state stays the truth the rest of the page reads,
+     and both of these are not-confirmed — which is already what it checks. */
+  var r=_exState[which];
+  if(r){
+    _exState[which]=Object.assign({},r,{candidates:r.candidates.map(function(c){
+      return c.field===field?Object.assign({},c,{state:"proposed",confirmedBy:null}):c;
+    })});
+  }
+  exRerender(which);
+}
+
+/**
+ * Take a decision back.
+ *
+ * Offered because both of the new answers are easy to press by accident and
+ * neither can be undone by editing the box — the row stops showing one.
+ * The revision that recorded the decision is kept: taking something back is
+ * itself part of the history, not a way to erase it.
+ */
+function exUndecide(which,field){
+  var B=window.BW,item=exItem(which,field);
+  if(!B||!item)return;
+  exSetItem(which,Object.assign({},item,{
+    disposition:B.REVIEW_DISPOSITION.PROPOSED,
+    value:item.evidence.value,
+    unit:item.evidence.unit,
+    why:null
+  }));
+  exRerender(which);
+}
+
 /** Close whatever is open on this path. */
 function exViewClose(which){
   var open=_exView[which];
@@ -4493,8 +4585,18 @@ async function exRead(which,input){
       filename:f.name,target:target,pagesInDocument:read.pagesInDocument
     });
     _exState[which]=result;
+
+    /* The decisions somebody already made, carried across only where this is
+       the same document read the same way. A new revision, or the same file
+       read as saying something else, sends every row back for review. */
+    var doc=B.documentRef({filename:f.name,fingerprint:await exFingerprint(f)});
+    var was=_exReview[which]||[];
+    var fresh=B.reviewQueue(result,{method:B.REVIEW_METHOD.RULE,document:doc,existing:was});
+    var lost=B.needsReReview(B.reviewQueue(result,{method:B.REVIEW_METHOD.RULE,document:doc}),was);
+    _exReview[which]=fresh;
+
     if(nameEl)nameEl.textContent=f.name+" — "+read.pages.length+" of "+read.pagesInDocument+" page(s) read";
-    out.innerHTML=note+exResultHTML(which,result);
+    out.innerHTML=note+(lost.length?exReReviewHTML(lost):"")+exResultHTML(which,result);
     input.value="";
     return;
   }
@@ -4678,9 +4780,7 @@ function exResultHTML(which,r){
       +'<td class="n">'+c.page+'</td>'
       +'<td style="font-family:monospace;font-size:11.5px;color:var(--bw-muted)">'+ciEsc(c.quote)+'</td>'
       +'<td><span class="bw-status bw-status--'+chip(c.confidence)+'">'+ciEsc(c.confidence)+'</span></td>'
-      +'<td><label class="bw-field" style="display:flex;align-items:center;gap:6px;margin:0">'
-      +'<input type="checkbox" style="width:auto;margin:0" data-ex="'+attrEsc(which)+'" data-ex-confirm="'+i+'"'+(c.state==="confirmed"?' checked':'')
-      +' aria-label="I have checked '+attrEsc(row.label)+' against the document"><span style="font-size:11.5px">checked</span></label></td>'
+      +'<td>'+exDecisionHTML(which,row,c,i)+'</td>'
       +'</tr>';
   }).join("");
 
@@ -4707,6 +4807,70 @@ function exResultHTML(which,r){
       +'</div>'
       +'<div id="'+attrEsc(which)+'-apply" style="margin-top:var(--bw-3)"></div>':'')
     +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-4) 0 0;line-height:1.55">'+ciEsc(r.method)+'</p>';
+}
+
+
+/**
+ * What somebody may decide about one reading, and what they already did.
+ *
+ * Four answers, not two. A tick and an edit cover "it says this and it is
+ * right" and "it says this and the right value is that"; neither covers "the
+ * drawing does not give this" or "that reading is not this field at all", and
+ * collapsing those into an untouched row loses the difference between a value
+ * nobody has looked at and one somebody has ruled out.
+ */
+function exDecisionHTML(which,row,c,i){
+  var B=window.BW,item=typeof exItem==="function"?exItem(which,c.field):null;
+  var D=B&&B.REVIEW_DISPOSITION;
+  var disp=item?item.disposition:null;
+
+  if(D&&(disp===D.UNKNOWN||disp===D.REJECTED)){
+    var said=disp===D.UNKNOWN?"not on the document":"reading rejected";
+    return '<div style="font-size:11.5px;color:var(--bw-muted);line-height:1.5">'+ciEsc(said)
+      +'<br><button class="bw-act bw-act-secondary" style="padding:2px 8px;font-size:11px;margin-top:4px"'
+      +' data-ex="'+attrEsc(which)+'" data-ex-undo="'+attrEsc(c.field)+'">undo</button></div>';
+  }
+
+  var trail="";
+  if(item&&item.revisions.length){
+    var last=item.revisions[item.revisions.length-1];
+    if(last.action==="correct"){
+      trail='<div style="font-size:11px;color:var(--bw-warning);margin-top:4px">'
+        +'corrected from '+ciEsc(String(last.from))+'</div>';
+    }
+  }
+
+  return '<label class="bw-field" style="display:flex;align-items:center;gap:6px;margin:0">'
+    +'<input type="checkbox" style="width:auto;margin:0" data-ex="'+attrEsc(which)+'" data-ex-confirm="'+i+'"'+(c.state==="confirmed"?' checked':'')
+    +' aria-label="I have checked '+attrEsc(row.label)+' against the document"><span style="font-size:11.5px">checked</span></label>'
+    +'<div style="display:flex;gap:4px;margin-top:4px">'
+    +'<button class="bw-act bw-act-secondary" style="padding:2px 8px;font-size:11px"'
+    +' data-ex="'+attrEsc(which)+'" data-ex-unknown="'+attrEsc(c.field)+'"'
+    +' title="This document does not give '+attrEsc(row.label)+'">not on it</button>'
+    +'<button class="bw-act bw-act-secondary" style="padding:2px 8px;font-size:11px"'
+    +' data-ex="'+attrEsc(which)+'" data-ex-reject="'+attrEsc(c.field)+'"'
+    +' title="That is not '+attrEsc(row.label)+'">wrong</button>'
+    +'</div>'+trail;
+}
+
+/**
+ * What was decided against a document that is no longer the one in front of
+ * you.
+ *
+ * Silently dropping the ticks would be defensible and unkind: somebody who
+ * checked fourteen rows and re-uploaded a corrected drawing needs to be told
+ * that is why they are all empty again.
+ */
+function exReReviewHTML(lost){
+  return '<div style="border:1px solid var(--bw-warning);background:var(--bw-warning-soft);'
+    +'border-radius:var(--bw-r-sm);padding:12px 14px;margin-bottom:var(--bw-4)">'
+    +'<div class="eyebrow" style="margin:0 0 6px">This document changed, so these need checking again</div>'
+    +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+    +lost.map(function(l){
+      return '<li><b style="color:var(--bw-text)">'+ciEsc(l.label)+'</b>'
+        +(l.was?' &mdash; you had confirmed '+ciEsc(String(l.was)):'')+'</li>';
+    }).join("")
+    +'</ul></div>';
 }
 
 /* Which form field each extracted field fills. Anything not named here is
@@ -4803,7 +4967,7 @@ function exBind(page){
       /* Confirming replaces the candidate in place, so the state the table
          renders from is the state the apply step reads. */
       var next=r.candidates.map(function(c){
-        return c===row.best?(t.checked?window.BW.confirmCandidate(c,"this browser"):Object.assign({},c,{state:"proposed",confirmedBy:null})):c;
+        return c===row.best?(t.checked?window.BW.confirmCandidate(c,EX_REVIEWER):Object.assign({},c,{state:"proposed",confirmedBy:null})):c;
       });
       _exState[which]=Object.assign({},r,{candidates:next});
     }
@@ -4823,10 +4987,24 @@ function exBind(page){
       return c===row.best?Object.assign({},c,{value:t.value,state:"proposed",confirmedBy:null,edited:true}):c;
     });
     _exState[which]=Object.assign({},r,{candidates:next});
+
+    /* And in the queue, where the reading it replaced is kept. The extraction
+       above still overwrites its own value — that is what the form binds to —
+       but the evidence of what the document said now survives it. */
+    var item=exItem(which,row.best.field);
+    if(item&&window.BW&&String(t.value).trim()!==""){
+      exSetItem(which,window.BW.reviewCorrect(item,{value:t.value},EX_REVIEWER));
+    }
   });
   page.addEventListener("click",function(e){
     var t=e.target&&e.target.closest?e.target.closest("[data-ex-act]"):null;
     if(t&&t.dataset.exAct==="apply")exApply(t.dataset.ex);
+
+    var d=e.target&&e.target.closest?e.target.closest("[data-ex-unknown],[data-ex-reject],[data-ex-undo]"):null;
+    if(!d)return;
+    if(d.dataset.exUnknown!==undefined)exDecide(d.dataset.ex,d.dataset.exUnknown,"unknown");
+    else if(d.dataset.exReject!==undefined)exDecide(d.dataset.ex,d.dataset.exReject,"reject");
+    else if(d.dataset.exUndo!==undefined)exUndecide(d.dataset.ex,d.dataset.exUndo);
   });
 }
 

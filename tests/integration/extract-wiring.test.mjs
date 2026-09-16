@@ -27,6 +27,11 @@ import {
   identify as identifyFile, nextStep as fileNextStep, withinLimits as fileWithinLimits,
   HANDLING as FILE_HANDLING, HEAD_BYTES,
 } from "../../src/intake/file-router.mjs";
+import {
+  queue as reviewQueue, documentRef, needsReReview, confirm as reviewConfirm,
+  correct as reviewCorrect, markUnknown as reviewUnknown, reject as reviewReject,
+  METHOD as REVIEW_METHOD, DISPOSITION as REVIEW_DISPOSITION,
+} from "../../src/intake/review.mjs";
 
 const html = pageSource();
 
@@ -89,7 +94,7 @@ beforeEach(() => {
     ctRenderRows: () => {},
   };
   vm.createContext(sandbox);
-  const src = ["exErr", "exResultHTML", "exApply"].map(fnSource).join("\n")
+  const src = ["exErr", "exResultHTML", "exApply", "exDecisionHTML"].map(fnSource).join("\n")
     + "\n" + html.slice(html.indexOf("var EX_TO_FORM="), html.indexOf("function exApply("));
   new vm.Script(src).runInContext(sandbox);
 });
@@ -307,7 +312,10 @@ describe("editing and confirming", () => {
   });
 
   test("confirming is recorded through the engine, not by setting a flag", () => {
-    assert.match(bindSource(), /window\.BW\.confirmCandidate\(c,"this browser"\)/);
+    assert.match(bindSource(), /window\.BW\.confirmCandidate\(c,EX_REVIEWER\)/);
+    /* The name is a constant now, because four actions record one and three
+       of them would otherwise each carry their own spelling of it. */
+    assert.match(html, /var EX_REVIEWER="this browser";/);
   });
 });
 
@@ -425,6 +433,7 @@ describe("a file goes where its bytes say it should", () => {
         BW: {
           identifyFile, fileNextStep, fileWithinLimits, FILE_HANDLING, HEAD_BYTES,
           extractDocument, EX_TARGET,
+          documentRef, reviewQueue, needsReReview, REVIEW_METHOD,
         },
       },
       ciEsc: (x) => String(x),
@@ -439,6 +448,9 @@ describe("a file goes where its bytes say it should", () => {
       exResultHTML: () => "<table>the rows</table>",
       exViewClose: (w) => box.closed.push(w),
       scPdfPages: async () => ({ pages: DRAWING_PAGES, pagesInDocument: 1 }),
+      _exReview: { scx: null, ctx: null },
+      exFingerprint: async () => "fingerprint",
+      exReReviewHTML: () => "<div>needs checking again</div>",
       scReadStarted: () => {},
       engineNote: () => "<p>the engine is missing</p>",
     };
@@ -548,5 +560,146 @@ describe("a file goes where its bytes say it should", () => {
     await vm.runInContext('exRead("scx", input);', box);
     assert.match(outEl.innerHTML, /the engine is missing/);
     assert.equal(shown.length, 0);
+  });
+});
+
+/* ------------------------------------------- the two decisions, executed */
+
+/**
+ * "Not on the drawing" and "that reading is wrong", through the page.
+ *
+ * Both were missing, and both were landing as an untouched row — the same
+ * thing a field nobody has looked at looks like. Run rather than matched:
+ * a rendered button proves markup, not that pressing it does anything.
+ */
+describe("a reading can be ruled out, not only ticked", () => {
+  /** A page with the decision functions and the table renderer in it. */
+  function studio() {
+    const outEl = { innerHTML: "" };
+    const box = {
+      document: { getElementById: (id) => (id === "scx-out" ? outEl : null) },
+      window: {
+        BW: {
+          extractDocument, reviewTable, EX_CONFIDENCE, EX_TARGET,
+          reviewQueue, documentRef, needsReReview,
+          reviewUnknown, reviewReject, reviewCorrect,
+          REVIEW_METHOD, REVIEW_DISPOSITION,
+        },
+      },
+      ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
+      attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+      console,
+      EX_REVIEWER: "this browser",
+      _exState: { scx: null },
+      _exReview: { scx: null },
+    };
+    vm.createContext(box);
+    new vm.Script(["exErr", "exResultHTML", "exDecisionHTML", "exItem", "exSetItem",
+                   "exRerender", "exDecide", "exUndecide"].map(fnSource).join("\n"))
+      .runInContext(box);
+
+    const doc = documentRef({ filename: "brk-a-102.pdf", fingerprint: "abc" });
+    const result = extractDocument(DRAWING_PAGES, { filename: "brk-a-102.pdf", target: EX_TARGET.DRAWING });
+    box._exState.scx = result;
+    box._exReview.scx = reviewQueue(result, { method: REVIEW_METHOD.RULE, document: doc });
+    vm.runInContext('_render = exResultHTML("scx", _exState.scx);', box);
+    outEl.innerHTML = box._render;
+
+    return {
+      box, outEl,
+      html: () => outEl.innerHTML,
+      decide: (field, action) =>
+        vm.runInContext(`exDecide("scx", ${JSON.stringify(field)}, ${JSON.stringify(action)});`, box),
+      undo: (field) => vm.runInContext(`exUndecide("scx", ${JSON.stringify(field)});`, box),
+      item: (field) => box._exReview.scx.find((i) => i.field === field),
+      /* A tick, as the change handler applies one. */
+      confirmInPlace: (field) => {
+        const r = box._exState.scx;
+        box._exState.scx = { ...r, candidates: r.candidates.map((x) =>
+          (x.field === field ? confirmCandidate(x, "this browser") : x)) };
+      },
+      candidate: (field) => box._exState.scx.candidates.find((c) => c.field === field),
+    };
+  }
+
+  test("both answers are offered on every row", () => {
+    const s = studio();
+    assert.match(s.html(), /data-ex-unknown="thickness"/);
+    assert.match(s.html(), /data-ex-reject="thickness"/);
+    assert.match(s.html(), /not on it</);
+    assert.match(s.html(), />wrong</);
+  });
+
+  test("marking one not-on-the-document records it and says so", () => {
+    const s = studio();
+    s.decide("thickness", "unknown");
+    assert.equal(s.item("thickness").disposition, REVIEW_DISPOSITION.UNKNOWN);
+    assert.match(s.html(), /not on the document/);
+    assert.equal(s.item("thickness").revisions[0].by, "this browser");
+  });
+
+  test("rejecting a reading says something different", () => {
+    /* The distinction the whole thing turns on: the drawing being silent and
+       the rule having matched the wrong thing are not the same answer. */
+    const s = studio();
+    s.decide("thickness", "reject");
+    assert.equal(s.item("thickness").disposition, REVIEW_DISPOSITION.REJECTED);
+    assert.match(s.html(), /reading rejected/);
+    assert.equal(/not on the document/.test(s.html()), false);
+  });
+
+  test("ruling out a row takes its tick away", () => {
+    /* Confirmed first, or this asserts that something never confirmed is not
+       confirmed — which is true of an empty page. The real case is somebody
+       who ticked a row and then noticed the rule had matched the wrong
+       number: the tick has to go, or a rejected reading is still applied. */
+    const s = studio();
+    s.confirmInPlace("thickness");
+    assert.equal(s.candidate("thickness").state, "confirmed", "the fixture did not confirm");
+
+    s.decide("thickness", "reject");
+    assert.notEqual(s.candidate("thickness").state, "confirmed");
+    assert.equal(s.candidate("thickness").confirmedBy, null);
+  });
+
+  test("the evidence survives being ruled out", () => {
+    /* A rule that keeps being rejected on the same kind of drawing is the
+       most useful thing this queue can report, and a deleted row reports
+       nothing. */
+    const s = studio();
+    const read = s.item("thickness").evidence.value;
+    s.decide("thickness", "reject");
+    assert.equal(s.item("thickness").evidence.value, read);
+    assert.ok(s.item("thickness").evidence.quote);
+  });
+
+  test("a decision can be taken back, and the taking back is kept", () => {
+    const s = studio();
+    s.decide("thickness", "unknown");
+    s.undo("thickness");
+    assert.equal(s.item("thickness").disposition, REVIEW_DISPOSITION.PROPOSED);
+    assert.equal(s.item("thickness").value, s.item("thickness").evidence.value,
+      "the reading did not come back");
+    assert.equal(s.item("thickness").revisions.length, 1,
+      "undoing erased the record that a decision was made");
+    assert.match(s.html(), /data-ex-unknown="thickness"/, "the row did not return to offering both");
+  });
+
+  test("one row's decision leaves the others alone", () => {
+    const s = studio();
+    s.decide("thickness", "unknown");
+    assert.equal(s.item("width").disposition, REVIEW_DISPOSITION.PROPOSED);
+    assert.match(s.html(), /data-ex-unknown="width"/);
+  });
+
+  test("with no queue built, the row still renders and offers both", () => {
+    /* exDecisionHTML is called from a renderer that runs before any queue
+       exists in several paths. Throwing there would take the whole table
+       with it. */
+    const s = studio();
+    s.box._exReview.scx = null;
+    vm.runInContext('_render = exResultHTML("scx", _exState.scx);', s.box);
+    assert.match(s.box._render, /data-ex-unknown="thickness"/);
   });
 });

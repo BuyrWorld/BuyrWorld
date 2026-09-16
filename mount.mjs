@@ -18,6 +18,13 @@
            withinLimits as fileWithinLimits, HANDLING as FILE_HANDLING,
            LIMITS as FILE_LIMITS, HEAD_BYTES } from "./src/intake/file-router.mjs";
   import * as viewer from "./src/intake/viewer.mjs";
+  import { queue as reviewQueue, documentRef, needsReReview,
+           confirm as reviewConfirm, correct as reviewCorrect,
+           markUnknown as reviewUnknown, reject as reviewReject,
+           confirmedValues, outstanding as reviewOutstanding,
+           sourceConflicts, stateOf as reviewStateOf, methodSaid,
+           METHOD as REVIEW_METHOD, DISPOSITION as REVIEW_DISPOSITION,
+           history as reviewHistory } from "./src/intake/review.mjs";
   import { alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL } from "./src/calc/batna.mjs";
   import { comparablePart, compare, findComparable, priceGap, ATTRIBUTES } from "./src/calc/comparable.mjs";
   import { scanOpportunities, SEVERITY } from "./src/calc/radar.mjs";
@@ -85,6 +92,11 @@
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { identifyFile, fileNextStep, fileWithinLimits,
+                reviewQueue, documentRef, needsReReview,
+                reviewConfirm, reviewCorrect, reviewUnknown, reviewReject,
+                confirmedValues, reviewOutstanding, sourceConflicts,
+                reviewStateOf, methodSaid, REVIEW_METHOD, REVIEW_DISPOSITION,
+                reviewHistory,
                 FILE_HANDLING, FILE_LIMITS, HEAD_BYTES, viewer,
                 costBridge, partialAcceptance, delayEffect, formatPercent,
                 pc: ratioFromPercent, moneyFromDecimal, moneyToDecimalString,
