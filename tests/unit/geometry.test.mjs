@@ -321,6 +321,19 @@ describe("mass needs a density somebody sourced", () => {
 /* -------------------------------------------------------------- history */
 
 describe("undo", () => {
+  test("deleting the highest hole id never transfers its requirements to a new hole", () => {
+    let m = ok(addHole(plate(), { xUm: mm(15), yUm: mm(25), diameterUm: mm(6) }));
+    m = ok(removeFeature(m, "hole-1"));
+    m = ok(addHole(m, { xUm: mm(50), yUm: mm(25), diameterUm: mm(6) }));
+    assert.deepEqual(featureIds(m), ["hole-2"]);
+  });
+  test("a new branch after undo cannot reuse a discarded feature identity", () => {
+    const h = history(plate());
+    h.push(ok(addHole(h.current(), { xUm: mm(15), yUm: mm(25), diameterUm: mm(6) })));
+    h.undo();
+    h.push(ok(addHole(h.current(), { xUm: mm(50), yUm: mm(25), diameterUm: mm(6) })));
+    assert.deepEqual(featureIds(h.current()), ["hole-2"]);
+  });
   test("steps back to the previous model", () => {
     const h = history(plate());
     h.push(ok(addHole(h.current(), { xUm: mm(15), yUm: mm(25), diameterUm: mm(6) })));

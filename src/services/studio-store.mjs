@@ -19,10 +19,20 @@
  */
 
 import { scenario, readiness, started } from "../studio/scenario.mjs";
+import { serialise, deserialise } from "./outcome-store.mjs";
 
 const KEY = "bw.studio.v1";
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
+
+/* Versions this build can still read.
+ *
+ * A version-1 record is a version-2 record that carries no model and no
+ * requirements — the fields were added, nothing changed meaning. Refusing to
+ * read one would discard somebody's saved work to enforce a distinction that
+ * does not exist. Anything outside this list is still withheld rather than
+ * guessed at. */
+const READABLE_SCHEMAS = Object.freeze([1, 2]);
 
 /* Generous next to the estimate store's 64KB: a scenario carries per-field
    provenance, which is several times the size of the values themselves. */
@@ -54,7 +64,9 @@ function readAll(store) {
   try {
     const raw = s.getItem(KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
+    /* deserialise, not JSON.parse: a saved model and its requirements are full
+       of BigInts, and they come back as BigInts or they come back wrong. */
+    const parsed = deserialise(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -65,7 +77,7 @@ function writeAll(records, store) {
   const s = store ?? localStore();
   if (!s) return { ok: false, error: "This browser is not storing anything for this site." };
   try {
-    s.setItem(KEY, JSON.stringify(records));
+    s.setItem(KEY, serialise(records));
     return { ok: true };
   } catch (e) {
     return { ok: false, error: `Storage refused the write: ${e && e.name ? e.name : "unknown error"}.` };
@@ -75,7 +87,7 @@ function writeAll(records, store) {
 /* A record this build can read. The schema gate is the same one the other
    stores use: withhold rather than misread something another build wrote. */
 const readable = (r) =>
-  Boolean(r) && typeof r === "object" && r.schema === SCHEMA_VERSION
+  Boolean(r) && typeof r === "object" && READABLE_SCHEMAS.includes(r.schema)
   && Boolean(r.id) && Boolean(r.fields);
 
 /* ---------------------------------------------------------------- reading */
@@ -90,7 +102,15 @@ const readable = (r) =>
 export function loadScenarios(store) {
   return readAll(store)
     .filter(readable)
-    .map((r) => scenario(r))
+    /* scenario() knows the form fields; the model and the requirements ride
+       along beside them, already rebuilt by deserialise. A version-1 record
+       simply has neither. */
+    .map((r) => Object.freeze({
+      ...scenario(r),
+      model: r.model ?? null,
+      requirements: Object.freeze([...(r.requirements ?? [])]),
+      savedSchema: r.schema,
+    }))
     .sort((a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
 }
 
@@ -110,7 +130,8 @@ export function storeStatus(store) {
     unreadableReasons: Object.freeze(bad.map((r) => {
       if (!r || typeof r !== "object") return "An entry that is not a scenario.";
       if (!r.id) return "A scenario with no id.";
-      return `Scenario ${r.name ?? r.id} was saved by schema ${r.schema ?? "unknown"}; this build reads ${SCHEMA_VERSION}.`;
+      return `Scenario ${r.name ?? r.id} was saved by schema ${r.schema ?? "unknown"}; `
+        + `this build reads ${READABLE_SCHEMAS.join(" and ")}.`;
     })),
     schema: SCHEMA_VERSION,
   });
@@ -151,6 +172,12 @@ export function saveScenario(s, store) {
   const r = readiness(s);
   const entry = {
     ...s,
+    /* The part and what it must satisfy, saved beside the fields. Without
+       these a reopened scenario is the form only, and whatever geometry and
+       tolerances happened to be in memory come with it — which is one
+       project's requirements appearing on another. */
+    model: s.model ?? null,
+    requirements: Object.freeze([...(s.requirements ?? [])]),
     schema: SCHEMA_VERSION,
     savedAt: new Date().toISOString(),
     updatedAt: s.updatedAt ?? new Date().toISOString(),
@@ -163,7 +190,7 @@ export function saveScenario(s, store) {
     },
   };
 
-  const bytes = JSON.stringify(entry).length;
+  const bytes = serialise(entry).length;
   if (bytes > MAX_SCENARIO_BYTES) {
     return {
       ok: false,

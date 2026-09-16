@@ -337,3 +337,64 @@ describe("the handover describes the product somebody would inherit", () => {
 function numberWord(n) {
   return ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"][n] || String(n);
 }
+
+/* ------------------------------------------- the status document says one thing */
+
+describe("the status document does not contradict itself", () => {
+  /* The 16 September audit: "Historical sections of IMPLEMENTATION-STATUS.md
+     describe features as not built before later sections mark them done."
+     Two lines apart it said C4 was unstarted and C4 was done.
+
+     It grew as a diary and was read as a description. Current state now sits
+     at the top in one table, and the diary lives underneath, labelled. These
+     checks keep those two facts about the document true. */
+  const status = readFileSync("IMPLEMENTATION-STATUS.md", "utf8");
+  const historyAt = status.indexOf("## How it was built");
+
+  test("current state comes before the history, not after it", () => {
+    const current = status.indexOf("## What exists now");
+    assert.ok(current > 0, "there is no current-state section");
+    assert.ok(historyAt > current,
+      "the history must sit below what is current, or a reader meets it first");
+  });
+
+  test("the first line says where to look", () => {
+    assert.match(status.slice(0, 400), /Where this stands is the table below/);
+  });
+
+  test("every path the current-state table names exists", () => {
+    const table = status.slice(status.indexOf("## What exists now"),
+      status.indexOf("## What does not exist"));
+    const paths = [...table.matchAll(/`((?:src|scripts|tests)\/[^`]+|app\.js|index\.html)`/g)]
+      .map((m) => m[1])
+      .filter((p) => !p.endsWith("/"));
+    assert.ok(paths.length >= 8, `only ${paths.length} paths found in the table`);
+    for (const p of paths) {
+      assert.doesNotThrow(() => readFileSync(p),
+        `the table says ${p}, which is not there`);
+    }
+  });
+
+  test("nothing outside the history claims a built thing is unbuilt", () => {
+    /* The exact failure. A present-tense "not started" above the history is a
+       description; below it, it is a dated record and says so. */
+    const current = status.slice(0, historyAt);
+    assert.equal(/\bnot started\b|\bremains unstarted\b|\bis specified, not built\b/i.test(current), false,
+      "a section above the history claims something is unbuilt");
+  });
+
+  test("the history says its entries are as-at the day they were written", () => {
+    const preamble = status.slice(historyAt, historyAt + 900);
+    assert.match(preamble, /as-at the moment it was written/);
+    /* Whitespace collapsed first: the sentence wraps mid-phrase, so a literal
+       space in the pattern meets a newline in the file and never matches. */
+    assert.match(preamble.replace(/\s+/g, " "),
+      /the table above is the only description of now/);
+  });
+
+  test("it points at the browser handover rather than describing it", () => {
+    assert.match(status, /docs\/BROWSER-CHECKS\.md/);
+    assert.equal(/## Next slice/.test(status), false,
+      "a 'next slice' heading at the end is where staleness collects");
+  });
+});

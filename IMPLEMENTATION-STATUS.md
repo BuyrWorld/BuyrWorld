@@ -1,49 +1,113 @@
 # Implementation status — BuyrWorld Claude Pack v4
 
-Maintained so work can resume without repeating what is done. Newest first.
+**Where this stands is the table below. Everything after it is history.**
 
-## Baseline
+## What exists now
 
-| | |
-|---|---|
-| Commit at start | `a464b60` |
-| Branch | `main`, clean |
-| Runtime | Node 24.18.0. No `package.json`, no build step, no framework. |
-| Hosting | Vercel, `framework: null`. Push to `main` deploys production. |
-| Entry point | `index.html` (133KB markup) + `app.js` (507KB) + `mount.mjs`, which mounts `window.BW` |
-| Router | `go(page)` over `.page` sections; no hash routing |
-| Persistence | `localStorage` via `src/services/*-store.mjs` |
-| Auth | None. Single-user browser application. |
-| Money | `src/calc/exact.mjs` — BigInt minor units, ratios scaled 1e9. No floats in `src/calc/`. |
-| Checks | `node scripts/verify.mjs` — 6 checks, 1,931 tests |
-| Pre-existing failures | None. All six checks passed at baseline. |
-
-## What the pack asks for that already exists
-
-The repository is further along than the pack assumes. Before building anything
-new I checked the pack's own acceptance fixture
-(`acceptance/STUDIO-V3-CHECKS.md`) against `src/calc/should-cost.mjs`:
-
-| Pack figure | This engine | |
+| Capability | State | Where |
 |---|---|---|
-| 81 blanks per sheet | 81 | agrees |
-| 114 blanks required | 114 | agrees |
-| 2 sheets | 2 | agrees |
-| 144 expected good units | 144 | agrees |
+| Should-Cost Studio, three columns | built | `index.html`, `app.js` |
+| Upload drawing / No drawing, equally | built | `scEntry` |
+| One model behind both routes | built | `src/studio/scenario.mjs` |
+| Provenance, "I don't know", field help | built | `SC_FIELD_HELP` |
+| Save and reopen a draft | built | `src/services/studio-store.mjs` |
+| A late drawing compares, never overwrites | built | `compareExtraction` |
+| Engineering requirements (v4 C1) | built | `src/studio/requirements.mjs` |
+| Part Builder, bounded (v4 C2) | built | `src/studio/geometry.mjs` |
+| Technical-review package (v4 C3) | built, within its limits | `src/studio/review-export.mjs` |
+| Described edits, validated (v4 C4) | built | `src/studio/edit-proposal.mjs` |
+| Instructions read by rule, no model | built | `src/studio/read-instruction.mjs` |
+| Rotatable preview, feature selection | built, unseen in a browser | `src/render/` |
+| Offline review dossier | built, unrun here | `scripts/build_part_review.py` |
 
-So `engineering/material-planning.mjs` in the pack is **not** being adopted.
-`engineering/01-INTEGRATION.md` says to "prefer a verified existing
-equivalent", and this one is verified, exact-integer and already covered by
-tests. The same applies to `money.mjs`: `src/calc/exact.mjs` supersedes it.
+## What does not exist
 
-Also already built, from earlier work: certificate checking (`certificate.mjs`),
-mill performance (`mill.mjs`), quote comparison (`sourcing.mjs`), negotiation
-(`negotiation.mjs`), supplier history, portfolio reporting, the radar, rule-based
-document extraction (`src/intake/`) and the Inbox routing. Pack sections 11's
-"remaining supported improvements" are largely present; what they lack is the
-approved Studio shell, not the domain logic.
+| | Why |
+|---|---|
+| A solid-model or drawing export | No geometry kernel. The package names both as absent, with reasons, and is never marked complete. |
+| Curves, fillets, chamfers, freeform | The builder is rectangular blocks, through-holes and rectangular pockets, and says so. |
+| A configured AI provider | Instructions are read by written rule — the path that must keep working after one arrives. |
+| A configured extraction service | `src/intake/extract-document.mjs` reads by rule, offline, and proposes unconfirmed candidates. |
+| Model-to-cost linkage | Deliberate. Using model mass as purchased stock mass would skip the allowances a buyer is answerable for. |
+| Any browser verification | See below. |
+| Any real case | The corpus is zero. Every engine has only met synthetic fixtures. |
 
-## Slices
+## What to do next
+
+**`docs/BROWSER-CHECKS.md`** — 44 checks in the order worth doing them, each
+mapped to the pack acceptance line it closes. Nothing here has been opened in
+a browser, and the 16 September update roughly doubled the surface that needs
+it. About two hours.
+
+Then one real case end to end, which would teach more than the next feature.
+
+## Decisions
+
+- **The pack's reference implementations are not adopted.** `material-planning.mjs`
+  and `money.mjs` are reference code; the repository's equivalents are verified
+  and exact. Adopting the pack's would be a regression.
+- **The approved PNG governs composition, not arithmetic.** Its stage prices do
+  not reconcile with its headline total, its nesting figure is not a geometric
+  result, and its High/Medium confidence chips are explicitly rejected by
+  `design/04-APPROVED-STUDIO.md`. None of them enter the code.
+- **Provenance vocabulary** follows the pack: *User confirmed*, *Extracted —
+  check this*, *Assumed*, *Missing*. The repository's existing `provenance.mjs`
+  already distinguishes these; the labels are a presentation mapping onto it.
+
+---
+
+## How it was built
+
+A record, in the order the work happened, kept because it says *why* each
+thing is the way it is and the table above only says *what*.
+
+**Every entry is as-at the moment it was written.** An entry that says
+something is not built is reporting the state on that day, not today; the
+table above is the only description of now. This document grew as a diary
+and read as a description, which is how it came to say C4 was unstarted
+two lines above the entry recording it done.
+
+### 16 September — an external audit, applied
+
+A pack built against `27b1196`, supplied as a patch. It found two real
+defects, both mine, and both verified here before the patch was accepted.
+
+`nextId()` took the highest existing feature number, so deleting the
+*highest* hole and adding another reissued that id — and a tolerance written
+for the deleted hole attached itself to the new one. The comment in
+`geometry.mjs` names that exact failure; I implemented a defence against the
+middle-deletion case and tested precisely the case my defence handled.
+
+And `scExportReview` passed `features:[]`, so every exported package told a
+reviewer that every requirement had lost its target while the part still had
+the holes.
+
+It also added a rotatable preview, feature selection, a pending resize
+preview, `part-model.json`, and an offline Python review generator. Applied
+on a branch, because it is a large amount of interactive surface nobody has
+seen render.
+
+### One scenario at a time
+
+"Start a new one" cleared four of nine pieces of per-scenario state, so a
+new scenario opened carrying the previous project's part, its tolerances,
+its undo history and its prepared export. Saving never carried the model or
+the requirements at all. Both are fixed; the store is at schema 2 with 1
+still readable.
+
+A test now reads the module-level `_sc` declarations and fails if
+`scClearSession` misses one. It immediately found `_scLast`, which I had
+missed.
+
+### The home page said nothing was stored
+
+It did, while six `localStorage` stores existed — and the site's own legal
+page said so accurately two clicks away. "Four ways in" sat above five
+pillars. The count is derived from the list now, and
+`tests/security/public-claims.test.mjs` checks both.
+
+Neither was caught by anything: every figure in the engine is derived or
+ratcheted, and these were prose on the most-read page.
 
 ### Slice 1 — a piece count without a thickness · DONE
 
@@ -232,7 +296,7 @@ only hole on a block made the requirement that just lost its target report as
 waiting for a model sitting right there. The caller now says which: null for
 no model, an array (empty or not) for a model carrying those features.
 
-C4 (AI-assisted edits) remains unstarted.
+*(At the time: C4 was not yet started. It is now — see the table above.)*
 
 ### v4 C4 — AI-assisted edits · DONE
 
@@ -265,49 +329,45 @@ Still to do when a provider is configured: an adapter prompt producing
 proposals in this same shape. It goes through the same validation, and the
 rule-based reader stays as the path that works without one.
 
-## Decisions
+---
 
-- **The pack's reference implementations are not adopted.** `material-planning.mjs`
-  and `money.mjs` are reference code; the repository's equivalents are verified
-  and exact. Adopting the pack's would be a regression.
-- **The approved PNG governs composition, not arithmetic.** Its stage prices do
-  not reconcile with its headline total, its nesting figure is not a geometric
-  result, and its High/Medium confidence chips are explicitly rejected by
-  `design/04-APPROVED-STUDIO.md`. None of them enter the code.
-- **Provenance vocabulary** follows the pack: *User confirmed*, *Extracted —
-  check this*, *Assumed*, *Missing*. The repository's existing `provenance.mjs`
-  already distinguishes these; the labels are a presentation mapping onto it.
+## Baseline
 
-## The programme is complete
+| | |
+|---|---|
+| Commit at start | `a464b60` |
+| Branch | `main`, clean |
+| Runtime | Node 24.18.0. No `package.json`, no build step, no framework. |
+| Hosting | Vercel, `framework: null`. Push to `main` deploys production. |
+| Entry point | `index.html` (133KB markup) + `app.js` (507KB) + `mount.mjs`, which mounts `window.BW` |
+| Router | `go(page)` over `.page` sections; no hash routing |
+| Persistence | `localStorage` via `src/services/*-store.mjs` |
+| Auth | None. Single-user browser application. |
+| Money | `src/calc/exact.mjs` — BigInt minor units, ratios scaled 1e9. No floats in `src/calc/`. |
+| Checks | `node scripts/verify.mjs` — 6 checks, 1,931 tests |
+| Pre-existing failures | None. All six checks passed at baseline. |
 
-All four v4 increments and all six v3 Studio slices have engines, interfaces
-and tests. 2,399 tests, all six checks pass, every module verified against the
-bytes the site actually serves.
+## What the pack asks for that already exists
 
-**`docs/BROWSER-CHECKS.md` is the handover.** It lists what executing code
-cannot settle, in the order worth doing it, each item mapped to the pack
-acceptance line it closes. About a hundred minutes of work.
+The repository is further along than the pack assumes. Before building anything
+new I checked the pack's own acceptance fixture
+(`acceptance/STUDIO-V3-CHECKS.md`) against `src/calc/should-cost.mjs`:
 
-## Limitations
+| Pack figure | This engine | |
+|---|---|---|
+| 81 blanks per sheet | 81 | agrees |
+| 114 blanks required | 114 | agrees |
+| 2 sheets | 2 | agrees |
+| 144 expected good units | 144 | agrees |
 
-- No extraction service is configured. `src/intake/extract-document.mjs` reads
-  by written rule, offline, and proposes unconfirmed candidates — which
-  satisfies the pack's "manual completion honestly" requirement without
-  pretending an AI service exists.
-- No browser testing has been performed in this programme. Verification so far
-  is the repository's own checks plus execution of served bytes under `node:vm`.
-- The geometry is deliberately bounded: rectangular blocks, through-holes and
-  rectangular pockets. No freeform surface, no fillet, no chamfer. A volume
-  containing a round feature is reported as an interval rather than a rounded
-  figure, because pi is not rational.
-- No solid-model or drawing export. The review package names both as absent
-  with reasons and is never marked complete.
-- No AI provider is configured. Instructions are read by written rule, which
-  is the path that must keep working after one is.
+So `engineering/material-planning.mjs` in the pack is **not** being adopted.
+`engineering/01-INTEGRATION.md` says to "prefer a verified existing
+equivalent", and this one is verified, exact-integer and already covered by
+tests. The same applies to `money.mjs`: `src/calc/exact.mjs` supersedes it.
 
-## Next slice
-
-The pack's v3 Studio requirements are now implemented end to end. Next is
-either the v4 Part Builder (C1: requirements — tolerances, finishes and
-specification revisions — which needs no geometry engine), or a browser pass
-over the six slices, which nothing so far has had.
+Also already built, from earlier work: certificate checking (`certificate.mjs`),
+mill performance (`mill.mjs`), quote comparison (`sourcing.mjs`), negotiation
+(`negotiation.mjs`), supplier history, portfolio reporting, the radar, rule-based
+document extraction (`src/intake/`) and the Inbox routing. Pack sections 11's
+"remaining supported improvements" are largely present; what they lack is the
+approved Studio shell, not the domain logic.

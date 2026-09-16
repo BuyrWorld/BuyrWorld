@@ -98,7 +98,7 @@ describe("preparing a package", () => {
     await s.runAsync("scExportReview();");
     assert.match(s.out(), /Not included/);
     assert.match(s.out(), /model\.step/);
-    assert.match(s.out(), /No geometry engine is integrated/);
+    assert.match(s.out(), /needs a CAD kernel this build does not have/);
     assert.match(s.out(), /drawing\.pdf/);
   });
 
@@ -196,5 +196,23 @@ describe("it is on the page", () => {
     const fns = [fnSource("scExportReview", app), fnSource("scSaveArtifact", app),
       fnSource("scRenderPackage", app)].join("\n");
     assert.equal(/\bfetch\s*\(|XMLHttpRequest|sendBeacon|mailto:/.test(fns), false);
+  });
+});
+
+/* --------------------------------------------------- the drawing downloads */
+
+describe("saving the DXF", () => {
+  test("it is offered with its own media type, not as markdown", () => {
+    /* The bytes were right and the label on them was wrong, which works on
+       one machine and confuses a CAD tool on another. */
+    const fn = fnSource("scSaveArtifact", app);
+    assert.match(fn, /\.dxf\$\/\.test\(name\) \? "image\/vnd\.dxf"/);
+  });
+
+  test("and every other type is still what it was", () => {
+    const fn = fnSource("scSaveArtifact", app);
+    assert.match(fn, /application\/json/);
+    assert.match(fn, /text\/html/);
+    assert.match(fn, /text\/markdown/);
   });
 });

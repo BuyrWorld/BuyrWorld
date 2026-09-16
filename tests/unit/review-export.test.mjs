@@ -49,11 +49,26 @@ const snap = (over = {}) => snapshot({
 /* ------------------------------------------------ what it does not contain */
 
 describe("what the package says it is not", () => {
-  test("the model and the drawing are named as unavailable, with reasons", () => {
+  test("the model and the dimensioned drawing are named as unavailable", () => {
     assert.equal(FORMATS["model.step"].available, false);
     assert.equal(FORMATS["drawing.pdf"].available, false);
-    assert.match(FORMATS["model.step"].why, /No geometry engine is integrated/);
-    assert.match(FORMATS["drawing.pdf"].why, /needs geometry to dimension/);
+  });
+
+  test("and the reason says what would have to change, not just that it cannot", () => {
+    /* "No geometry engine" was true and told a reader nothing. The actual
+       obstacle is specific: a blind pocket needs a boolean subtraction, which
+       needs a kernel. A through-hole block alone could be an extruded profile
+       — and emitting STEP for the expressible part would describe a different
+       part, which is the failure worth naming. */
+    assert.match(FORMATS["model.step"].why, /blind\s+pocket cannot/);
+    assert.match(FORMATS["model.step"].why, /needs a CAD\s+kernel/);
+    assert.match(FORMATS["model.step"].why, /describes a different part/);
+  });
+
+  test("the 2D geometry is available, and is not called a drawing", () => {
+    assert.equal(FORMATS["drawing.dxf"].available, true);
+    assert.match(FORMATS["drawing.dxf"].what, /2D geometry/);
+    assert.match(FORMATS["drawing.pdf"].why, /more than geometry/);
   });
 
   test("they are listed in the package, not silently absent", async () => {
@@ -328,5 +343,71 @@ describe("what a reviewer is given", () => {
     const pkg = await buildPackage(snap({ requirements: [r] }));
     assert.equal(/<script>alert/.test(pkg.files["requirement-schedule.html"]), false);
     assert.match(pkg.files["requirement-schedule.html"], /&lt;script&gt;/);
+  });
+});
+
+/* ------------------------------------------- the drawing, where there is one */
+
+describe("the top view travels with the package", () => {
+  const modelled = async () => {
+    const { block, addHole, addPocket } = await import("../../src/studio/geometry.mjs");
+    const um = (x) => BigInt(Math.round(x * 1000));
+    let m = addHole(block({ widthUm: um(100), lengthUm: um(50), thicknessUm: um(10) }),
+      { xUm: um(15), yUm: um(25), diameterUm: um(6) }).model;
+    m = addPocket(m, { xUm: um(40), yUm: um(10), widthUm: um(20), lengthUm: um(20), depthUm: um(3) }).model;
+    return m;
+  };
+
+  test("a package with a model carries a DXF", async () => {
+    const pkg = await buildPackage(snap({ model: await modelled() }));
+    assert.ok(pkg.files["drawing.dxf"], "no drawing was included");
+    assert.match(pkg.files["drawing.dxf"], /^0\nSECTION/);
+  });
+
+  test("and it agrees with the model it was made from", async () => {
+    /* The check that makes offering the file defensible: a package must never
+       carry a drawing that disagrees with its own schedule. */
+    const { checkDxf } = await import("../../src/studio/dxf-export.mjs");
+    const model = await modelled();
+    const pkg = await buildPackage(snap({ model }));
+    assert.equal(checkDxf(pkg.files["drawing.dxf"], model).ok, true);
+  });
+
+  test("a package with no model carries none, and does not pretend otherwise", async () => {
+    const pkg = await buildPackage(snap());
+    assert.equal(pkg.files["drawing.dxf"], undefined);
+    assert.equal(pkg.manifest.files.some((f) => f.name === "drawing.dxf"), false);
+  });
+
+  test("the notes say what the drawing is not", async () => {
+    const pkg = await buildPackage(snap({ model: await modelled() }));
+    assert.match(pkg.files["review-notes.md"], /It is not a dimensioned drawing/);
+    assert.match(pkg.files["review-notes.md"], /requirement schedule is the/);
+  });
+
+  test("the DXF is hashed like everything else", async () => {
+    const pkg = await buildPackage(snap({ model: await modelled() }));
+    const entry = pkg.manifest.files.find((f) => f.name === "drawing.dxf");
+    assert.match(entry.sha256, /^[0-9a-f]{64}$/);
+    assert.equal((await verifyPackage(pkg)).ok, true);
+  });
+
+  test("it is exempt from the draft label, because it has nowhere to put one", async () => {
+    /* A DXF has no prose. Its status travels in the manifest and the notes,
+       which accompany it — and the exemption is narrow, by filename. */
+    const pkg = await buildPackage(snap({ model: await modelled() }));
+    assert.equal(pkg.files["drawing.dxf"].includes(DRAFT_LABEL), false);
+    for (const [name, text] of Object.entries(pkg.files)) {
+      if (name === "drawing.dxf") continue;
+      assert.ok(text.includes(DRAFT_LABEL), `${name} lost the label`);
+    }
+  });
+
+  test("a model that cannot be drawn is reported, not silently dropped", async () => {
+    const broken = Object.freeze({ ...(await modelled()), widthUm: 0n });
+    const pkg = await buildPackage(snap({ model: broken }));
+    assert.equal(pkg.files["drawing.dxf"], undefined);
+    assert.ok(pkg.manifest.omissions.some((o) => /drawing\.dxf could not be produced/.test(o)));
+    assert.equal(pkg.manifest.complete, false);
   });
 });

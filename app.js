@@ -355,6 +355,18 @@ const PILLARS=[
 ["Workflows","RFQs, quote comparisons, contract reviews, spend analysis, negotiation prep — done in minutes.","tools",'<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="15" cy="6" r="2.2"/><circle cx="8" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/>',"tools"],
 ["Learn","Structured Academy pathways and a weekly blog — from first PO to category leadership and CIPS.","academy",'<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/>',"academy"],
 ["Method","Every figure is calculated in the open, labelled supplied, derived or assumed, and checked by tests.","about",'<path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9z"/><path d="M8.5 12.2l2.4 2.4 4.6-4.9"/>',"about"]];
+/* Counted from the list rather than written beside it. It said "Four ways
+   in" above five pillars — true when it was written, and wrong from the day
+   somebody added one. A number in prose next to the thing it counts will
+   drift again; a number derived from it cannot. */
+var PILLAR_WORDS=["No","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten"];
+(function(){
+  var intro=document.getElementById("pillars-intro");
+  if(!intro) return;
+  var n=PILLARS.length;
+  intro.textContent=(PILLAR_WORDS[n]||String(n))+" ways in, depending on the job in front of you.";
+})();
+
 document.getElementById("pillars").innerHTML=PILLARS.map(([t,d,_ic,icon,dest])=>`
 <div class="card glow-hover" role="button" tabindex="0" data-key="cardKey$event" style="cursor:pointer" data-do="go" data-a="${dest}">
   <svg viewBox="0 0 24 24" aria-hidden="true" style="width:26px;height:26px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;margin-bottom:12px">${icon}</svg>
@@ -2564,7 +2576,18 @@ function scFormScenario(){
       at:_scEdited[id]||null
     });
   }
-  return s;
+
+  /* The part and its requirements, attached last.
+   *
+   * They were attached before this loop to begin with, and withField() rebuilds
+   * the scenario through scenario(), which keeps only the fields it knows
+   * about — so the first value entered dropped them both, silently, and every
+   * save stored a scenario with no part. Anything added to a scenario that
+   * scenario() does not know about has to go on after the last withField. */
+  return Object.freeze(Object.assign({}, s, {
+    model: _scModel || null,
+    requirements: _scReqs.slice()
+  }));
 }
 
 /** Put a stored scenario back on the form. */
@@ -2572,9 +2595,19 @@ function scApplyScenario(s){
   var B=window.BW;
   if(!s||!B) return;
 
+  /* Put the previous scenario down first. Restoring on top of it is how one
+     project's part ends up under another project's name. */
+  scClearSession();
+
   _scScenarioId=s.id;
   _scRevision=s.revision||1;
-  _scUnknown={}; _scSource={}; _scEdited={};
+
+  /* The engineering record, where the saved copy had one. A scenario saved by
+     an older build has neither, and comes back with neither rather than
+     inheriting what was on screen. */
+  _scReqs = s.requirements ? s.requirements.slice() : [];
+  _scModel = s.model || null;
+  _scHistory = _scModel && B.geometryHistory ? B.geometryHistory(_scModel) : null;
 
   var unit=document.getElementById("sc-unit");
   if(unit&&s.unit)unit.value=s.unit;
@@ -2589,7 +2622,11 @@ function scApplyScenario(s){
     if(f.source&&f.source!=="manual") _scSource[id]=f.source;
   }
   scRenderFieldStates();
-  scDraftStatus("Reopened " + (s.name||s.id) + ".");
+  scRenderBuilder();
+  scDraftStatus("Reopened " + (s.name||s.id) + "."
+    + (s.savedSchema === 1
+      ? " It was saved before the part and its requirements were stored, so it has neither."
+      : ""));
 }
 
 /** One line under the buttons saying what just happened. */
@@ -2623,14 +2660,36 @@ function scSaveDraft(){
   scRenderDrafts();
 }
 
-/** Start again, keeping nothing. */
-function scNewDraft(){
+/**
+ * Put down everything belonging to the scenario on screen.
+ *
+ * One function rather than a line in each caller, because the failure this
+ * fixes was a caller that cleared four things out of nine. Anything added to
+ * the Studio's per-scenario state belongs in here, and the test that counts
+ * the module-level _sc variables against this list will say so.
+ */
+function scClearSession(){
   _scScenarioId=null; _scRevision=0;
   _scUnknown={}; _scSource={}; _scEdited={};
+  _scReqs=[];
+  _scModel=null; _scHistory=null;
+  _scPreview=null; _scPackage=null;
+  _scCompare=null; _scReadStartedAt=null;
+  /* The last calculated plan and cost. bcSave reads it, so leaving it behind
+     lets the previous part's calculation be saved as this one's estimate. */
+  _scLast=null;
   scClear();
+}
+
+/** Start again, keeping nothing. */
+function scNewDraft(){
+  scClearSession();
   scRenderFieldStates();
   scDraftStatus("Started a new scenario. The one you were on is still saved.");
   scRenderDrafts();
+  scRenderBuilder();
+  scAiStatus("");
+  var out=document.getElementById("rev-out"); if(out)out.innerHTML="";
 }
 
 function scOpenDraft(id){
@@ -3108,7 +3167,11 @@ async function scExportReview(){
       units:scVal("sc-unit")||"mm",
       preparedBy:scVal("rev-by")||null,
       requirements:_scReqs,
-      features:[]
+      features:typeof _scModel!=="undefined"&&_scModel ? _scModel.features.map(function(f){return f.id;}) : [],
+      model:typeof _scModel!=="undefined" ? _scModel : null,
+      modelRevision:typeof _scModel!=="undefined"&&_scModel ? _scModel.revision : null,
+      material:{name:scVal("sc-grade")||null,density:scVal("sc-dv")||null,
+        densityUnit:scVal("sc-du")||null,source:scVal("sc-ds")||null}
     });
     _scPackage=await B.buildReviewPackage(snap);
   }catch(e){
@@ -3135,6 +3198,7 @@ function scRenderPackage(){
       +'</li>';
   }).join("");
 
+  files+='<li class="bw-rev-file"><button type="button" class="bw-rev-save" data-do="scSaveArtifact" data-a="manifest.json">manifest.json</button><span class="bw-rev-what">File hashes and export metadata</span></li>';
   var absent=m.notIncluded.map(function(f){
     return '<li><b>'+ciEsc(f.name)+'</b> &mdash; '+ciEsc(f.what)+'. '+ciEsc(f.why)+'</li>';
   }).join("");
@@ -3148,7 +3212,7 @@ function scRenderPackage(){
     +'<div class="bw-rev-label">'+ciEsc(B_DRAFT_LABEL())+'</div>'
     +'<p class="bw-rev-lead">Nothing has been sent. These are files to hand to somebody '
     +'technical; saving them does not approve the part or record a review.</p>'
-    +'<div class="bw-rev-head">'+m.files.length+' file'+(m.files.length===1?'':'s')+'</div>'
+    +'<div class="bw-rev-head">'+(m.files.length+1)+' files</div>'
     +'<ul class="bw-rev-files">'+files+'</ul>'
     +(absent?'<div class="bw-rev-head">Not included</div><ul class="bw-rev-absent">'+absent+'</ul>':'')
     +(omissions?'<div class="bw-rev-head">'+(m.complete?'':'This package is incomplete')
@@ -3165,8 +3229,12 @@ function B_DRAFT_LABEL(){
 function scSaveArtifact(name){
   if(!_scPackage||!_scPackage.files[name]) return;
   var text=_scPackage.files[name];
+  /* A DXF is not text/markdown. The bytes were right and the label on them
+     was wrong, which works on one machine and confuses a CAD tool on another.
+     image/vnd.dxf is the registered type. */
   var type = /\.json$/.test(name) ? "application/json"
-           : /\.html$/.test(name) ? "text/html" : "text/markdown";
+           : /\.html$/.test(name) ? "text/html"
+           : /\.dxf$/.test(name) ? "image/vnd.dxf" : "text/markdown";
   var blob=new Blob([text],{type:type+";charset=utf-8"});
   var a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -3336,6 +3404,7 @@ function scRenderBuilder(){
   var B=window.BW;
 
   if(!_scModel){
+    if(B&&B.updateStudio) B.updateStudio(null);
     host.innerHTML='<p style="color:var(--bw-muted);font-size:12px;margin:10px 0 0;line-height:1.6">'
       +'No model yet. You do not need one &mdash; requirements, quantities and costs all work '
       +'without it. Build one when a shape would help somebody understand the part.</p>';
@@ -3344,6 +3413,7 @@ function scRenderBuilder(){
   }
 
   var v=B.volume(_scModel);
+  if(B.updateStudio) B.updateStudio(_scModel);
   var d=null;
   try{
     if(scVal("sc-dv")!==""&&scVal("sc-ds")!=="") d=B.scDensity(scVal("sc-dv"),scVal("sc-du")||"g/cm3",scVal("sc-ds"));
@@ -3413,8 +3483,33 @@ function scAiStatus(html){
   if(el) el.innerHTML=html;
 }
 
+/**
+ * Read a described change.
+ *
+ * A provider first where one is configured, and the written rules otherwise.
+ * Both return the same shape, so nothing after this point knows which
+ * answered — which is what keeps the rule reader a complete substitute rather
+ * than a fallback with a different contract.
+ *
+ * No provider is configured in this build. The reader says so and the rules
+ * take over, which is the path that runs every time here.
+ */
+async function scReadChange(text, revision){
+  var B=window.BW;
+  if(B.proposeEdit && B.aiTransport){
+    var asked=await B.proposeEdit(_scModel, text, {transport:B.aiTransport});
+    if(!asked.unavailable){
+      /* The revision the request was typed against travels with it, so a
+         proposal worked out while somebody else edited is caught as stale. */
+      if(asked.ok && asked.proposal) asked.proposal.modelRevision=revision;
+      return asked;
+    }
+  }
+  return B.readInstruction(text, revision);
+}
+
 /** Read what was typed, validate it, and preview it. Nothing is applied. */
-function scDescribeChange(){
+async function scDescribeChange(){
   var B=window.BW;
   if(!B||!B.readInstruction){ scAiStatus(scErr("The engine did not load.")); return; }
   if(!_scModel){
@@ -3423,7 +3518,7 @@ function scDescribeChange(){
   }
 
   _scPreview=null;
-  var read=B.readInstruction(scVal("ai-text"), _scModel.revision);
+  var read=await scReadChange(scVal("ai-text"), _scModel.revision);
 
   if(!read.ok){
     /* A question, not a failure. The difference matters: one means try again,

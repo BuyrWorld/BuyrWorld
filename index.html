@@ -34,6 +34,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/studio-enhancements.css">
 <style>
 :root{
   /* ---- surfaces, darkest to lightest ---- */
@@ -655,7 +656,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       </div>
       <div style="display:flex;gap:24px;margin-top:32px;color:var(--muted);font-size:13px;flex-wrap:wrap;justify-content:center">
         <span><b style="color:var(--text);font-family:'Space Grotesk'">Synthetic</b> data only</span>
-        <span><b style="color:var(--text);font-family:'Space Grotesk'">No account</b>, nothing stored</span>
+        <span><b style="color:var(--text);font-family:'Space Grotesk'">No account</b>. Saved work stays in this browser</span>
       </div>
     </div>
   </section>
@@ -667,7 +668,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   <section class="sec"><div class="wrap">
     <div class="eyebrow" style="margin-bottom:10px">Start here</div>
     <h2 style="font-size:34px;margin-bottom:10px">What do you need today?</h2>
-    <p style="color:var(--muted);max-width:640px;margin-bottom:28px;line-height:1.6">Four ways in, depending on the job in front of you.</p>
+    <p id="pillars-intro" style="color:var(--muted);max-width:640px;margin-bottom:28px;line-height:1.6"></p>
     <div class="grid4" id="pillars" style="margin-bottom:46px"></div>
     <div class="eyebrow" style="margin-bottom:10px">Explore everything</div>
     <h3 style="font-size:24px;margin-bottom:24px">The full toolkit</h3>
@@ -1257,12 +1258,12 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 <div class="page" id="page-shouldcost">
   <section class="sec"><div class="wrap" style="max-width:1320px">
     <h2 style="font-size:var(--bw-t-page);margin-bottom:4px">What should this part cost?</h2>
-    <p style="color:var(--bw-muted);font-size:var(--bw-t-body);margin-bottom:var(--bw-4);max-width:760px">The finished part's weight is not the question. Between it and the stock you buy sit a bigger blank, a saw that turns metal into dust, a sheet that does not divide evenly, scrap at every operation and a supplier who sells sheets rather than square millimetres. This works out <b style="color:var(--bw-text)">what to order, how much, and why</b> &mdash; every quantity separately, so a challenge can be answered.</p>
+    <p class="bw-studio-intro">Describe the part. Understand the material and route. Give your technical reviewer a clear starting point.</p>
 
     <div class="bw-panel" style="border-color:var(--bw-border-strong);margin-bottom:var(--bw-4)">
       <div class="bw-panel-head"><div class="bw-panel-title">What this release does, and what it does not</div></div>
-      <p style="color:var(--bw-body);font-size:var(--bw-t-body);margin:0;line-height:1.6">Everything is entered by hand. <b style="color:var(--bw-text)">There is no document extraction in this build</b> &mdash; nothing on this page reads a PDF, a photograph or a CAD file. A 2D drawing does not contain recoverable 3D geometry, and no dimension or certificate value here was recovered from one.</p>
-      <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6">Everything you record stays in this browser. Nothing is uploaded, pooled with anybody else's records, or published.</p>
+      <p style="color:var(--bw-body);font-size:var(--bw-t-body);margin:0;line-height:1.6">Start manually or read labelled text from a PDF, then confirm each proposed value. Scanned images need manual entry. The optional part builder supports rectangular blocks, through-holes and pockets; it does not reconstruct CAD from a drawing.</p>
+      <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6">Studio processing is local to this browser. Save preserves the core scenario fields; download a review snapshot to keep the model and requirements.</p>
     </div>
 
     <div role="tablist" aria-label="What you are doing" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--bw-5)">
@@ -1326,15 +1327,16 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           </div>
           <button type="button" class="bw-act bw-act-secondary bw-act--sm" data-do="scSetBlock">Set the block</button>
 
-          <div class="eyebrow" style="margin:var(--bw-4) 0 6px">Add a through-hole</div>
+          <details class="bw-feature-editor"><summary>Add a through-hole</summary>
           <div class="bw-fields" style="margin-bottom:8px">
             <label class="bw-field">Centre X<input class="bwin" id="pb-hx" inputmode="decimal" placeholder="15"></label>
             <label class="bw-field">Centre Y<input class="bwin" id="pb-hy" inputmode="decimal" placeholder="25"></label>
             <label class="bw-field">Diameter<input class="bwin" id="pb-hd" inputmode="decimal" placeholder="6"></label>
           </div>
           <button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scAddHole">Add hole</button>
+          </details>
 
-          <div class="eyebrow" style="margin:var(--bw-4) 0 6px">Add a pocket</div>
+          <details class="bw-feature-editor"><summary>Add a pocket</summary>
           <div class="bw-fields" style="margin-bottom:8px">
             <label class="bw-field">Corner X<input class="bwin" id="pb-px" inputmode="decimal" placeholder="40"></label>
             <label class="bw-field">Corner Y<input class="bwin" id="pb-py" inputmode="decimal" placeholder="10"></label>
@@ -1343,6 +1345,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
             <label class="bw-field">Depth<input class="bwin" id="pb-pd" inputmode="decimal" placeholder="3"></label>
           </div>
           <button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scAddPocket">Add pocket</button>
+          </details>
 
           <p id="pb-status" role="status" aria-live="polite"
              style="font-size:12px;margin:var(--bw-3) 0 0;line-height:1.6;min-height:1.2em"></p>
@@ -1432,6 +1435,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
       </div>
 
       <div class="bw-studio-col">
+        <div id="studio-viewport" class="bw-panel bw-viewport" aria-label="Interactive part preview"></div>
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head"><div class="bw-panel-title">4 &middot; The route</div></div>
           <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">A yield is <b style="color:var(--bw-text)">accepted output divided by input</b>. It is not a scrap percentage added to demand: 100 parts at 95% yield needs 106 blanks, not 105, and across a route the difference compounds. Setup and test pieces must say which side of the yield they come from &mdash; that is the mistake that counts the same pieces twice.</p>

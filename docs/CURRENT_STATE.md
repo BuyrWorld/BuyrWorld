@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 48 |
-| Test files | 0 | 82 |
+| Modules under `src/` | 0 | 52 |
+| Test files | 0 | 88 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -216,6 +216,17 @@ is refused by saying what this builds. When a real adapter is configured it
 produces proposals in the same shape and goes through the same validation;
 this stays as the path that works without one.
 
+`src/studio/read-instruction.mjs` reads a typed instruction into that
+proposal shape, by written rule and with no model — the same reasoning
+`extract-document.mjs` gives about drawings, and sharper here because the
+sentence is about to become a change to a part. It knows five phrasings and
+refuses the rest, showing what it can take. The requests the pack names are
+answered by name: "make this aerospace grade" asks which specification
+applies, "tighten the tolerance" asks by how much and on what, and a fillet
+is refused by saying what this builds. When a real adapter is configured it
+produces proposals in the same shape and goes through the same validation;
+this stays as the path that works without one.
+
 `src/studio/edit-proposal.mjs` turns a described change into a proposal and
 refuses to turn it into code. Every operation a proposal may contain is on a
 closed list checked by name, so nothing is evaluated and an instruction with
@@ -226,6 +237,25 @@ older revision is refused, and so is accepting a preview of a part that has
 since moved on. What a model is not allowed to decide — a tolerance value, a
 specification revision, whether something is confirmed — is held back and
 reported rather than quietly dropped.
+
+`src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
+reader. It asks a model and then refuses most of what comes back: the reply
+must name an operation from the closed list, only the fields an operation may
+carry survive, and everything else — the numbers, the targets, the staleness —
+is checked by the same validator that checks a typed instruction. With no
+transport it reports that no provider is configured and the rule reader
+carries on, which is the ordinary state of this build. It cannot reach a
+network on its own; every call goes through a transport it is handed.
+
+`src/studio/dxf-export.mjs` writes the top view as DXF, which is the one CAD
+format this can be exactly right about: the supported geometry is rectangles
+and circles, and both are DXF primitives at integer micrometre precision. It
+reads its own output back and checks every coordinate against the model before
+the file is offered, so a package never carries a drawing that disagrees with
+its own schedule. It is geometry, not a dimensioned drawing, and says so.
+There is no STEP: a block with through-holes could be an extruded profile, but
+a blind pocket needs a boolean subtraction and that needs a kernel — emitting
+STEP for the expressible part would describe a different part.
 
 `src/studio/geometry.mjs` is a deliberately small parametric part: a
 rectangular block, through-holes and rectangular pockets, and nothing that
@@ -301,3 +331,26 @@ handling**; that section is the one to read before anything else here.
 - **The Upstash purge is outstanding.** See `SECURITY_REVIEW.md`.
 - **No scanned document can be read**, and there is no CAD parser. Both are
   stated on the page rather than implied away.
+
+## Studio visual and review update — 15 September 2026
+
+`src/render/part-view.mjs` projects the existing block, holes and pockets into
+rotatable SVG views. `src/render/studio-view.mjs` connects those views to the
+existing form, with feature selection and a clearly marked resize preview.
+Neither renderer computes commercial quantities or costs.
+
+Review exports now pass the actual model revision and active feature ids.
+When a model exists, part-model.json carries exact micrometre dimensions, the
+material as entered, requirement records and display rows from one snapshot.
+The manifest is now downloadable. scripts/build_part_review.py uses that JSON
+offline to produce dimensioned review illustrations, HTML and a hashed ZIP.
+It does not provide STEP, a CAD kernel, manufacturing approval or standards
+verification. Saved scenarios still preserve core fields only, not the full
+model, requirements and route. Download the review snapshot to retain these
+engineering records. A later complete persistence increment is still needed.
+
+Feature identities now survive deletion of the last hole and branching after
+undo; a new feature cannot inherit a requirement from a discarded feature id.
+The live baseline was inspected in a browser. Local browser preview was blocked
+by the environment, so the supplied generated images are visual targets only.
+Check the Vercel preview at desktop and mobile widths before deployment.

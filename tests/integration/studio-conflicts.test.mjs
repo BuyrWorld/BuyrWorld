@@ -74,6 +74,10 @@ function studio({ values = {}, unknown = {}, edited = {},
     help, map,
     `var _scUnknown=${JSON.stringify(unknown)};`,
     "var _scSource={}; var _scEntry=\"manual\"; var _scScenarioId=null; var _scRevision=0;",
+    /* scFormScenario carries the part and its requirements now, so a reopened
+       scenario comes back with the geometry and tolerances it was saved with
+       rather than whatever happened to be on screen. */
+    "var _scModel=null; var _scReqs=[];",
     `var _scEdited=${JSON.stringify(edited)};`,
     "function scTouched(id){ if(SC_FIELD_HELP[id]) _scEdited[id]=new Date().toISOString(); }",
     `var _scCompare=null; var _scReadStartedAt=${JSON.stringify(readStartedAt)};`,
