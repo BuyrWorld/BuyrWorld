@@ -20,11 +20,11 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 import { instruction, FIELDS } from "../../src/intake/vision-read.mjs";
 
-const src = readFileSync("api/read-document.js", "utf8");
+const src = readFileSync("api/read-document.mjs", "utf8");
 const chat = readFileSync("api/chat.js", "utf8");
 
 /** The source with comments removed, for claims about what the code does. */
@@ -234,5 +234,54 @@ describe("one wording, in one place", () => {
     const built = instruction("drawing");
     assert.match(built, /This document is a drawing/);
     assert.match(instruction("certificate"), /This document is a certificate/);
+  });
+});
+
+/* ------------------------------------------------- how it is loaded at all */
+
+/**
+ * The extension is load-bearing, and it took a 500 on every request to learn
+ * that.
+ *
+ * Vercel transpiles ESM syntax in an `api/*.js` file to CommonJS. That is
+ * harmless for `api/chat.js`, which imports nothing. This endpoint imports
+ * `vision-read.mjs` on purpose — one wording, in one place — and `require()`
+ * of a real ES module throws ERR_REQUIRE_ESM before the handler is ever
+ * reached, so every path returned 500 including the ones that should have
+ * been a 400.
+ *
+ * It passed locally for a reason that does not hold in production: Node 24
+ * detects ESM syntax in a `.js` file and treats it as a module. The build
+ * does not. An import check that succeeds on this machine proves nothing
+ * about the one it runs on.
+ */
+describe("an endpoint that imports a module is loaded as one", () => {
+  const apiFiles = readdirSync("api");
+
+  test("this endpoint is .mjs, because it imports an .mjs", () => {
+    assert.ok(apiFiles.includes("read-document.mjs"),
+      "the endpoint is not .mjs, so its import will be require()d and throw");
+    assert.equal(apiFiles.includes("read-document.js"), false,
+      "a stale .js copy would be routed to instead");
+  });
+
+  test("no api/*.js file imports an ES module", () => {
+    /* The general form, so the next endpoint does not rediscover this. */
+    for (const name of apiFiles.filter((f) => f.endsWith(".js"))) {
+      const body = readFileSync(`api/${name}`, "utf8");
+      const imports = [...body.matchAll(/^\s*import\s[^;]*?from\s+["']([^"']+)["']/gm)]
+        .map((m) => m[1]);
+      for (const spec of imports) {
+        assert.equal(spec.endsWith(".mjs"), false,
+          `api/${name} imports ${spec}; rename it to .mjs or the deployed function will not load`);
+      }
+    }
+  });
+
+  test("the handler and its duration are still exported", () => {
+    /* A rename is the kind of change that silently breaks the contract
+       Vercel reads. */
+    assert.match(code, /export default async function handler/);
+    assert.match(code, /export const config = \{ maxDuration: \d+ \}/);
   });
 });
