@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 import {
   SCHEMA_VERSION, MAX_SCENARIO_BYTES, newId,
   loadScenarios, loadScenario, saveScenario, deleteScenario, clearScenarios,
-  storeStatus, storageAvailable,
+  storeStatus, storageAvailable, previousVersion, canStepBack,
 } from "../../src/services/studio-store.mjs";
 import {
   scenario, withField, ENTRY, GOAL, SOURCE, stateOf, STATE,
@@ -372,5 +372,177 @@ describe("the review queue survives a refresh", () => {
     const r = saveScenario(withReview(many), store);
     assert.equal(r.ok, true, r.error);
     assert.equal(loadScenarios(store)[0].review.length, 20);
+  });
+});
+
+/* ------------------------------------------- what a later build wrote */
+
+/**
+ * `specs/04`: *"migrate older scenarios without erasing unknown values."*
+ *
+ * The envelope that spec describes holds scenario alternatives, specialist
+ * findings, next actions and outcome events. None of them has a producer yet,
+ * and adding empty slots now would be guessing at their shape. Keeping
+ * whatever a later build writes guesses at nothing and costs nothing — and
+ * without it, opening a case in an older tab and saving it silently destroys
+ * work the newer one did.
+ */
+describe("a field this build has never heard of", () => {
+  const laterBuild = () => ([{
+    schema: 3, id: "SCN-future", name: "Written by a later build",
+    fields: { goodParts: { value: "250" } }, revision: 1,
+    updatedAt: "2026-09-17T00:00:00.000Z",
+    scenarioAlternatives: [{ id: "alt-1", kind: "expedite" }],
+    specialistFindings: [{ specialist: "commercial", finding: "a real finding" }],
+  }]);
+
+  test("survives being loaded", () => {
+    store._put(JSON.stringify(laterBuild()));
+    const back = loadScenarios(store)[0];
+    assert.equal(back.carried.scenarioAlternatives.length, 1);
+    assert.equal(back.carried.specialistFindings[0].specialist, "commercial");
+  });
+
+  test("and survives being saved again by this build", () => {
+    /* The one that matters. Opening a case in an older tab and saving it
+       must not destroy what a newer one wrote. */
+    store._put(JSON.stringify(laterBuild()));
+    saveScenario({ ...loadScenarios(store)[0], revision: 2 }, store);
+
+    const stored = JSON.parse(store._raw())[0];
+    assert.ok(stored.scenarioAlternatives, "a later build's scenarios were erased");
+    assert.ok(stored.specialistFindings, "a later build's findings were erased");
+  });
+
+  test("what this build does know still wins", () => {
+    /* Carrying unknown fields must not let a stale copy of a known one ride
+       back in over the current value. */
+    const rogue = laterBuild();
+    rogue[0].model = { impostor: true };
+    store._put(JSON.stringify(rogue));
+
+    const back = loadScenarios(store)[0];
+    saveScenario({ ...back, revision: 2, model: null }, store);
+    assert.equal(JSON.parse(store._raw())[0].model, null);
+  });
+
+  test("the carrier is not itself stored as a field", () => {
+    store._put(JSON.stringify(laterBuild()));
+    saveScenario({ ...loadScenarios(store)[0], revision: 2 }, store);
+    assert.equal("carried" in JSON.parse(store._raw())[0], false);
+  });
+});
+
+/* ------------------------------------------------------- stepping back */
+
+/**
+ * `specs/04`: *"retain a recoverable prior version."*
+ *
+ * One step, not a history. What this protects against is a save somebody
+ * regrets immediately; a chain of versions is a different feature.
+ */
+describe("the copy a save replaced", () => {
+  test("is kept, and can be read back", () => {
+    const first = { ...draft("SCN-1"), name: "First name" };
+    saveScenario(first, store);
+    saveScenario({ ...first, name: "Second name", revision: first.revision + 1 }, store);
+
+    assert.equal(canStepBack("SCN-1", store), true);
+    assert.equal(previousVersion("SCN-1", store).name, "First name");
+    assert.equal(loadScenario("SCN-1", store).name, "Second name");
+  });
+
+  test("a first save has nothing to step back to", () => {
+    const r = saveScenario(draft("SCN-1"), store);
+    assert.equal(r.canStepBack, false);
+    assert.equal(previousVersion("SCN-1", store), null);
+    assert.equal(canStepBack("SCN-1", store), false);
+  });
+
+  test("the chain never grows past one", () => {
+    /* Otherwise every save carries the one before it and a scenario grows
+       without bound. */
+    const base = draft("SCN-1");
+    for (let n = 1; n <= 5; n++) {
+      saveScenario({ ...base, name: `Save ${n}`, revision: base.revision + n }, store);
+    }
+    const stored = JSON.parse(store._raw())[0];
+    assert.equal(stored.previous.name, "Save 4");
+    assert.equal("previous" in stored.previous, false, "the chain is nesting");
+  });
+
+  test("it is read rather than restored", () => {
+    /* Putting it back is a save like any other, and doing it here would go
+       around the revision check that stops one tab overwriting another. */
+    const first = { ...draft("SCN-1"), name: "First name" };
+    saveScenario(first, store);
+    saveScenario({ ...first, name: "Second name", revision: first.revision + 1 }, store);
+
+    previousVersion("SCN-1", store);
+    assert.equal(loadScenario("SCN-1", store).name, "Second name",
+      "reading the previous version changed the current one");
+  });
+
+  test("it comes back as a scenario, with its own review queue", () => {
+    const withReview = { ...draft("SCN-1"), name: "First",
+      review: [confirm(reviewItem(
+        { field: "thickness", label: "Thickness", value: "5", unit: "mm", page: 1,
+          quote: "Thickness 5 mm", confidence: "labelled" },
+        { method: METHOD.RULE, document: documentRef({ filename: "d.pdf" }) }), "a buyer")] };
+    saveScenario(withReview, store);
+    saveScenario({ ...withReview, name: "Second", review: [],
+                   revision: withReview.revision + 1 }, store);
+
+    const back = previousVersion("SCN-1", store);
+    assert.equal(back.review.length, 1);
+    assert.equal(back.review[0].disposition, "confirmed");
+  });
+
+  test("a scenario too large to carry its previous copy still saves", () => {
+    /* The backup never costs the save: losing the step-back is a smaller harm
+       than refusing to store work somebody just did.
+
+       Two hundred rows, deliberately. At sixty the record and its copy both
+       fit inside the limit, so the branch never runs — and the first version
+       of this test guarded its assertions behind `if (droppedPrevious)`,
+       which checks nothing at all when the thing it describes does not
+       happen. Measured: 60 rows is 30KB and fits doubled; 200 rows is 100KB
+       and fits alone but not doubled, which is the case this rule is for. */
+    const bulky = (rev) => ({
+      ...draft("SCN-1"), revision: rev,
+      review: Array.from({ length: 200 }, (_, n) => confirm(reviewItem(
+        { field: `field${n}`, label: `Field ${n}`, value: "123.456", unit: "mm", page: 3,
+          quote: "A quote long enough to be realistic, with a label and a value on it",
+          confidence: "labelled" },
+        { method: METHOD.RULE, document: documentRef({ filename: "big.pdf" }) }), "a buyer")),
+    });
+
+    assert.equal(saveScenario(bulky(1), store).ok, true);
+    const second = saveScenario(bulky(2), store);
+
+    assert.equal(second.ok, true, second.error);
+    assert.equal(second.droppedPrevious, true, "the copy was kept and should not have fitted");
+    assert.equal(second.canStepBack, false);
+    assert.match(second.note, /not room to keep the previous copy/);
+    assert.equal(canStepBack("SCN-1", store), false);
+
+    assert.equal(loadScenario("SCN-1", store).review.length, 200,
+      "the save itself was damaged to make room for the backup");
+  });
+
+  test("and a smaller one keeps both", () => {
+    /* The other side of the same rule, so "it dropped the copy" is not the
+       only outcome this can produce. */
+    const modest = (rev) => ({
+      ...draft("SCN-1"), revision: rev,
+      review: Array.from({ length: 20 }, (_, n) => confirm(reviewItem(
+        { field: `field${n}`, label: `Field ${n}`, value: "1", unit: "mm", page: 1,
+          quote: "Field value 1 mm", confidence: "labelled" },
+        { method: METHOD.RULE, document: documentRef({ filename: "d.pdf" }) }), "a buyer")),
+    });
+    saveScenario(modest(1), store);
+    const second = saveScenario(modest(2), store);
+    assert.equal(second.droppedPrevious, false);
+    assert.equal(second.canStepBack, true);
   });
 });

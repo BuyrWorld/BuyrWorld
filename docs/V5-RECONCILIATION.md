@@ -174,6 +174,26 @@ read elsewhere, and the two sets of readings end up in one queue.
   several quality levels, with precision, recall and abstention reported by
   field and format, before anybody leans on the reader.
 
+## The envelope, against specs/04
+
+`specs/04-COMPLETE-CASE.md` describes a fuller envelope than schema 3 holds:
+scenario alternatives, next actions, specialist findings, notes and outcome
+events. None of those has a producer yet, and adding empty slots for them
+would be guessing at their shape.
+
+What is built instead is the rule that makes guessing unnecessary — *"migrate
+older scenarios without erasing unknown values"*. A field this build has
+never heard of survives being loaded and saved here, so a newer build's work
+is not destroyed by an older tab opening the case. That was a real defect:
+before this, it was erased silently.
+
+One deliberate divergence. `specs/04` asks for "exact calculation
+inputs/results" to be stored. The inputs are; the results are not, and that
+predates this work — a reopened scenario recomputes, so it can never show a
+total its own inputs no longer support. Storing a result would reintroduce
+exactly that. The estimate store is where a figure somebody argued with is
+kept deliberately frozen, and the two answer different questions.
+
 ## Closed since: the case envelope
 
 The vertical slice now survives refresh, reopen and new-case reset. The
