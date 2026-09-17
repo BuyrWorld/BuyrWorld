@@ -20,6 +20,9 @@ import { fnSource, pageSource } from "../helpers/page.mjs";
 import {
   ROUTES as INTAKE_ROUTES, routeFor, saidAboutUnready, resumable, resumableSaid, ROUTE,
 } from "../../src/case/intake.mjs";
+import {
+  changes as caseChanges, saidPlainly as briefingSaid, anythingToSay,
+} from "../../src/case/briefing.mjs";
 
 const app = readFileSync("app.js", "utf8");
 
@@ -237,5 +240,116 @@ describe("it is wired the way the page requires", () => {
     const boot = pageSource();
     assert.match(boot, /intakeRenderRoutes\(\); intakeRenderResume\(\);/);
     assert.match(boot, /The intake band did not draw/);
+  });
+});
+
+/* --------------------------------------------- what changed since last time */
+
+describe("since you were last here", () => {
+  const scenario = (id, at, over = {}) => ({
+    id, name: `Case ${id}`, updatedAt: at, summary: { waitingOn: [], unknowns: 0, ...over },
+  });
+
+  /** A page with the changes panel and a storage that can be inspected. */
+  function withChanges({ scenarios = [], seen = null } = {}) {
+    const els = new Map();
+    for (const id of ["intake-changed", "intake-routes", "intake-answer", "intake-resume"]) {
+      els.set(id, { id, innerHTML: "" });
+    }
+    const store = new Map();
+    if (seen) store.set("bw.lastSeen.v1", seen);
+
+    const box = {
+      document: { getElementById: (id) => els.get(id) ?? null },
+      console,
+      ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
+      attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+      localStorage: {
+        getItem: (k) => (store.has(k) ? store.get(k) : null),
+        setItem: (k, v) => store.set(k, String(v)),
+      },
+      window: {
+        BW: {
+          caseChanges, anythingToSay, briefingSaid,
+          loadScenarios: () => scenarios, loadEstimates: () => [], loadOutcomes: () => [],
+        },
+      },
+    };
+    vm.createContext(box);
+    new vm.Script([
+      'var INTAKE_SEEN_KEY = "bw.lastSeen.v1";',
+      fnSource("intakeLastSeen", app), fnSource("intakeMarkSeen", app),
+      fnSource("intakeRenderChanges", app),
+    ].join("\n")).runInContext(box);
+
+    return {
+      box, store,
+      render: () => { vm.runInContext("intakeRenderChanges();", box);
+                      return els.get("intake-changed").innerHTML; },
+      markSeen: () => vm.runInContext("intakeMarkSeen();", box),
+      html: () => els.get("intake-changed").innerHTML,
+    };
+  }
+
+  test("nothing changed shows nothing at all", () => {
+    /* A heading over an empty list is a product telling somebody to look at
+       nothing. */
+    const v2 = withChanges({ scenarios: [scenario("A", "2026-09-10T00:00:00Z")],
+                             seen: "2026-09-12T00:00:00Z" });
+    assert.equal(v2.render(), "");
+  });
+
+  test("what needs you is listed above what does not", () => {
+    const v2 = withChanges({ scenarios: [
+      scenario("W", "2026-09-16T00:00:00Z"),
+      scenario("N", "2026-09-17T00:00:00Z", { waitingOn: ["a material rate"] }),
+    ] });
+    const html = v2.render();
+    assert.ok(html.indexOf("Needs something from you") < html.indexOf("Moved, and can wait"));
+    assert.match(html, /Waiting on a material rate/);
+  });
+
+  test("marking it seen clears it, and records when", () => {
+    const v2 = withChanges({ scenarios: [scenario("A", "2026-09-17T00:00:00Z")] });
+    assert.notEqual(v2.render(), "");
+
+    v2.markSeen();
+    assert.equal(v2.html(), "", "the list survived being marked seen");
+    assert.match(v2.store.get("bw.lastSeen.v1"), /^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  test("it is a deliberate act, not something loading does", () => {
+    /* Clearing on load means a reload loses it, and somebody who refreshes to
+       read it again finds it gone with no way back — the worst possible
+       behaviour for a list whose whole job is to be read. */
+    const v2 = withChanges({ scenarios: [scenario("A", "2026-09-17T00:00:00Z")] });
+    v2.render();
+    v2.render();
+    assert.notEqual(v2.html(), "", "rendering marked it seen");
+    assert.equal(v2.store.has("bw.lastSeen.v1"), false);
+  });
+
+  test("a storage that refuses does not take the panel with it", () => {
+    const v2 = withChanges({ scenarios: [scenario("A", "2026-09-17T00:00:00Z")] });
+    vm.runInContext(
+      "localStorage = { getItem: function(){ throw new Error('no'); }," +
+      " setItem: function(){ throw new Error('no'); } };", v2.box);
+    assert.notEqual(v2.render(), "", "a refusing store emptied the panel");
+    v2.markSeen();
+  });
+
+  test("a store that throws leaves the panel empty rather than broken", () => {
+    const v2 = withChanges({ scenarios: [scenario("A", "2026-09-17T00:00:00Z")] });
+    vm.runInContext("window.BW.loadScenarios = function(){ throw new Error('no'); };", v2.box);
+    assert.equal(v2.render(), "");
+  });
+
+  test("the button asks for an action the table registers", () => {
+    assert.ok(pageSource().includes("intakeMarkSeen:"), "intakeMarkSeen is not registered");
+  });
+
+  test("the panel is drawn at load with the rest of the band", () => {
+    assert.match(pageSource(), /intakeRenderChanges\(\); intakeRenderRoutes\(\);/);
   });
 });

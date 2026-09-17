@@ -537,6 +537,12 @@ There is no total field, and the absence is the feature: the three are all
 money sitting in one list, summing them is the easiest thing anybody could
 add here, and it is how a tool starts reporting savings nobody made.
 
+It is shown on the home band, above the routes, and only when something has
+moved. Marking it seen is a deliberate act rather than something loading
+does: clearing it on load means a reload loses it, and somebody refreshing to
+read it again finds it gone with no way back — the worst possible behaviour
+for a list whose whole job is to be read.
+
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
 must name an operation from the closed list, only the fields an operation may

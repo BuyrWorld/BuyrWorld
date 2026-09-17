@@ -371,7 +371,7 @@ var PILLAR_WORDS=["No","One","Two","Three","Four","Five","Six","Seven","Eight","
    the resumable list is re-drawn whenever saved work does. */
 (function(){
   if (typeof intakeRenderRoutes === "function") {
-    try { intakeRenderRoutes(); intakeRenderResume(); }
+    try { intakeRenderChanges(); intakeRenderRoutes(); intakeRenderResume(); }
     catch (e) { console.error("The intake band did not draw:", e && e.message); }
   }
 })();
@@ -1118,6 +1118,90 @@ function defCalc(){
 }
 
 
+
+
+/* ------------------------------------------------ what changed since last time */
+
+/**
+ * When somebody last said they had seen this.
+ *
+ * Its own key rather than part of a case, because it is about the person and
+ * not about any case — and because losing it should cost nothing worse than
+ * seeing a list again.
+ */
+var INTAKE_SEEN_KEY = "bw.lastSeen.v1";
+
+function intakeLastSeen(){
+  try { return localStorage.getItem(INTAKE_SEEN_KEY); }
+  catch (e) { return null; }
+}
+
+/**
+ * Mark it seen.
+ *
+ * A deliberate act rather than something that happens on load. Clearing the
+ * list by loading the page means a reload loses it, and somebody who
+ * refreshes to read it again finds it gone with no way back — which is the
+ * worst possible behaviour for a list whose whole job is to be read.
+ */
+function intakeMarkSeen(){
+  try { localStorage.setItem(INTAKE_SEEN_KEY, new Date().toISOString()); }
+  catch (e) { /* storage refused; the list simply shows again next time */ }
+  intakeRenderChanges();
+}
+
+/**
+ * What has moved since then.
+ *
+ * Shown only when there is something to show. A heading over an empty list is
+ * a product telling somebody to look at nothing.
+ */
+function intakeRenderChanges(){
+  var host = document.getElementById("intake-changed");
+  var B = window.BW;
+  if (!host) return;
+  if (!B || !B.caseChanges) { host.innerHTML = ""; return; }
+
+  var stores;
+  try {
+    stores = {
+      scenarios: B.loadScenarios ? B.loadScenarios(null) : [],
+      estimates: B.loadEstimates ? B.loadEstimates() : [],
+      outcomes: B.loadOutcomes ? B.loadOutcomes() : []
+    };
+  } catch (e) { host.innerHTML = ""; return; }
+
+  var seen = intakeLastSeen();
+  var r = B.caseChanges(stores, seen);
+  if (!B.anythingToSay(r)) { host.innerHTML = ""; return; }
+
+  var list = function(items, heading){
+    if (!items.length) return "";
+    return '<div style="margin-bottom:14px">'
+      + '<div class="eyebrow" style="margin-bottom:6px">' + ciEsc(heading) + '</div>'
+      + '<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+      + items.map(function(c){
+          return '<li><b style="color:var(--bw-text)">' + ciEsc(c.title) + '</b> '
+            + '<span style="color:var(--bw-muted)">(' + ciEsc(c.kind) + ')</span> &mdash; '
+            + ciEsc(c.said)
+            + (c.why ? ' <span style="color:var(--bw-warning)">' + ciEsc(c.why) + '</span>' : '')
+            + '</li>';
+        }).join("")
+      + '</ul></div>';
+  };
+
+  host.innerHTML = '<div class="bw-panel" style="margin:0 0 28px">'
+    + '<div class="bw-panel-head"><div class="bw-panel-title">Since you were last here</div>'
+    + '<span class="bw-status bw-status--derived">from your saved work</span></div>'
+    + list(r.needsYou, "Needs something from you")
+    + list(r.canWait, "Moved, and can wait")
+    + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+    + '<button class="bw-act bw-act-secondary" style="margin:0" data-do="intakeMarkSeen">'
+    + 'Seen it</button>'
+    + '<span style="font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
+    + ciEsc(B.briefingSaid(r, { firstVisit: !seen })) + '</span>'
+    + '</div></div>';
+}
 
 /* ------------------------------------------------- the task-led way in */
 
@@ -8796,6 +8880,7 @@ registerActions({
   intakeDescribe: function () { intakeDescribe(); },
   intakeKey$event: function (_a, _b, ev) { intakeKey(ev); },
   intakeResume: function (id) { intakeResume(id); },
+  intakeMarkSeen: function () { intakeMarkSeen(); },
   ciCopy$self: function () { ciCopy(this); },
   addQuoteFiles$self: function () { addQuoteFiles(this); },
   loadContractFile$self: function () { loadContractFile(this); },
