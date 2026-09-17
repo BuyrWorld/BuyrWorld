@@ -2678,6 +2678,14 @@ function scClearSession(){
   /* The last calculated plan and cost. bcSave reads it, so leaving it behind
      lets the previous part's calculation be saved as this one's estimate. */
   _scLast=null;
+  /* The last document read and the preview of it. Both outlived a new case
+     before this: the previous part's extracted values were still offered for
+     confirmation, and the previous drawing was still on screen. */
+  if(typeof _exState!=="undefined"){ _exState.scx=null; _exState.ctx=null; }
+  if(typeof _exReview!=="undefined"){ _exReview.scx=null; _exReview.ctx=null; }
+  if(typeof exViewClose==="function"){ exViewClose("scx"); exViewClose("ctx"); }
+  var exOut=document.getElementById("scx-out"); if(exOut)exOut.innerHTML="";
+  var exName=document.getElementById("scx-name"); if(exName)exName.textContent="";
   scClear();
 }
 
@@ -4417,40 +4425,358 @@ async function scPdfPages(file){
   return {pages:pages,pagesInDocument:pdf.numPages};
 }
 
+/**
+ * What is open, per reading path, so the previous document can be closed.
+ *
+ * An object URL holds the file alive until it is revoked, and a preview left
+ * behind when the next one opens is both a leak and the previous case's
+ * drawing still on screen.
+ */
+var _exView={scx:null,ctx:null};
+
+/**
+ * What a person has decided about each reading, per path.
+ *
+ * Kept beside the extraction rather than inside it. The extraction is what
+ * the document says and does not change; this is what somebody did about it,
+ * and it carries the audit trail — what a value was corrected from, by whom,
+ * and when. Correcting used to overwrite the reading in place, so the moment
+ * anybody disagreed with a drawing, what the drawing said was gone.
+ */
+var _exReview={scx:null,ctx:null};
+
+/** The one name this product can honestly record. There is no sign-in. */
+var EX_REVIEWER="this browser";
+
+/** A fingerprint of what was actually read, so a re-read can be recognised. */
+async function exFingerprint(file){
+  try{
+    var buf=await file.arrayBuffer();
+    var hash=await crypto.subtle.digest("SHA-256",buf);
+    return Array.prototype.map.call(new Uint8Array(hash),function(b){
+      return ("0"+b.toString(16)).slice(-2);
+    }).join("").slice(0,16);
+  }catch(e){
+    /* No subtle crypto, or the file could not be re-read. Size and modified
+       time still separate two different files far better than a name does,
+       and saying so is better than claiming a hash there is not. */
+    return "size-"+file.size+"-"+(file.lastModified||0);
+  }
+}
+
+/** The decision made about one field, or null if nobody has made one. */
+function exItem(which,field){
+  var q=_exReview[which];
+  if(!q)return null;
+  for(var i=0;i<q.length;i++)if(q[i].field===field)return q[i];
+  return null;
+}
+
+/** Replace one item, keeping the rest of the queue as it was. */
+function exSetItem(which,next){
+  var q=_exReview[which];
+  if(!q)return;
+  _exReview[which]=q.map(function(it){ return it.field===next.field?next:it; });
+}
+
+/** Re-render whichever table this path owns. */
+function exRerender(which){
+  var out=document.getElementById(which+"-out");
+  if(out&&_exState[which])out.innerHTML=exResultHTML(which,_exState[which]);
+}
+
+/** One of the four decisions, applied to both the queue and the extraction. */
+function exDecide(which,field,action){
+  var B=window.BW,item=exItem(which,field);
+  if(!B||!item)return;
+  var next=action==="unknown"
+    ?B.reviewUnknown(item,EX_REVIEWER,"Not given on this document")
+    :B.reviewReject(item,EX_REVIEWER,"This reading is not that field");
+  exSetItem(which,next);
+
+  /* The extraction's own state stays the truth the rest of the page reads,
+     and both of these are not-confirmed — which is already what it checks. */
+  var r=_exState[which];
+  if(r){
+    _exState[which]=Object.assign({},r,{candidates:r.candidates.map(function(c){
+      return c.field===field?Object.assign({},c,{state:"proposed",confirmedBy:null}):c;
+    })});
+  }
+  exRerender(which);
+}
+
+/**
+ * Take a decision back.
+ *
+ * Offered because both of the new answers are easy to press by accident and
+ * neither can be undone by editing the box — the row stops showing one.
+ * The revision that recorded the decision is kept: taking something back is
+ * itself part of the history, not a way to erase it.
+ */
+function exUndecide(which,field){
+  var B=window.BW,item=exItem(which,field);
+  if(!B||!item)return;
+  exSetItem(which,Object.assign({},item,{
+    disposition:B.REVIEW_DISPOSITION.PROPOSED,
+    value:item.evidence.value,
+    unit:item.evidence.unit,
+    why:null
+  }));
+  exRerender(which);
+}
+
+/** Close whatever is open on this path. */
+function exViewClose(which){
+  var open=_exView[which];
+  if(!open)return;
+  if(open.url)URL.revokeObjectURL(open.url);
+  if(open.off)open.off();
+  _exView[which]=null;
+}
+
+/**
+ * Read a document, whatever kind it turns out to be.
+ *
+ * The format comes from the file's first bytes rather than the end of its
+ * name. That is the fix: the input used to accept only .pdf and this function
+ * rejected everything else by filename, so widening the input alone would
+ * have changed nothing.
+ */
 async function exRead(which,input){
   var out=document.getElementById(which+"-out");
   var nameEl=document.getElementById(which+"-name");
   var f=input&&input.files&&input.files[0];
   if(!out||!f)return;
+  var B=window.BW;
+  if(!B||!B.identifyFile){ out.innerHTML=engineNote(); return; }
 
-  if(nameEl)nameEl.textContent=f.name+" — reading…";
+  exViewClose(which);
+  _exState[which]=null;
+  /* A new document is a new revision, so a reading of the last one that
+     arrives late is recognised as being of the last one. */
+  if(typeof _exRevision!=="undefined")_exRevision[which]=(_exRevision[which]||0)+1;
+  if(nameEl)nameEl.textContent=f.name+" — checking…";
   /* The moment the read began. Anything edited after this has been seen by a
      person more recently than by the reader, so a proposal for it is stale
      however the results happen to come back. */
   if(which==="scx"&&typeof scReadStarted==="function")scReadStarted();
-  if(f.size>MAX_FILE_MB*1024*1024){
+
+  var size=B.fileWithinLimits(f.size);
+  if(!size.ok){ if(nameEl)nameEl.textContent=f.name; out.innerHTML=exErr(size.why); return; }
+
+  var id;
+  try{
+    var head=await f.slice(0,B.HEAD_BYTES).arrayBuffer();
+    id=B.identifyFile(new Uint8Array(head),f.name);
+  }catch(e){
     if(nameEl)nameEl.textContent=f.name;
-    out.innerHTML=exErr("That file is "+(f.size/1024/1024).toFixed(1)+"MB; the limit is "+MAX_FILE_MB+"MB.");
-    return;
-  }
-  if(!/\.pdf$/i.test(f.name)){
-    if(nameEl)nameEl.textContent=f.name;
-    out.innerHTML=exErr("This reads PDFs. An image is a picture of a document: no dimension may be derived from its pixels, so it is refused rather than guessed at. Enter the values by hand instead.");
+    out.innerHTML=exErr("That file could not be read from this computer: "+String((e&&e.message)||e));
     return;
   }
 
-  var read;
-  try{ read=await scPdfPages(f); }
-  catch(e){ if(nameEl)nameEl.textContent=f.name; out.innerHTML=exErr("That PDF could not be opened: "+String(e.message||e)); return; }
+  var note=id.mismatch?exNote(id.mismatchNote):"";
+  var step=B.fileNextStep(id,{ocr:false});
 
-  var target=which==="ctx"?window.BW.EX_TARGET.CERTIFICATE:window.BW.EX_TARGET.DRAWING;
-  var result=window.BW.extractDocument(read.pages,{
-    filename:f.name,target:target,pagesInDocument:read.pagesInDocument
-  });
-  _exState[which]=result;
-  if(nameEl)nameEl.textContent=f.name+" — "+read.pages.length+" of "+read.pagesInDocument+" page(s) read";
-  out.innerHTML=exResultHTML(which,result);
+  if(id.handling===B.FILE_HANDLING.PDF){
+    if(nameEl)nameEl.textContent=f.name+" — reading…";
+    var read;
+    try{ read=await scPdfPages(f); }
+    catch(e2){ if(nameEl)nameEl.textContent=f.name; out.innerHTML=note+exErr("That PDF could not be opened: "+String((e2&&e2.message)||e2)); return; }
+
+    var target=which==="ctx"?B.EX_TARGET.CERTIFICATE:B.EX_TARGET.DRAWING;
+    var result=B.extractDocument(read.pages,{
+      filename:f.name,target:target,pagesInDocument:read.pagesInDocument
+    });
+    _exState[which]=result;
+
+    /* The decisions somebody already made, carried across only where this is
+       the same document read the same way. A new revision, or the same file
+       read as saying something else, sends every row back for review. */
+    var doc=B.documentRef({filename:f.name,fingerprint:await exFingerprint(f)});
+    var was=_exReview[which]||[];
+    var fresh=B.reviewQueue(result,{method:B.REVIEW_METHOD.RULE,document:doc,existing:was});
+    var lost=B.needsReReview(B.reviewQueue(result,{method:B.REVIEW_METHOD.RULE,document:doc}),was);
+    _exReview[which]=fresh;
+
+    /* Which pages were readable, named rather than counted. The file
+       router already promises that scanned pages cannot be read here and
+       that you will be told which; until now nothing told anybody which. */
+    var seen=B.assessDocument(read.pages,{pagesInDocument:read.pagesInDocument});
+
+    if(nameEl)nameEl.textContent=f.name+" — "+read.pages.length+" of "+read.pagesInDocument+" page(s) read";
+    out.innerHTML=note+(lost.length?exReReviewHTML(lost):"")
+      +exPagesHTML(seen)+exResultHTML(which,result);
+    /* Pages this browser could not read are the ones a reader elsewhere
+       could. Offered, never taken. */
+    exOfferScannedRead(which,f,seen,out);
+    input.value="";
+    return;
+  }
+
+  if(id.handling===B.FILE_HANDLING.IMAGE){
+    if(nameEl)nameEl.textContent=f.name;
+    exShowImage(which,f,step.say,note);
+    input.value="";
+    return;
+  }
+
+  if(nameEl)nameEl.textContent=f.name;
+  out.innerHTML=note+exErr(step.say);
   input.value="";
+}
+
+/** A remark that is not an error — a name that disagrees with its contents. */
+function exNote(m){
+  return '<p style="color:var(--bw-warning);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">'+ciEsc(m)+'</p>';
+}
+
+/**
+ * Show a picture of a document.
+ *
+ * Nothing is read off it, and the panel says so. What it does instead is the
+ * part that was missing: a drawing photographed on a phone is legible if you
+ * can enlarge and turn it, and somebody who can read it can type what it
+ * says. Before this, that file was refused and the case stopped there.
+ */
+function exShowImage(which,file,say,note){
+  var host=document.getElementById(which+"-out");
+  if(!host)return;
+  var V=window.BW&&window.BW.viewer;
+  if(!V){ host.innerHTML=engineNote(); return; }
+
+  host.innerHTML="";
+  var url=URL.createObjectURL(file);
+  var img=document.createElement("img");
+  img.alt="The uploaded document. Nothing on it has been read; the values are yours to enter.";
+  img.style.position="absolute";
+  img.style.transformOrigin="50% 50%";
+  img.draggable=false;
+
+  var pane=document.createElement("div");
+  pane.tabIndex=0;
+  pane.setAttribute("role","group");
+  pane.setAttribute("aria-label","Document preview. Drag to move, plus and minus to zoom, R to turn.");
+  pane.style.cssText="position:relative;overflow:hidden;height:420px;background:var(--bw-panel);"
+    +"border:1px solid var(--bw-line);border-radius:var(--bw-r-2);cursor:grab;touch-action:none";
+  pane.appendChild(img);
+
+  var bar=document.createElement("div");
+  bar.style.cssText="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:var(--bw-3) 0 0";
+
+  var readout=document.createElement("span");
+  readout.style.cssText="font-size:12px;color:var(--bw-muted);margin-left:auto;font-variant-numeric:tabular-nums";
+
+  var msg=document.createElement("p");
+  msg.style.cssText="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6";
+  msg.textContent=say;
+
+  /* Nothing on a picture can be read here, and this is the offer to have it
+     read elsewhere. It asks before it sends anything. */
+  var offer=document.createElement("button");
+  offer.type="button";
+  offer.className="bw-act bw-act-secondary";
+  offer.style.cssText="margin:var(--bw-3) 0 0";
+  offer.textContent="Read this document for me";
+  offer.addEventListener("click",function(){
+    offer.disabled=true;
+    exAskToSend(which,file,host);
+  });
+
+  if(note){ var n=document.createElement("div"); n.innerHTML=note; host.appendChild(n); }
+  host.appendChild(pane);
+  host.appendChild(bar);
+  host.appendChild(msg);
+  host.appendChild(offer);
+
+  var view=null;
+  var draw=function(){
+    if(!view)return;
+    var t=V.transform(view),p=view.pages[view.page];
+    var w=p.w*t.scale,h=p.h*t.scale;
+    img.style.width=w+"px";
+    img.style.height=h+"px";
+    img.style.left=(t.x+t.w/2-w/2)+"px";
+    img.style.top=(t.y+t.h/2-h/2)+"px";
+    img.style.transform="rotate("+t.turn+"deg)";
+    readout.textContent=Math.round(t.scale*100)+"%"+(t.fitted?" · fits":"")+(t.turn?" · "+t.turn+"°":"");
+  };
+  var apply=function(next){ view=next; draw(); };
+
+  var btn=function(label,title,fn){
+    var b=document.createElement("button");
+    b.type="button"; b.className="bw-act bw-act-secondary";
+    b.style.cssText="padding:4px 10px;font-size:12px;margin:0";
+    b.textContent=label; b.title=title; b.setAttribute("aria-label",title);
+    b.addEventListener("click",function(){ if(view)fn(); });
+    bar.appendChild(b);
+    return b;
+  };
+
+  btn("\u2212","Zoom out",function(){ apply(V.zoomOut(view)); });
+  btn("+","Zoom in",function(){ apply(V.zoomIn(view)); });
+  btn("Fit","Fit the whole page",function(){ apply(V.fit(view)); });
+  btn("100%","Actual size",function(){ apply(V.actual(view)); });
+  btn("\u21ba","Turn left",function(){ apply(V.turn(view,-90)); });
+  btn("\u21bb","Turn right",function(){ apply(V.turn(view,90)); });
+  bar.appendChild(readout);
+
+  /* Drag to move. Pointer capture rather than listeners on the document: a
+     drag that leaves the pane keeps working, and stops when the button is
+     released wherever that happens. */
+  var from=null;
+  pane.addEventListener("pointerdown",function(e){
+    if(!view)return;
+    from={x:e.clientX,y:e.clientY};
+    pane.setPointerCapture(e.pointerId);
+    pane.style.cursor="grabbing";
+  });
+  pane.addEventListener("pointermove",function(e){
+    if(!from||!view)return;
+    apply(V.pan(view,e.clientX-from.x,e.clientY-from.y));
+    from={x:e.clientX,y:e.clientY};
+  });
+  var release=function(e){
+    if(!from)return;
+    from=null; pane.style.cursor="grab";
+    try{ pane.releasePointerCapture(e.pointerId); }catch(err){}
+  };
+  pane.addEventListener("pointerup",release);
+  pane.addEventListener("pointercancel",release);
+
+  pane.addEventListener("wheel",function(e){
+    if(!view)return;
+    e.preventDefault();
+    var box=pane.getBoundingClientRect();
+    var at={x:e.clientX-box.left,y:e.clientY-box.top};
+    apply(e.deltaY<0?V.zoomIn(view,at):V.zoomOut(view,at));
+  },{passive:false});
+
+  /* The same moves from the keyboard, because a drawing you cannot enlarge
+     without a mouse is a drawing you cannot read. */
+  pane.addEventListener("keydown",function(e){
+    if(!view)return;
+    var step=60,by={ArrowLeft:[step,0],ArrowRight:[-step,0],ArrowUp:[0,step],ArrowDown:[0,-step]}[e.key];
+    if(by){ e.preventDefault(); apply(V.pan(view,by[0],by[1])); return; }
+    if(e.key==="+"||e.key==="="){ e.preventDefault(); apply(V.zoomIn(view)); }
+    else if(e.key==="-"){ e.preventDefault(); apply(V.zoomOut(view)); }
+    else if(e.key==="0"){ e.preventDefault(); apply(V.fit(view)); }
+    else if(e.key==="r"||e.key==="R"){ e.preventDefault(); apply(V.turn(view,e.shiftKey?-90:90)); }
+  });
+
+  var onResize=function(){ if(view)apply(V.resize(view,{w:pane.clientWidth,h:pane.clientHeight})); };
+  window.addEventListener("resize",onResize);
+
+  img.addEventListener("load",function(){
+    apply(V.open({pages:[{w:img.naturalWidth,h:img.naturalHeight}]},
+                 {w:pane.clientWidth||800,h:pane.clientHeight||420}));
+  });
+  img.addEventListener("error",function(){
+    host.innerHTML=exErr("That image could not be displayed. It may be damaged. "
+      +"You can still enter the values by hand.");
+  });
+  img.src=url;
+
+  _exView[which]={url:url,off:function(){ window.removeEventListener("resize",onResize); }};
 }
 
 function exErr(m){
@@ -4475,13 +4801,23 @@ function exResultHTML(which,r){
       +(c.missingUnit?'<div style="font-size:11.5px;color:var(--bw-warning)">no unit stated</div>':'')
       +'</td>'
       +'<td><input class="bwin" value="'+attrEsc(c.value)+'" data-ex="'+attrEsc(which)+'" data-ex-row="'+i+'" aria-label="'+attrEsc(row.label)+' value"></td>'
-      +'<td>'+(c.unit?ciEsc(c.unit):'<span style="color:var(--bw-warning)">&mdash;</span>')+'</td>'
+      +'<td>'+(c.unit?ciEsc(c.unit):'<span style="color:var(--bw-warning)">&mdash;</span>')
+      /* A tolerance printed against this dimension. Shown beside the value
+         because that is what it governs, and a value confirmed without its
+         limits is half a requirement. An unreadable one is shown as written:
+         a geometric control is a real requirement and a reviewer reading it
+         beats this reading it wrongly. */
+      +(c.tolerance
+        ?'<div style="font-size:11.5px;margin-top:3px;color:'
+          +(c.tolerance.readable?'var(--bw-muted)':'var(--bw-warning)')+'" title="'
+          +attrEsc(c.tolerance.said)+'">'+ciEsc(c.tolerance.printed)
+          +(c.tolerance.readable?'':' &mdash; not read as limits')+'</div>'
+        :'')
+      +'</td>'
       +'<td class="n">'+c.page+'</td>'
       +'<td style="font-family:monospace;font-size:11.5px;color:var(--bw-muted)">'+ciEsc(c.quote)+'</td>'
       +'<td><span class="bw-status bw-status--'+chip(c.confidence)+'">'+ciEsc(c.confidence)+'</span></td>'
-      +'<td><label class="bw-field" style="display:flex;align-items:center;gap:6px;margin:0">'
-      +'<input type="checkbox" style="width:auto;margin:0" data-ex="'+attrEsc(which)+'" data-ex-confirm="'+i+'"'+(c.state==="confirmed"?' checked':'')
-      +' aria-label="I have checked '+attrEsc(row.label)+' against the document"><span style="font-size:11.5px">checked</span></label></td>'
+      +'<td>'+exDecisionHTML(which,row,c,i)+'</td>'
       +'</tr>';
   }).join("");
 
@@ -4508,6 +4844,503 @@ function exResultHTML(which,r){
       +'</div>'
       +'<div id="'+attrEsc(which)+'-apply" style="margin-top:var(--bw-3)"></div>':'')
     +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-4) 0 0;line-height:1.55">'+ciEsc(r.method)+'</p>';
+}
+
+
+/**
+ * What somebody may decide about one reading, and what they already did.
+ *
+ * Four answers, not two. A tick and an edit cover "it says this and it is
+ * right" and "it says this and the right value is that"; neither covers "the
+ * drawing does not give this" or "that reading is not this field at all", and
+ * collapsing those into an untouched row loses the difference between a value
+ * nobody has looked at and one somebody has ruled out.
+ */
+function exDecisionHTML(which,row,c,i){
+  var B=window.BW,item=typeof exItem==="function"?exItem(which,c.field):null;
+  var D=B&&B.REVIEW_DISPOSITION;
+  var disp=item?item.disposition:null;
+
+  if(D&&(disp===D.UNKNOWN||disp===D.REJECTED)){
+    var said=disp===D.UNKNOWN?"not on the document":"reading rejected";
+    return '<div style="font-size:11.5px;color:var(--bw-muted);line-height:1.5">'+ciEsc(said)
+      +'<br><button class="bw-act bw-act-secondary" style="padding:2px 8px;font-size:11px;margin-top:4px"'
+      +' data-ex="'+attrEsc(which)+'" data-ex-undo="'+attrEsc(c.field)+'">undo</button></div>';
+  }
+
+  var trail="";
+  if(item&&item.revisions.length){
+    var last=item.revisions[item.revisions.length-1];
+    if(last.action==="correct"){
+      trail='<div style="font-size:11px;color:var(--bw-warning);margin-top:4px">'
+        +'corrected from '+ciEsc(String(last.from))+'</div>';
+    }
+  }
+
+  return '<label class="bw-field" style="display:flex;align-items:center;gap:6px;margin:0">'
+    +'<input type="checkbox" style="width:auto;margin:0" data-ex="'+attrEsc(which)+'" data-ex-confirm="'+i+'"'+(c.state==="confirmed"?' checked':'')
+    +' aria-label="I have checked '+attrEsc(row.label)+' against the document"><span style="font-size:11.5px">checked</span></label>'
+    +'<div style="display:flex;gap:4px;margin-top:4px">'
+    +'<button class="bw-act bw-act-secondary" style="padding:2px 8px;font-size:11px"'
+    +' data-ex="'+attrEsc(which)+'" data-ex-unknown="'+attrEsc(c.field)+'"'
+    +' title="This document does not give '+attrEsc(row.label)+'">not on it</button>'
+    +'<button class="bw-act bw-act-secondary" style="padding:2px 8px;font-size:11px"'
+    +' data-ex="'+attrEsc(which)+'" data-ex-reject="'+attrEsc(c.field)+'"'
+    +' title="That is not '+attrEsc(row.label)+'">wrong</button>'
+    +'</div>'+trail;
+}
+
+/**
+ * Which pages were read, and which were pictures.
+ *
+ * A count was already there — "3 page(s) carry no text" — and a count is not
+ * something anybody can act on: working out which three means opening the
+ * file yourself. Naming them is the difference between a warning and an
+ * instruction.
+ *
+ * Quiet when everything read, because a banner that always appears is one
+ * nobody reads on the day it matters.
+ */
+function exPagesHTML(seen){
+  if(!seen||seen.pagesRead===0)return "";
+  if(!seen.needsReading.length&&!seen.skipped.length)return "";
+
+  var B=window.BW;
+  var tone=seen.anyReadable?"--bw-warning":"--bw-danger";
+  return '<div style="border:1px solid var('+tone+');background:var(--bw-warning-soft);'
+    +'border-radius:var(--bw-r-sm);padding:12px 14px;margin-bottom:var(--bw-4)">'
+    +'<div class="eyebrow" style="margin:0 0 6px">What was read, and what was not</div>'
+    +'<p style="margin:0;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+    +ciEsc(B.pagesSaidPlainly(seen))+'</p></div>';
+}
+
+/**
+ * What was decided against a document that is no longer the one in front of
+ * you.
+ *
+ * Silently dropping the ticks would be defensible and unkind: somebody who
+ * checked fourteen rows and re-uploaded a corrected drawing needs to be told
+ * that is why they are all empty again.
+ */
+function exReReviewHTML(lost){
+  return '<div style="border:1px solid var(--bw-warning);background:var(--bw-warning-soft);'
+    +'border-radius:var(--bw-r-sm);padding:12px 14px;margin-bottom:var(--bw-4)">'
+    +'<div class="eyebrow" style="margin:0 0 6px">This document changed, so these need checking again</div>'
+    +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+    +lost.map(function(l){
+      return '<li><b style="color:var(--bw-text)">'+ciEsc(l.label)+'</b>'
+        +(l.was?' &mdash; you had confirmed '+ciEsc(String(l.was)):'')+'</li>';
+    }).join("")
+    +'</ul></div>';
+}
+
+
+
+/* ------------------------------------------------ scanned pages of a PDF */
+
+/**
+ * How many pages of one document are sent to be read at once.
+ *
+ * The reader allows six requests a minute and each page is one request, so a
+ * twenty-page scan sent in full would be refused halfway through with no way
+ * to tell which half. Four is under the limit with room for a retry, and the
+ * count is stated rather than discovered.
+ */
+var EX_MAX_PAGES_SENT=4;
+
+/**
+ * Draw pages of a PDF as images.
+ *
+ * pdf.js is already loaded for the text layer. A page with no text is a
+ * picture of a page, and once drawn it is the same problem as a photograph —
+ * which already has a route.
+ */
+async function scPdfPageImages(file,pageNumbers){
+  var B=window.BW;
+  var buf=await file.arrayBuffer();
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc=await verifiedWorkerURL("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js");
+  var pdf=await pdfjsLib.getDocument({data:buf}).promise;
+
+  var out=[];
+  for(var i=0;i<pageNumbers.length;i++){
+    var n=pageNumbers[i];
+    if(n<1||n>pdf.numPages)continue;
+    var page=await pdf.getPage(n);
+
+    /* Rendered at the size the reader works at rather than at whatever the
+       page happens to be. A scan drawn at 72dpi is unreadable; drawn at 600
+       it is a large upload of the same characters. */
+    var base=page.getViewport({scale:1});
+    var plan=B.downscaleTo(base.width,base.height);
+    var scale=plan.scaled?Math.min(plan.width/base.width,plan.height/base.height):1;
+    /* A page smaller than the target is drawn larger, which is not the same
+       as enlarging a photograph: this is re-rendering vector geometry at a
+       higher resolution, not inventing pixels. A scanned image inside it
+       cannot gain detail, and nothing downstream is told otherwise. */
+    if(!plan.scaled)scale=Math.min(3,1568/Math.max(base.width,base.height));
+
+    var viewport=page.getViewport({scale:scale});
+    var canvas=document.createElement("canvas");
+    canvas.width=Math.round(viewport.width);
+    canvas.height=Math.round(viewport.height);
+    await page.render({canvasContext:canvas.getContext("2d"),viewport:viewport}).promise;
+
+    var url=canvas.toDataURL("image/jpeg",0.9);
+    out.push({page:n,image:url.slice(url.indexOf(",")+1)});
+  }
+  return out;
+}
+
+/**
+ * Offer to have the unread pages read, and do it if asked.
+ *
+ * The same consent step as a photograph, because it is the same thing
+ * happening: the document leaves the computer. The only difference is that
+ * here it is some pages of it rather than all of it, and the offer says
+ * which.
+ */
+function exOfferScannedRead(which,file,seen,host){
+  var B=window.BW;
+  if(!B||!seen||!seen.needsReading.length)return;
+
+  var pages=seen.needsReading.slice(0,EX_MAX_PAGES_SENT);
+  var offer=document.createElement("button");
+  offer.type="button";
+  offer.className="bw-act bw-act-secondary";
+  offer.style.cssText="margin:var(--bw-3) 0 0";
+  offer.textContent="Read page"+(pages.length>1?"s":"")+" "+pages.join(", ")+" for me";
+  offer.addEventListener("click",function(){
+    offer.disabled=true;
+    exAskToSend(which,file,host,pages);
+  });
+
+  var note=document.createElement("p");
+  note.style.cssText="margin:6px 0 0;font-size:11.5px;color:var(--bw-muted);line-height:1.6";
+  note.textContent=seen.needsReading.length>pages.length
+    ? seen.needsReading.length+" pages could not be read here and "+pages.length
+      +" are sent at a time, so the rest stay yours to enter."
+    : "This sends "+(pages.length>1?"those pages":"that page")+" from your computer to be read.";
+
+  host.appendChild(offer);
+  host.appendChild(note);
+}
+
+/* ------------------------------------------------ reading a picture, elsewhere */
+
+/**
+ * When each path's fields were last touched by a person.
+ *
+ * The adapter refuses a reading that arrives after somebody typed into the
+ * fields it would fill. That rule needs a time, and nothing was recording
+ * one, which would have made the refusal unreachable — the shape of dead
+ * guard this codebase has already had to dig out five times.
+ */
+var _exEditedAt={scx:0,ctx:0};
+
+/** A revision, so a reading of a replaced document is recognised as stale. */
+var _exRevision={scx:0,ctx:0};
+
+/**
+ * Send one image to be read.
+ *
+ * Downscaled first, to the long edge the reader works at. Sending more buys
+ * nothing and costs upload time; sending less loses the small printed text,
+ * which on a drawing is most of what matters. Nothing is ever enlarged.
+ */
+async function exImagePayload(file){
+  var B=window.BW;
+  var bitmap=await createImageBitmap(file);
+  var plan=B.downscaleTo(bitmap.width,bitmap.height);
+  if(!plan){ bitmap.close&&bitmap.close(); throw new Error("That image has no readable size."); }
+
+  var canvas=document.createElement("canvas");
+  canvas.width=plan.width; canvas.height=plan.height;
+  var ctx=canvas.getContext("2d");
+  ctx.drawImage(bitmap,0,0,plan.width,plan.height);
+  bitmap.close&&bitmap.close();
+
+  var url=canvas.toDataURL("image/jpeg",0.9);
+  var comma=url.indexOf(",");
+  return {image:url.slice(comma+1),mediaType:"image/jpeg",scaled:plan.scaled};
+}
+
+/** The transport the adapter talks through. One endpoint, one purpose. */
+function exReaderTransport(){
+  return async function(job){
+    var payload=await exImagePayload(job.file);
+    var res=await fetch("/api/read-document",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        image:payload.image,
+        mediaType:payload.mediaType,
+        target:job.submission.target||"drawing"
+      })
+    });
+    var body=await res.json().catch(function(){ return {}; });
+    if(!res.ok){
+      /* The endpoint says whether this is worth trying again; the adapter
+         classifies on the message, so the message carries it. */
+      throw new Error((body.permanent?"unsupported: ":"")+(body.error||("The reader returned "+res.status)));
+    }
+    return {state:window.BW.JOB.REVIEW_READY,text:body.text,truncated:Boolean(body.truncated)};
+  };
+}
+
+
+/**
+ * Several pages, read one at a time.
+ *
+ * One request per page, because a reader given four pages at once has to be
+ * told which answer belongs to which, and asking it to keep them apart is a
+ * thing it can get wrong. One page per request cannot be confused.
+ *
+ * A page that fails does not lose the pages that worked. Whatever was read is
+ * kept and the failure is reported beside it, which is the difference between
+ * a partial answer and nothing at all.
+ */
+function exPagesTransport(pages){
+  return async function(job){
+    var B=window.BW;
+    var images=await scPdfPageImages(job.file,pages);
+    if(!images.length)throw new Error("unsupported: none of those pages could be drawn.");
+
+    var replies=[],failed=[];
+    for(var i=0;i<images.length;i++){
+      try{
+        var res=await fetch("/api/read-document",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({image:images[i].image,mediaType:"image/jpeg",
+                               target:job.submission.target||"drawing"})
+        });
+        var body=await res.json().catch(function(){ return {}; });
+        if(!res.ok){ failed.push({page:images[i].page,why:body.error||("status "+res.status)}); continue; }
+        replies.push({page:images[i].page,text:body.text,truncated:Boolean(body.truncated)});
+      }catch(e){
+        failed.push({page:images[i].page,why:String((e&&e.message)||e)});
+      }
+    }
+
+    if(!replies.length){
+      throw new Error(failed.length?failed[0].why:"No page could be read.");
+    }
+    return {
+      state:B.JOB.REVIEW_READY,
+      pages:replies,
+      failedPages:failed,
+      truncated:replies.some(function(r){ return r.truncated; })
+    };
+  };
+}
+
+/**
+ * Ask before sending anything.
+ *
+ * `specs/03`: explain cloud processing before upload. The wording lives in
+ * the module so it can be read in a diff and tested; this only places it.
+ * Both answers are buttons of equal weight — consent copy that leads
+ * somewhere is not consent copy.
+ */
+function exAskToSend(which,file,host,pages){
+  var B=window.BW,C=B.CONSENT_SAID;
+  var box=document.createElement("div");
+  box.style.cssText="border:1px solid var(--bw-warning);background:var(--bw-warning-soft);"
+    +"border-radius:var(--bw-r-sm);padding:14px 16px;margin-top:var(--bw-4)";
+
+  var head=document.createElement("div");
+  head.className="eyebrow";
+  head.style.cssText="margin:0 0 8px";
+  head.textContent="Before this leaves your computer";
+  box.appendChild(head);
+
+  ["what","kept","limits","instead"].forEach(function(k){
+    var p=document.createElement("p");
+    p.style.cssText="margin:0 0 8px;font-size:12.5px;line-height:1.7;color:var(--bw-body)";
+    p.textContent=C[k];
+    box.appendChild(p);
+  });
+
+  var row=document.createElement("div");
+  row.style.cssText="display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--bw-3)";
+
+  var send=document.createElement("button");
+  send.type="button"; send.className="bw-act bw-act-primary"; send.style.margin="0";
+  send.textContent=B.CONSENT_CHOICES.SEND;
+
+  var no=document.createElement("button");
+  no.type="button"; no.className="bw-act bw-act-secondary"; no.style.margin="0";
+  no.textContent=B.CONSENT_CHOICES.TYPE;
+
+  row.appendChild(send); row.appendChild(no);
+  box.appendChild(row);
+  host.appendChild(box);
+
+  no.addEventListener("click",function(){ box.remove(); });
+  send.addEventListener("click",function(){
+    send.disabled=true; no.disabled=true;
+    send.textContent="Reading…";
+    exCloudRead(which,file,box,pages);
+  });
+}
+
+/**
+ * Send it, and decide whether the answer that comes back still applies.
+ *
+ * The check is not ceremony. Between the click and the reply somebody can
+ * start a new case, replace the drawing, or type the values themselves — and
+ * a reading applied quietly after any of those is indistinguishable from the
+ * software changing a number on its own.
+ */
+async function exCloudRead(which,file,box,pages){
+  var B=window.BW;
+  var host=document.getElementById(which+"-out");
+  if(!B||!host)return;
+
+  var sub=B.jobSubmission({
+    caseId:which==="scx"?(_scScenarioId||"scx"):"ctx",
+    revision:_exRevision[which],
+    documentId:(_exReview[which]&&_exReview[which][0]&&_exReview[which][0].document.fingerprint)||null
+  });
+  sub=Object.assign({},sub,{target:which==="ctx"?"certificate":"drawing"});
+
+  var result=await B.submitExtraction(file,sub,{
+    transport:pages&&pages.length?exPagesTransport(pages):exReaderTransport()
+  });
+
+  if(box)box.remove();
+
+  if(!result.ok){
+    host.appendChild(exNoteEl(result.said,B.jobCanRetry(result)?function(){
+      exAskToSend(which,file,host);
+    }:null));
+    return;
+  }
+
+  var verdict=B.resultApplicable(result,{
+    caseId:which==="scx"?(_scScenarioId||"scx"):"ctx",
+    revision:_exRevision[which],
+    editedAt:_exEditedAt[which]
+  });
+  if(!verdict.ok){
+    host.appendChild(exNoteEl(verdict.why,null));
+    return;
+  }
+
+  var reading=result.pages?exReadingFromPages(result.pages):B.readingsFrom(result.text);
+  if(!reading.ok){ host.appendChild(exNoteEl(reading.why,null)); return; }
+
+  if(result.failedPages&&result.failedPages.length){
+    host.appendChild(exNoteEl("Page"+(result.failedPages.length>1?"s ":" ")
+      +result.failedPages.map(function(f){ return f.page; }).join(", ")
+      +" could not be read. What was read from the others is below; those pages stay yours to enter.",null));
+  }
+  if(!reading.candidates.length){
+    host.appendChild(exNoteEl("Nothing on this picture was read into a field this product knows. "
+      +"That is not a failure of the drawing \u2014 enter the values yourself.",null));
+    return;
+  }
+
+  exApplyReading(which,file,reading,result);
+}
+
+/** What a picture-read actually covered, stated rather than assumed complete. */
+function exReadCoverage(reading){
+  var pages={};
+  for(var i=0;i<reading.candidates.length;i++)pages[reading.candidates[i].page||1]=true;
+  var n=Object.keys(pages).length||1;
+  return {pagesProvided:n,pagesWithText:n,pagesInDocument:n,complete:true,unread:0,withoutText:0};
+}
+
+/**
+ * Several pages' readings, put together.
+ *
+ * Each page is read on its own, so two pages can disagree about the same
+ * field — one scan of a title block and a continuation sheet that repeats it
+ * differently. Choosing between them here would be the quiet resolution this
+ * product refuses everywhere else, so both are kept, each with the page it
+ * came from, and `findConflicts` surfaces the disagreement above the table
+ * exactly as it does for a rule-read document.
+ */
+function exReadingFromPages(pages){
+  var B=window.BW;
+  var candidates=[],dropped=[],failedPages=[];
+
+  for(var i=0;i<pages.length;i++){
+    var one=B.readingsFrom(pages[i].text);
+    if(!one.ok){ failedPages.push({page:pages[i].page,why:one.why}); continue; }
+    for(var j=0;j<one.candidates.length;j++){
+      candidates.push(Object.assign({},one.candidates[j],{page:pages[i].page}));
+    }
+    for(var k=0;k<one.dropped.length;k++)dropped.push(one.dropped[k]);
+  }
+
+  if(!candidates.length&&failedPages.length){
+    return {ok:false,why:"None of those pages produced a reading in the form asked for.",
+            candidates:[],dropped:dropped};
+  }
+  return {ok:true,candidates:candidates,dropped:dropped,failedPages:failedPages,why:null};
+}
+
+/** A remark under the viewer, with an optional way to try again. */
+function exNoteEl(text,retry){
+  var p=document.createElement("div");
+  p.style.cssText="margin-top:var(--bw-4);font-size:12.5px;line-height:1.7;color:var(--bw-body)";
+  var say=document.createElement("p");
+  say.style.cssText="margin:0";
+  say.textContent=text;
+  p.appendChild(say);
+  if(retry){
+    var again=document.createElement("button");
+    again.type="button"; again.className="bw-act bw-act-secondary";
+    again.style.cssText="margin-top:10px";
+    again.textContent="Try again";
+    again.addEventListener("click",function(){ p.remove(); retry(); });
+    p.appendChild(again);
+  }
+  return p;
+}
+
+/**
+ * Put a picture's readings into the same queue everything else goes through.
+ *
+ * Deliberately the same queue. A reading is a reading — it arrives proposed,
+ * it carries the printed text it came from, and it cannot be used until
+ * somebody confirms it. The only difference is the method, and the method is
+ * what the row says about how much to trust it.
+ */
+function exApplyReading(which,file,reading,result){
+  var B=window.BW;
+  var host=document.getElementById(which+"-out");
+  var doc=B.documentRef({filename:file.name,revision:String(_exRevision[which]),
+                         fingerprint:result.submission.idempotencyKey});
+
+  _exState[which]=Object.freeze({
+    filename:file.name,
+    target:which==="ctx"?B.EX_TARGET.CERTIFICATE:B.EX_TARGET.DRAWING,
+    candidates:reading.candidates,
+    coverage:exReadCoverage(reading),
+    /* Two pages disagreeing about one field is a question for whoever owns
+       the document, not something to resolve here — the same rule the
+       rule-read path follows, through the same function. */
+    conflicts:B.findConflicts(reading.candidates),
+    blockers:[],
+    method:B.VISION_SAID
+  });
+  _exReview[which]=B.reviewQueue(_exState[which],
+    {method:B.REVIEW_METHOD.VISION,document:doc});
+
+  var panel=document.createElement("div");
+  panel.style.marginTop="var(--bw-4)";
+  var dropped=B.droppedSaid(reading.dropped);
+  panel.innerHTML=(result.truncated
+      ?exNote("The reading was cut short, so it is incomplete. What is below is what arrived; "
+             +"anything absent was not looked at rather than not found.")
+      :"")
+    +(dropped?exNote(dropped):"")
+    +exResultHTML(which,_exState[which]);
+  host.appendChild(panel);
 }
 
 /* Which form field each extracted field fills. Anything not named here is
@@ -4604,7 +5437,7 @@ function exBind(page){
       /* Confirming replaces the candidate in place, so the state the table
          renders from is the state the apply step reads. */
       var next=r.candidates.map(function(c){
-        return c===row.best?(t.checked?window.BW.confirmCandidate(c,"this browser"):Object.assign({},c,{state:"proposed",confirmedBy:null})):c;
+        return c===row.best?(t.checked?window.BW.confirmCandidate(c,EX_REVIEWER):Object.assign({},c,{state:"proposed",confirmedBy:null})):c;
       });
       _exState[which]=Object.assign({},r,{candidates:next});
     }
@@ -4624,10 +5457,27 @@ function exBind(page){
       return c===row.best?Object.assign({},c,{value:t.value,state:"proposed",confirmedBy:null,edited:true}):c;
     });
     _exState[which]=Object.assign({},r,{candidates:next});
+    /* The adapter refuses a reading that arrives after this. Recording the
+       time is what makes that refusal reachable rather than decorative. */
+    if(typeof _exEditedAt!=="undefined")_exEditedAt[which]=Date.now();
+
+    /* And in the queue, where the reading it replaced is kept. The extraction
+       above still overwrites its own value — that is what the form binds to —
+       but the evidence of what the document said now survives it. */
+    var item=exItem(which,row.best.field);
+    if(item&&window.BW&&String(t.value).trim()!==""){
+      exSetItem(which,window.BW.reviewCorrect(item,{value:t.value},EX_REVIEWER));
+    }
   });
   page.addEventListener("click",function(e){
     var t=e.target&&e.target.closest?e.target.closest("[data-ex-act]"):null;
     if(t&&t.dataset.exAct==="apply")exApply(t.dataset.ex);
+
+    var d=e.target&&e.target.closest?e.target.closest("[data-ex-unknown],[data-ex-reject],[data-ex-undo]"):null;
+    if(!d)return;
+    if(d.dataset.exUnknown!==undefined)exDecide(d.dataset.ex,d.dataset.exUnknown,"unknown");
+    else if(d.dataset.exReject!==undefined)exDecide(d.dataset.ex,d.dataset.exReject,"reject");
+    else if(d.dataset.exUndo!==undefined)exUndecide(d.dataset.ex,d.dataset.exUndo);
   });
 }
 

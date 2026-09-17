@@ -14,6 +14,32 @@
   import { mapExposure, costShock, shareFrom, parseAmount } from "./src/calc/shock.mjs";
   import { learningCorpus, whatWorks, captureGaps } from "./src/calc/learning.mjs";
   import { classify, nextActions } from "./src/intake/classify.mjs";
+  import { identify as identifyFile, nextStep as fileNextStep,
+           withinLimits as fileWithinLimits, HANDLING as FILE_HANDLING,
+           LIMITS as FILE_LIMITS, HEAD_BYTES } from "./src/intake/file-router.mjs";
+  import * as viewer from "./src/intake/viewer.mjs";
+  import { readTolerance, asTolerance, saidPlainly as toleranceSaid,
+           kindOf as toleranceKind, verificationOf as toleranceVerification,
+           FORM as TOLERANCE_FORM, APPLIES as TOLERANCE_APPLIES
+         } from "./src/intake/read-tolerance.mjs";
+  import { readingsFrom, droppedSaid, downscaleTo, SAID as VISION_SAID,
+           CONSENT_SAID, CONSENT_CHOICES, PROMPT_VERSION as VISION_PROMPT_VERSION
+         } from "./src/intake/vision-read.mjs";
+  import { submission as jobSubmission, submit as submitExtraction,
+           applicable as resultApplicable, asComparison as resultAsComparison,
+           canRetry as jobCanRetry, retryOf as jobRetryOf,
+           configured as workerConfigured, JOB, FAILURE as JOB_FAILURE,
+           REFUSED as RESULT_REFUSED, UNAVAILABLE_SAID as WORKER_UNAVAILABLE_SAID
+         } from "./src/intake/extraction-job.mjs";
+  import { assessDocument, saidPlainly as pagesSaidPlainly,
+           PAGE as PAGE_TEXT } from "./src/intake/page-text.mjs";
+  import { queue as reviewQueue, documentRef, needsReReview,
+           confirm as reviewConfirm, correct as reviewCorrect,
+           markUnknown as reviewUnknown, reject as reviewReject,
+           confirmedValues, outstanding as reviewOutstanding,
+           sourceConflicts, stateOf as reviewStateOf, methodSaid,
+           METHOD as REVIEW_METHOD, DISPOSITION as REVIEW_DISPOSITION,
+           history as reviewHistory } from "./src/intake/review.mjs";
   import { alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL } from "./src/calc/batna.mjs";
   import { comparablePart, compare, findComparable, priceGap, ATTRIBUTES } from "./src/calc/comparable.mjs";
   import { scanOpportunities, SEVERITY } from "./src/calc/radar.mjs";
@@ -24,7 +50,8 @@
   import { MATERIAL_GAP, buildUpShares, compareToBuildUp, questionsFrom } from "./src/calc/build-up.mjs";
   import { estimateFrom, asCostPlan, saveEstimate, loadEstimates, loadEstimate,
            deleteEstimate, storeStatus as estimateStoreStatus } from "./src/services/estimate-store.mjs";
-  import { extractDocument, confirmCandidate, readiness, reviewTable,
+  import { findConflicts,
+           extractDocument, confirmCandidate, readiness, reviewTable,
            CONFIDENCE as EX_CONFIDENCE, TARGET as EX_TARGET } from "./src/intake/extract-document.mjs";
   import { lotRecord, lotFromReview, millPerformance, rank as millRank, uniqueLots,
            DECISION as MILL_DECISION, RESPONSIBILITY, SCOPE as MILL_SCOPE,
@@ -80,7 +107,22 @@
   import { saveOutcome, loadOutcomes, clearOutcomes, exportOutcomes } from "./src/services/outcome-store.mjs";
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
-  window.BW = { costBridge, partialAcceptance, delayEffect, formatPercent,
+  window.BW = { identifyFile, fileNextStep, fileWithinLimits,
+                readTolerance, asTolerance, toleranceSaid, toleranceKind,
+                toleranceVerification, TOLERANCE_FORM, TOLERANCE_APPLIES,
+                readingsFrom, droppedSaid, downscaleTo, VISION_SAID, findConflicts,
+                CONSENT_SAID, CONSENT_CHOICES, VISION_PROMPT_VERSION,
+                jobSubmission, submitExtraction, resultApplicable, resultAsComparison,
+                jobCanRetry, jobRetryOf, workerConfigured, JOB, JOB_FAILURE,
+                RESULT_REFUSED, WORKER_UNAVAILABLE_SAID,
+                assessDocument, pagesSaidPlainly, PAGE_TEXT,
+                reviewQueue, documentRef, needsReReview,
+                reviewConfirm, reviewCorrect, reviewUnknown, reviewReject,
+                confirmedValues, reviewOutstanding, sourceConflicts,
+                reviewStateOf, methodSaid, REVIEW_METHOD, REVIEW_DISPOSITION,
+                reviewHistory,
+                FILE_HANDLING, FILE_LIMITS, HEAD_BYTES, viewer,
+                costBridge, partialAcceptance, delayEffect, formatPercent,
                 pc: ratioFromPercent, moneyFromDecimal, moneyToDecimalString,
                 createSeries, movementBetween, assessEvidence, formatWeight, fxRate,
                 labelFor, assumptionsToVerify, LEGEND,

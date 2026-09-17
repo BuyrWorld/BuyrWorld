@@ -17,21 +17,34 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-import { pageSource } from "../helpers/page.mjs";
+import { pageSource, fnSource as pageFnSource } from "../helpers/page.mjs";
 
 import {
   extractDocument, confirmCandidate, readiness, reviewTable,
   CONFIDENCE as EX_CONFIDENCE, TARGET as EX_TARGET,
 } from "../../src/intake/extract-document.mjs";
+import {
+  identify as identifyFile, nextStep as fileNextStep, withinLimits as fileWithinLimits,
+  HANDLING as FILE_HANDLING, HEAD_BYTES,
+} from "../../src/intake/file-router.mjs";
+import {
+  queue as reviewQueue, documentRef, needsReReview, confirm as reviewConfirm,
+  correct as reviewCorrect, markUnknown as reviewUnknown, reject as reviewReject,
+  METHOD as REVIEW_METHOD, DISPOSITION as REVIEW_DISPOSITION,
+} from "../../src/intake/review.mjs";
+import {
+  assessDocument, saidPlainly as pagesSaidPlainly, PAGE as PAGE_TEXT,
+} from "../../src/intake/page-text.mjs";
+import {
+  readingsFrom, downscaleTo,
+} from "../../src/intake/vision-read.mjs";
+import { findConflicts } from "../../src/intake/extract-document.mjs";
 
 const html = pageSource();
 
-function fnSource(name) {
-  const start = html.indexOf(`function ${name}(`);
-  if (start < 0) throw new Error(`${name} not found`);
-  const end = html.indexOf("\nfunction ", start + 1);
-  return html.slice(start, end < 0 ? html.length : end);
-}
+/** The page's own source for one function. `html` is this file's copy of the page. */
+const fnSource = (name) => pageFnSource(name, html);
+
 
 const CERT_PAGES = [
   { page: 1, text: "CERTIFICATE No: SYN-CERT-0001\nManufacturer: Northgate Steelworks (synthetic)\n" +
@@ -88,7 +101,7 @@ beforeEach(() => {
     ctRenderRows: () => {},
   };
   vm.createContext(sandbox);
-  const src = ["exErr", "exResultHTML", "exApply"].map(fnSource).join("\n")
+  const src = ["exErr", "exResultHTML", "exApply", "exDecisionHTML"].map(fnSource).join("\n")
     + "\n" + html.slice(html.indexOf("var EX_TO_FORM="), html.indexOf("function exApply("));
   new vm.Script(src).runInContext(sandbox);
 });
@@ -122,9 +135,17 @@ describe("it is wired in", () => {
     }
   });
 
-  test("both modes have an upload, and both accept only PDFs", () => {
+  test("both modes take a photograph as well as a PDF", () => {
+    /* This was `accept=".pdf,application/pdf"` on both, which is half of the
+       defect the v5 gap matrix names: the input refused the file before the
+       handler got a chance to, so fixing the handler alone would have changed
+       nothing a person could see. */
     for (const which of ["scx", "ctx"]) {
-      assert.match(html, new RegExp(`id="${which}-file" accept="\\.pdf,application/pdf"`));
+      const accept = new RegExp(`id="${which}-file" accept="([^"]*)"`).exec(html);
+      assert.ok(accept, `${which} has no upload`);
+      for (const kind of ["application/pdf", "image/jpeg", "image/png"]) {
+        assert.ok(accept[1].includes(kind), `${which} does not accept ${kind}`);
+      }
     }
   });
 
@@ -298,7 +319,10 @@ describe("editing and confirming", () => {
   });
 
   test("confirming is recorded through the engine, not by setting a flag", () => {
-    assert.match(bindSource(), /window\.BW\.confirmCandidate\(c,"this browser"\)/);
+    assert.match(bindSource(), /window\.BW\.confirmCandidate\(c,EX_REVIEWER\)/);
+    /* The name is a constant now, because four actions record one and three
+       of them would otherwise each carry their own spelling of it. */
+    assert.match(html, /var EX_REVIEWER="this browser";/);
   });
 });
 
@@ -327,9 +351,58 @@ describe("the document is content, and it is escaped", () => {
 describe("what the page must keep saying", () => {
   const panel = () => html.slice(html.indexOf('id="ctx-file"') - 1400, html.indexOf('id="ctx-out"'));
 
-  test("it says the file never leaves the browser", () => {
-    assert.match(panel(), /never leaves this browser/);
+  test("the local claim is scoped to the route where it is true", () => {
+    /* This said "The file never leaves this browser", unscoped, and it was
+       true when a PDF read by rule was the only route. It stopped being true
+       the moment a picture could be sent to be read, and an unscoped promise
+       that has quietly become conditional is worse than no promise — it is
+       the one somebody relies on. */
+    assert.match(panel(), /A PDF is read entirely in this browser/);
     assert.match(panel(), /no upload, no extraction service and no prompt/);
+  });
+
+  test("no blanket promise that the file never leaves is left anywhere", () => {
+    /* The regression this exists to prevent, checked across the whole page
+       rather than this panel: one of the two copies being updated and the
+       other left standing is exactly how this would go wrong. */
+    assert.equal(/never leaves (this|your) (browser|computer)/i.test(html), false,
+      "an unscoped local-only promise is still on the page");
+  });
+
+  test("the upload is disclosed where the upload is offered", () => {
+    assert.match(panel(), /you may send it to be read, which does upload it/);
+    assert.match(panel(), /you are asked first/);
+  });
+
+  test("both panels say the same thing, because both do the same thing", () => {
+    const scx = html.slice(html.indexOf('id="scx-file"') - 1400, html.indexOf('id="scx-out"'));
+    for (const claim of [/A PDF is read entirely in this browser/, /does upload it/]) {
+      assert.match(scx, claim, "the drawing panel and the certificate panel disagree");
+    }
+  });
+
+  test("nothing is sent without being asked first", () => {
+    /* The button offers; it does not send. Everything that reaches the
+       network goes through the consent step, and a path around it would make
+       the disclosure above a lie. */
+    const offer = fnSource("exShowImage");
+    assert.match(offer, /exAskToSend\(which,file,host\)/);
+    assert.equal(/exCloudRead|fetch\(/.test(offer), false,
+      "the viewer can reach the network without passing through consent");
+
+    const ask = fnSource("exAskToSend");
+    assert.match(ask, /send\.addEventListener\("click"/);
+    assert.match(ask, /exCloudRead\(which,file,box,pages\)/);
+  });
+
+  test("the consent wording comes from the module, not from the page", () => {
+    /* So it is reviewed in one diff and tested in one place. A second copy
+       here would drift from the one the tests assert on. */
+    const ask = fnSource("exAskToSend");
+    assert.match(ask, /B\.CONSENT_SAID/);
+    assert.match(ask, /B\.CONSENT_CHOICES\.SEND/);
+    assert.equal(/uploads this document|language model/.test(ask), false,
+      "the page carries its own copy of the consent wording");
   });
 
   test("it says nothing found is used until confirmed", () => {
@@ -341,9 +414,587 @@ describe("what the page must keep saying", () => {
     assert.match(out, /No model was asked, nothing was uploaded anywhere/);
   });
 
-  test("an image file is refused with the reason", () => {
+  test("the format is decided by the file's bytes, not by its name", () => {
+    /* The other half. `exRead` gated on `/\.pdf$/i` and returned an error
+       before opening anything, so a JPEG was refused whatever the input
+       accepted — and a PDF saved as ".bin" was refused too. */
     const fn = fnSource("exRead");
-    assert.match(fn, /no dimension may be derived from its pixels/);
-    assert.match(fn, /Enter the values by hand instead/);
+    assert.equal(/\\\.pdf\$/i.test(fn), false, "a format decision is still being made from a filename");
+    assert.match(fn, /B\.identifyFile\(new Uint8Array\(head\),f\.name\)/);
+    assert.match(fn, /f\.slice\(0,B\.HEAD_BYTES\)\.arrayBuffer\(\)/);
+  });
+
+  test("and nothing is claimed to have been read off it", () => {
+    /* The honest state, and the one that must not drift: an image is shown so
+       a person can read it, and the values stay theirs to type. A viewer that
+       implied a reading was coming would be worse than the refusal it
+       replaced. */
+    const say = fnSource("exShowImage");
+    assert.match(say, /msg\.textContent=say/, "the message comes from the router, not from here");
+    assert.match(say, /Nothing on it has been read/);
+    assert.equal(/verified|confirmed automatically/i.test(say), false);
+  });
+
+  test("the previous document is closed when the next one opens", () => {
+    /* An object URL holds the file alive until it is revoked, and a preview
+       left behind is the last case's drawing still on screen. */
+    assert.match(fnSource("exViewClose"), /URL\.revokeObjectURL\(open\.url\)/);
+    assert.match(fnSource("exRead"), /exViewClose\(which\);/);
+    assert.match(fnSource("scClearSession"), /exViewClose\("scx"\); exViewClose\("ctx"\);/);
+  });
+
+  test("a name that disagrees with the contents is reported, not resolved quietly", () => {
+    const fn = fnSource("exRead");
+    assert.match(fn, /id\.mismatch\?exNote\(id\.mismatchNote\)/);
+    assert.match(fnSource("exNote"), /ciEsc\(m\)/, "the note is escaped like every other filename");
+  });
+});
+
+/* ------------------------------------------------- the routing, executed */
+
+/**
+ * `exRead` run for real, against the real router.
+ *
+ * Matching the source of the branch was not enough: replacing the image test
+ * with `if(false&&id.handling===…)` left every assertion passing, because a
+ * dead branch reads exactly like a live one. The only way to know a file
+ * reaches the right handler is to hand one over and see where it lands.
+ */
+describe("a file goes where its bytes say it should", () => {
+  const bytesOf = (...prefix) => new Uint8Array([...prefix, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+
+  const JPEG = bytesOf(0xFF, 0xD8, 0xFF);
+  const PNG = bytesOf(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A);
+  const PDF = bytesOf(0x25, 0x50, 0x44, 0x46, 0x2D);
+  const TIFF = bytesOf(0x49, 0x49, 0x2A, 0x00);
+
+  /** A File, as much of one as this function touches. */
+  const fileOf = (bytes, name, size) => ({
+    name,
+    size: size === undefined ? bytes.length : size,
+    slice: (from, to) => ({ arrayBuffer: async () => bytes.slice(from, to).buffer }),
+  });
+
+  /** Run exRead over one file and report everything it did. */
+  async function read(which, file, before = null, pdf = null) {
+    const shown = [];
+    const outEl = { innerHTML: "" };
+    const nameEl = { textContent: "" };
+    const box = {
+      document: {
+        getElementById: (id) =>
+          (id === `${which}-out` ? outEl : id === `${which}-name` ? nameEl : null),
+      },
+      window: {
+        BW: {
+          identifyFile, fileNextStep, fileWithinLimits, FILE_HANDLING, HEAD_BYTES,
+          extractDocument, EX_TARGET,
+          documentRef, reviewQueue, needsReReview, REVIEW_METHOD,
+          assessDocument, pagesSaidPlainly, PAGE_TEXT,
+        },
+      },
+      ciEsc: (x) => String(x),
+      console,
+      _exState: { scx: before, ctx: before },
+      closed: [],
+      shown,
+      /* Two spies. What is being tested is where a file goes, and each of
+         these has its own tests; running the whole viewer here would test the
+         DOM rather than the routing. */
+      exShowImage: (w, f, say, note) => shown.push({ w, name: f.name, say, note }),
+      exResultHTML: () => "<table>the rows</table>",
+      exViewClose: (w) => box.closed.push(w),
+      scPdfPages: async () => pdf ?? ({ pages: DRAWING_PAGES, pagesInDocument: 1 }),
+      _exReview: { scx: null, ctx: null },
+      exFingerprint: async () => "fingerprint",
+      exReReviewHTML: () => "<div>needs checking again</div>",
+      /* The offer to have unread pages read elsewhere. It has its own tests;
+         here it only needs to exist so the reading path runs. */
+      exOfferScannedRead: () => {},
+      scReadStarted: () => {},
+      engineNote: () => "<p>the engine is missing</p>",
+    };
+    vm.createContext(box);
+    new vm.Script(["exRead", "exErr", "exNote", "exPagesHTML"].map(fnSource).join("\n")).runInContext(box);
+
+    const input = { files: [file], value: "x" };
+    box.input = input;
+    await vm.runInContext("exRead(" + JSON.stringify(which) + ", input);", box);
+    return { out: outEl.innerHTML, name: nameEl.textContent, shown, state: box._exState[which],
+             closed: box.closed, input };
+  }
+
+  test("a JPEG reaches the viewer rather than an error", async () => {
+    const r = await read("scx", fileOf(JPEG, "drawing-photo.jpg"));
+    assert.equal(r.shown.length, 1, "the image branch did not run");
+    assert.equal(r.shown[0].name, "drawing-photo.jpg");
+    assert.equal(r.out, "", "nothing was written to the error area");
+  });
+
+  test("and it is told plainly that nothing will be read for it", async () => {
+    const r = await read("scx", fileOf(PNG, "scan.png"));
+    assert.match(r.shown[0].say, /No text reader is configured/);
+    assert.match(r.shown[0].say, /nothing will be read for you/);
+    /* Not "verified", and not a reading that is merely coming later. The
+       refusal this replaced was at least honest, and a viewer that implied a
+       reading was on its way would be a step backwards. */
+    assert.equal(/verified|will be read here|read for you to check/i.test(r.shown[0].say), false);
+  });
+
+  test("a PDF still goes to the reader, and still reads", async () => {
+    const r = await read("scx", fileOf(PDF, "drawing.pdf"));
+    assert.equal(r.shown.length, 0, "a PDF was sent to the image viewer");
+    assert.ok(r.state && r.state.candidates.length > 0, "nothing was extracted");
+    assert.match(r.name, /1 of 1 page/);
+  });
+
+  test("a PDF named something else is read as a PDF", async () => {
+    /* The name was the only evidence before, and this file would have been
+       refused for not ending in .pdf. */
+    const r = await read("scx", fileOf(PDF, "drawing.bin"));
+    assert.ok(r.state && r.state.candidates.length > 0, "the bytes were ignored");
+  });
+
+  test("a PNG named .jpg is read as a PNG, and the disagreement is shown", async () => {
+    const r = await read("scx", fileOf(PNG, "png-renamed.jpg"));
+    assert.equal(r.shown.length, 1);
+    assert.match(r.shown[0].note, /named \.jpg and its contents are image\/png/);
+  });
+
+  test("a format this cannot use says what to do instead", async () => {
+    const r = await read("ctx", fileOf(TIFF, "scan.tif"));
+    assert.equal(r.shown.length, 0);
+    assert.match(r.out, /Export it as a PNG or a PDF/);
+  });
+
+  test("an oversized file is refused before anything is opened", async () => {
+    const r = await read("scx", fileOf(JPEG, "huge.jpg", 400 * 1024 * 1024));
+    assert.equal(r.shown.length, 0);
+    assert.match(r.out, /the limit is/);
+  });
+
+  test("the previous document is closed before the next one is opened", async () => {
+    /* Seeded, because a sandbox that starts empty makes "it was cleared" a
+       claim that cannot fail — which is the shape of vacuous test this suite
+       has now found five times. */
+    const stale = { candidates: [{ label: "the last drawing" }] };
+    const r = await read("scx", fileOf(JPEG, "second.jpg"), stale);
+    assert.deepEqual(r.closed, ["scx"], "the previous preview was left open");
+    assert.equal(r.state, null, "the previous reading survived into this one");
+  });
+
+  test("and it is cleared even when the new file cannot be used at all", async () => {
+    /* The worse version: a file that fails leaves the last drawing's values
+       on screen, offered for confirmation against a document nobody is
+       looking at any more. */
+    const stale = { candidates: [{ label: "the last drawing" }] };
+    const r = await read("scx", fileOf(TIFF, "scan.tif"), stale);
+    assert.equal(r.state, null);
+    assert.match(r.out, /Export it as a PNG or a PDF/);
+  });
+
+  test("the input is cleared, so the same file can be chosen again", async () => {
+    /* A change event does not fire for the same file twice. Somebody who
+       picks the wrong drawing, then picks the right one, then picks the first
+       again would otherwise get nothing at all. */
+    for (const f of [fileOf(JPEG, "a.jpg"), fileOf(PDF, "a.pdf"), fileOf(TIFF, "a.tif")]) {
+      const r = await read("scx", f);
+      assert.equal(r.input.value, "", `the input kept its value after ${f.name}`);
+    }
+  });
+
+  test("a mixed PDF names the pages that were not read", async () => {
+    /* The promise the file router already makes — "scanned pages cannot be
+       read in this build, you will be told which" — was not being kept by
+       anything. The count of pages without text was there; which pages was
+       not, and working that out meant opening the file yourself. */
+    const r = await read("scx", fileOf(PDF, "mixed.pdf"), null, {
+      pages: [
+        { page: 1, text: DRAWING_PAGES[0].text },
+        { page: 2, text: "" },
+        { page: 3, text: DRAWING_PAGES[0].text },
+        { page: 4, text: "" },
+      ],
+      pagesInDocument: 6,
+    });
+    assert.match(r.out, /Pages 1 and 3 were read/);
+    assert.match(r.out, /Pages 2 and 4 are a picture with no text/);
+    assert.match(r.out, /Pages 5 and 6 were not read at all/);
+  });
+
+  test("and says the values are missing from the reading, not from the drawing", async () => {
+    const r = await read("scx", fileOf(PDF, "mixed.pdf"), null, {
+      pages: [{ page: 1, text: DRAWING_PAGES[0].text }, { page: 2, text: "" }],
+      pagesInDocument: 2,
+    });
+    assert.match(r.out, /not missing from the drawing; it is missing from what was read/);
+  });
+
+  test("a wholly readable PDF says nothing at all about pages", async () => {
+    /* A banner that always appears is one nobody reads on the day it
+       matters. */
+    const r = await read("scx", fileOf(PDF, "clean.pdf"));
+    assert.equal(/What was read, and what was not/.test(r.out), false);
+  });
+
+  test("a sparse page is named too, since a stamp over a scan is a scan", async () => {
+    const r = await read("scx", fileOf(PDF, "stamped.pdf"), null, {
+      pages: [{ page: 1, text: DRAWING_PAGES[0].text }, { page: 2, text: "QA-4471" }],
+      pagesInDocument: 2,
+    });
+    assert.match(r.out, /Page 2 carries only a few characters/);
+    assert.match(r.out, /Treat it as unread/);
+  });
+
+  test("with no engine it says so rather than failing silently", async () => {
+    const shown = [];
+    const outEl = { innerHTML: "" };
+    const box = {
+      document: { getElementById: (id) => (id === "scx-out" ? outEl : null) },
+      window: {},
+      console, _exState: { scx: null }, shown,
+      exShowImage: () => shown.push(1), exViewClose: () => {},
+      engineNote: () => "<p>the engine is missing</p>",
+      ciEsc: (x) => String(x),
+    };
+    vm.createContext(box);
+    new vm.Script(["exRead", "exErr", "exNote"].map(fnSource).join("\n")).runInContext(box);
+    box.input = { files: [fileOf(JPEG, "d.jpg")], value: "x" };
+    await vm.runInContext('exRead("scx", input);', box);
+    assert.match(outEl.innerHTML, /the engine is missing/);
+    assert.equal(shown.length, 0);
+  });
+});
+
+/* ------------------------------------------- the two decisions, executed */
+
+/**
+ * "Not on the drawing" and "that reading is wrong", through the page.
+ *
+ * Both were missing, and both were landing as an untouched row — the same
+ * thing a field nobody has looked at looks like. Run rather than matched:
+ * a rendered button proves markup, not that pressing it does anything.
+ */
+describe("a reading can be ruled out, not only ticked", () => {
+  /** A page with the decision functions and the table renderer in it. */
+  function studio() {
+    const outEl = { innerHTML: "" };
+    const box = {
+      document: { getElementById: (id) => (id === "scx-out" ? outEl : null) },
+      window: {
+        BW: {
+          extractDocument, reviewTable, EX_CONFIDENCE, EX_TARGET,
+          reviewQueue, documentRef, needsReReview,
+          reviewUnknown, reviewReject, reviewCorrect,
+          REVIEW_METHOD, REVIEW_DISPOSITION,
+        },
+      },
+      ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
+      attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+      console,
+      EX_REVIEWER: "this browser",
+      _exState: { scx: null },
+      _exReview: { scx: null },
+    };
+    vm.createContext(box);
+    new vm.Script(["exErr", "exResultHTML", "exDecisionHTML", "exItem", "exSetItem",
+                   "exRerender", "exDecide", "exUndecide"].map(fnSource).join("\n"))
+      .runInContext(box);
+
+    const doc = documentRef({ filename: "brk-a-102.pdf", fingerprint: "abc" });
+    const result = extractDocument(DRAWING_PAGES, { filename: "brk-a-102.pdf", target: EX_TARGET.DRAWING });
+    box._exState.scx = result;
+    box._exReview.scx = reviewQueue(result, { method: REVIEW_METHOD.RULE, document: doc });
+    vm.runInContext('_render = exResultHTML("scx", _exState.scx);', box);
+    outEl.innerHTML = box._render;
+
+    return {
+      box, outEl,
+      html: () => outEl.innerHTML,
+      decide: (field, action) =>
+        vm.runInContext(`exDecide("scx", ${JSON.stringify(field)}, ${JSON.stringify(action)});`, box),
+      undo: (field) => vm.runInContext(`exUndecide("scx", ${JSON.stringify(field)});`, box),
+      item: (field) => box._exReview.scx.find((i) => i.field === field),
+      /* A tick, as the change handler applies one. */
+      confirmInPlace: (field) => {
+        const r = box._exState.scx;
+        box._exState.scx = { ...r, candidates: r.candidates.map((x) =>
+          (x.field === field ? confirmCandidate(x, "this browser") : x)) };
+      },
+      candidate: (field) => box._exState.scx.candidates.find((c) => c.field === field),
+    };
+  }
+
+  test("both answers are offered on every row", () => {
+    const s = studio();
+    assert.match(s.html(), /data-ex-unknown="thickness"/);
+    assert.match(s.html(), /data-ex-reject="thickness"/);
+    assert.match(s.html(), /not on it</);
+    assert.match(s.html(), />wrong</);
+  });
+
+  test("marking one not-on-the-document records it and says so", () => {
+    const s = studio();
+    s.decide("thickness", "unknown");
+    assert.equal(s.item("thickness").disposition, REVIEW_DISPOSITION.UNKNOWN);
+    assert.match(s.html(), /not on the document/);
+    assert.equal(s.item("thickness").revisions[0].by, "this browser");
+  });
+
+  test("rejecting a reading says something different", () => {
+    /* The distinction the whole thing turns on: the drawing being silent and
+       the rule having matched the wrong thing are not the same answer. */
+    const s = studio();
+    s.decide("thickness", "reject");
+    assert.equal(s.item("thickness").disposition, REVIEW_DISPOSITION.REJECTED);
+    assert.match(s.html(), /reading rejected/);
+    assert.equal(/not on the document/.test(s.html()), false);
+  });
+
+  test("ruling out a row takes its tick away", () => {
+    /* Confirmed first, or this asserts that something never confirmed is not
+       confirmed — which is true of an empty page. The real case is somebody
+       who ticked a row and then noticed the rule had matched the wrong
+       number: the tick has to go, or a rejected reading is still applied. */
+    const s = studio();
+    s.confirmInPlace("thickness");
+    assert.equal(s.candidate("thickness").state, "confirmed", "the fixture did not confirm");
+
+    s.decide("thickness", "reject");
+    assert.notEqual(s.candidate("thickness").state, "confirmed");
+    assert.equal(s.candidate("thickness").confirmedBy, null);
+  });
+
+  test("the evidence survives being ruled out", () => {
+    /* A rule that keeps being rejected on the same kind of drawing is the
+       most useful thing this queue can report, and a deleted row reports
+       nothing. */
+    const s = studio();
+    const read = s.item("thickness").evidence.value;
+    s.decide("thickness", "reject");
+    assert.equal(s.item("thickness").evidence.value, read);
+    assert.ok(s.item("thickness").evidence.quote);
+  });
+
+  test("a decision can be taken back, and the taking back is kept", () => {
+    const s = studio();
+    s.decide("thickness", "unknown");
+    s.undo("thickness");
+    assert.equal(s.item("thickness").disposition, REVIEW_DISPOSITION.PROPOSED);
+    assert.equal(s.item("thickness").value, s.item("thickness").evidence.value,
+      "the reading did not come back");
+    assert.equal(s.item("thickness").revisions.length, 1,
+      "undoing erased the record that a decision was made");
+    assert.match(s.html(), /data-ex-unknown="thickness"/, "the row did not return to offering both");
+  });
+
+  test("one row's decision leaves the others alone", () => {
+    const s = studio();
+    s.decide("thickness", "unknown");
+    assert.equal(s.item("width").disposition, REVIEW_DISPOSITION.PROPOSED);
+    assert.match(s.html(), /data-ex-unknown="width"/);
+  });
+
+  test("with no queue built, the row still renders and offers both", () => {
+    /* exDecisionHTML is called from a renderer that runs before any queue
+       exists in several paths. Throwing there would take the whole table
+       with it. */
+    const s = studio();
+    s.box._exReview.scx = null;
+    vm.runInContext('_render = exResultHTML("scx", _exState.scx);', s.box);
+    assert.match(s.box._render, /data-ex-unknown="thickness"/);
+  });
+});
+
+/* ------------------------------------------- pages this browser cannot read */
+
+/**
+ * The offer to have scanned pages read elsewhere.
+ *
+ * A scanned page has no text layer, the rule reader finds nothing on it, and
+ * `page-text.mjs` names it. Once pdf.js draws it to a canvas it is the same
+ * problem as a photograph, and the photograph route already exists — so this
+ * is mostly about what is offered and what is said, not about new machinery.
+ */
+describe("offering to read the pages this browser could not", () => {
+  function offerInto(seen) {
+    const appended = [];
+    const host = { appendChild: (el) => appended.push(el) };
+    const box = {
+      window: { BW: { assessDocument, pagesSaidPlainly, downscaleTo } },
+      document: {
+        createElement: () => ({
+          style: {}, addEventListener() {}, set textContent(v) { this._t = v; },
+          get textContent() { return this._t; },
+        }),
+      },
+      console, host, seen,
+      exAskToSend: () => {},
+      EX_MAX_PAGES_SENT: 4,
+    };
+    vm.createContext(box);
+    new vm.Script(fnSource("exOfferScannedRead")).runInContext(box);
+    vm.runInContext('exOfferScannedRead("scx", {name:"d.pdf"}, seen, host);', box);
+    return appended.map((el) => el.textContent).join(" | ");
+  }
+
+  const page = (n, text) => ({ page: n, text });
+  const REAL = "Drawing No: BRK-A-102 Rev: B  Material: FG-300  Thickness 5 mm  Width 200 mm";
+
+  test("nothing is offered when every page was read here", () => {
+    /* An offer to upload a document that has already been read is an invitation
+       to send something for no reason. */
+    assert.equal(offerInto(assessDocument([page(1, REAL)])), "");
+  });
+
+  test("the unread pages are named in the offer itself", () => {
+    const said = offerInto(assessDocument([page(1, REAL), page(2, ""), page(3, "")]));
+    assert.match(said, /Read pages 2, 3 for me/);
+  });
+
+  test("one page is offered in the singular", () => {
+    assert.match(offerInto(assessDocument([page(1, REAL), page(2, "")])), /Read page 2 for me/);
+  });
+
+  test("it says the pages leave the computer", () => {
+    /* The same disclosure as a photograph, because it is the same thing
+       happening to part of a document instead of all of one. */
+    assert.match(offerInto(assessDocument([page(1, REAL), page(2, "")])),
+      /sends that page from your computer to be read/);
+  });
+
+  test("more pages than are sent at once is stated, not discovered", () => {
+    /* Six requests a minute and one request per page: a twenty-page scan sent
+       in full would be refused halfway with no way to tell which half. */
+    const many = [page(1, REAL)];
+    for (let n = 2; n <= 9; n++) many.push(page(n, ""));
+    const said = offerInto(assessDocument(many));
+    assert.match(said, /Read pages 2, 3, 4, 5 for me/);
+    assert.match(said, /8 pages could not be read here and 4 are sent at a time/);
+    assert.match(said, /the rest stay yours to enter/);
+  });
+
+  test("a sparse page is offered too, since a stamp over a scan is a scan", () => {
+    assert.match(offerInto(assessDocument([page(1, REAL), page(2, "QA-4471")])),
+      /Read page 2 for me/);
+  });
+});
+
+describe("several pages read separately", () => {
+  /** exReadingFromPages, run against real replies. */
+  function merge(replies) {
+    const box = {
+      window: { BW: { readingsFrom, findConflicts } },
+      console,
+    };
+    vm.createContext(box);
+    new vm.Script(fnSource("exReadingFromPages")).runInContext(box);
+    box.replies = replies;
+    vm.runInContext("_out = exReadingFromPages(replies);", box);
+    return box._out;
+  }
+
+  const said = (field, value, quote) =>
+    JSON.stringify({ candidates: [{ field, value, unit: null, quote, legible: "clear" }] });
+
+  test("each reading keeps the page it came from", () => {
+    const r = merge([
+      { page: 2, text: said("material", "FG-300", "Material: FG-300") },
+      { page: 5, text: said("partNumber", "BRK-A-102", "Drawing No: BRK-A-102") },
+    ]);
+    /* Spread first: .map inside the vm returns an array with the vm's own
+       Array prototype, and deepStrictEqual compares prototypes. */
+    assert.deepEqual([...r.candidates].map((c) => [c.field, c.page]),
+      [["material", 2], ["partNumber", 5]]);
+  });
+
+  test("two pages disagreeing are both kept, and the disagreement surfaces", () => {
+    /* Choosing between them here would be the quiet resolution this product
+       refuses everywhere else — and it goes through the same function the
+       rule-read path uses, rather than a second idea of what a conflict is. */
+    const r = merge([
+      { page: 1, text: said("material", "FG-300", "Material: FG-300") },
+      { page: 2, text: said("material", "FG-400", "Material: FG-400") },
+    ]);
+    assert.equal(r.candidates.length, 2);
+    const clashes = findConflicts(r.candidates);
+    assert.equal(clashes.length, 1);
+    assert.equal(clashes[0].field, "material");
+  });
+
+  test("a page whose reply was unusable does not lose the pages that worked", () => {
+    const r = merge([
+      { page: 1, text: said("material", "FG-300", "Material: FG-300") },
+      { page: 2, text: "the model wrote prose instead" },
+    ]);
+    assert.equal(r.ok, true);
+    assert.equal(r.candidates.length, 1);
+    assert.deepEqual([...r.failedPages].map((f) => f.page), [2]);
+  });
+
+  test("no page producing anything is a failure, not an empty reading", () => {
+    /* "Nothing was on those pages" and "nothing came back in the right form"
+       are different, and showing the second as the first would say the
+       document was blank. */
+    const r = merge([{ page: 1, text: "prose" }, { page: 2, text: "more prose" }]);
+    assert.equal(r.ok, false);
+    assert.match(r.why, /in the form asked for/);
+  });
+});
+
+/* --------------------------------------------------------- tolerances shown */
+
+describe("a tolerance reaches the table it was read for", () => {
+  /** Render one candidate carrying a tolerance, the way a vision read does. */
+  function rowFor(tolerance) {
+    const r = {
+      filename: "d.jpg", target: EX_TARGET.DRAWING,
+      candidates: [{
+        field: "thickness", label: "Thickness", value: "10.00", unit: "mm",
+        page: 1, quote: "THICKNESS: 10.00 +/-0.05 mm", confidence: EX_CONFIDENCE.RECOGNISED,
+        state: "proposed", confirmedBy: null, missingUnit: false, flag: false,
+        tolerance,
+      }],
+      coverage: { pagesProvided: 1, pagesWithText: 1, pagesInDocument: 1, complete: true,
+                  unread: 0, withoutText: 0 },
+      conflicts: [], blockers: [], method: "read from a picture",
+    };
+    sandbox._exState.scx = r;
+    vm.runInContext('out_html = exResultHTML("scx", _exState.scx);', sandbox);
+    return sandbox.out_html;
+  }
+
+  test("a readable tolerance is shown beside the value it governs", () => {
+    /* It was read and then lost at the queue once already — carried into the
+       evidence but never rendered would be the same defect one seam later. */
+    const out = rowFor({ printed: "+/-0.05", form: "symmetric", readable: true,
+                         said: "Plus or minus 0.05." });
+    assert.match(out, /\+\/-0\.05/);
+    assert.match(out, /title="Plus or minus 0\.05\."/);
+  });
+
+  test("an unreadable one is shown as written, and marked as not read", () => {
+    /* A geometric control is a real requirement. Hiding it because this
+       cannot parse it loses a requirement; showing it as limits invents one. */
+    const out = rowFor({ printed: "flatness 0.05", form: "unreadable", readable: false,
+                         said: "This is a geometric control, not a size tolerance." });
+    assert.match(out, /flatness 0\.05/);
+    assert.match(out, /not read as limits/);
+  });
+
+  test("a dimension with no tolerance shows nothing rather than a dash", () => {
+    /* Missing is not zero and it is not an empty tolerance either. A blank
+       where a tolerance would go says "none printed"; a dash reads as one. */
+    const out = rowFor(null);
+    assert.equal(/not read as limits/.test(out), false);
+  });
+
+  test("a tolerance carrying markup cannot break out of the row", () => {
+    const out = rowFor({ printed: '+/-0.05"><img src=x onerror=alert(1)>', form: "unreadable",
+                         readable: false, said: 'x" onmouseover="alert(1)' });
+    assert.equal(/<img src=x/.test(out), false);
+    assert.equal(/onmouseover="alert/.test(out), false);
+    assert.match(out, /&quot;|&lt;/);
   });
 });

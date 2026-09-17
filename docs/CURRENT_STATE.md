@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 52 |
-| Test files | 0 | 88 |
+| Modules under `src/` | 0 | 59 |
+| Test files | 0 | 97 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -237,6 +237,109 @@ older revision is refused, and so is accepting a preview of a part that has
 since moved on. What a model is not allowed to decide — a tolerance value, a
 specification revision, whether something is confirmed — is held back and
 reported rather than quietly dropped.
+
+`src/intake/file-router.mjs` answers what a file actually is, from its
+first bytes rather than the end of its name. The drawing reader decides by
+filename in two places, and the v5 gap matrix notes that widening the input
+alone would not fix it because the handler rejects the file separately.
+Deciding by content fixes both. A name that disagrees with the bytes is
+reported rather than silently resolved either way — somebody who believes
+they uploaded a JPEG and a system that read a PNG will disagree later about
+something worse. Formats it knows and cannot use are named with what to do
+instead; limits are stated rather than met by surprise.
+
+`src/intake/viewer.mjs` is the other half of reading a picture, and most of
+what makes showing one worth doing: zoom, pan, quarter turns, fit and pages,
+with two properties it is built around. A region is stored against the
+document rather than the screen, so a source crop still marks the same
+characters after the drawing has been zoomed, turned and panned — the
+coordinate round trip is the thing its tests actually pin down, at every
+rotation. And panning stops at the edges, because a viewer that lets the page
+slide out of sight reads as a failed upload.
+
+`src/intake/review.mjs` is the confirmation queue, and the four answers a
+person can give about a reading rather than two. A tick and an editable box
+covered "it says this and it is right" and "it says this and the right value
+is that"; neither covered "the drawing does not give this" or "that reading
+is not this field at all", and both of those were landing as an untouched
+row, indistinguishable from one nobody had looked at.
+
+Correcting used to overwrite the reading in place, so the moment anybody
+disagreed with a drawing, what the drawing said was gone. Evidence is frozen
+at the point of reading now and never written to again; every decision is a
+revision on top of it, carrying who, when, and what it was changed from. A
+decision also belongs to the document it was made about: a new revision, or
+the same file read as saying something else, sends those rows back for review
+and says which ones and why, rather than quietly emptying the ticks. Where a
+typed value and a read value disagree, both are shown and neither wins.
+
+`src/intake/page-text.mjs` says which pages were readable, which is a
+promise the file router was already making and nothing was keeping. The
+extraction counted pages with no text — the right count and the wrong answer,
+since working out which three of twelve means opening the file yourself.
+
+It also has the state the count did not: a scan with a stamped reference
+number in its text layer *has* text, and reading that page as readable makes
+the rules run, find nothing, and the drawing look like one that simply said
+nothing. Sparse is named and grouped with the unreadable, because a stamp
+over a scan is a scan. The wording never implies a page will be read later,
+since there is no reader in this build, and it says plainly that a value
+missing from the reading is not missing from the drawing.
+
+`src/intake/extraction-job.mjs` is the adapter for a document worker that
+does not exist here, and it is deliberate rather than speculative. The v5
+spec wants an isolated Python worker with OCR and PDF rasterisation behind
+authenticated endpoints; that needs a binary runtime this repository has not
+got, and the roadmap's own instruction for that case is to keep preview and
+manual entry usable and mark the gate blocked. So the honest unavailable
+state is the one this build actually returns.
+
+The part that is not plumbing is the rule about a result that finally
+arrives. A reading that comes back for a case nobody is looking at, or for a
+drawing since replaced, or against fields somebody has typed into since, is
+not a slow success — it is a wrong answer arriving quietly, and the seam
+where it lands is the only place to stop it. A refused reading is kept and
+offered as a comparison rather than discarded, because somebody waited for
+it. A failure says whether trying again is worth anything: offering a retry
+on a format that will never work wastes an afternoon politely.
+
+`src/intake/vision-read.mjs` and `api/read-document.js` are the cloud
+reading route, and they are the riskiest thing in the product. Not because a
+model is often wrong about a drawing, but because when it is wrong it
+produces a plausible number rather than a gap. The rule reader fails by
+finding nothing, which is visible; this fails by finding something, which is
+not.
+
+So nothing rests on the model behaving. A proposal must name a field from the
+same closed list the rule reader uses, must carry the printed text it was
+read from, and that text must actually contain the value — which is what
+separates "I read this here" from "this is what I think it says". Anything
+describing itself as measured or scaled is dropped outright, because no
+dimension may come from pixels. Drops are reported rather than filtered: a
+reply where six of eight readings were discarded is the shape of a model that
+has started inventing, and keeping the two that passed would hide it.
+
+The endpoint cannot be used as a general model. The instruction is built
+server-side from the same module the browser checks the answer against, and
+only three things are read off the request — the image, its type, and whether
+it is a drawing or a certificate. Nothing else the caller sends reaches the
+model. Telemetry is counts and statuses only; the payload is somebody's
+drawing, and the audit's critical finding was logged prompt content.
+
+`src/intake/read-tolerance.mjs` reads a tolerance off a drawing. The exact
+side already existed — `requirements.mjs` reduces three notations to one band
+in nanometres, which is why one thou and a tenth of a thou survive in the
+last place — so this is only the reading, and mostly the refusing.
+
+Two refusals matter more than the parsing. A general title-block tolerance is
+not applied to anything: which dimensions it governs is a question about the
+drawing, not about the text, and answering it here would put limits on
+features nobody checked. And a class is not a number — "ISO 2768-m" cites a
+table this product does not carry, and a deviation remembered from one would
+be the most plausible wrong figure it could produce, so the citation is
+recorded as unverified and the limits are not. A geometric control is kept as
+written rather than read into limits, because the number beside a flatness
+symbol is a zone and not a deviation from a nominal.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
