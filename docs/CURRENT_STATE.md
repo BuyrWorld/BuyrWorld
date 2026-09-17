@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 60 |
-| Test files | 0 | 99 |
+| Modules under `src/` | 0 | 61 |
+| Test files | 0 | 100 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -361,6 +361,28 @@ and only what a derived thing was actually stamped against is reported, so a
 package that never depended on the quantity is not invalidated by the
 quantity moving. A warning that cries wolf is one people learn to click
 through.
+
+`src/case/narrative.mjs` is what a case says, worked out rather than
+written. `specs/05` asks every case to use five headings — what happened, why
+it matters, your options, the recommended next step, evidence and missing
+information — and five headings like those are exactly the shape of a thing
+that wants to be generated. Generated prose with numbers in it is the failure
+this codebase is built to prevent, so a narrative is not text: it is a list
+of claims, each carrying what it rests on and what it is waiting for, and the
+sentence is assembled from them.
+
+One line of the spec decides whether the whole thing is honest — *"show a
+numerical impact only after relevant inputs are confirmed"*. A claim that
+carries a figure names the inputs it depends on, and if any is unconfirmed
+the figure is absent with the reason in its place. Not rounded, not hedged,
+not grey with an asterisk. A figure that names no dependency is refused at
+construction, and so is a claim whose own sentence already contains its own
+figure — withholding the field does nothing about "about £1,250" in the
+words, and the words are what a reader sees.
+
+Nothing in it renders. Where and how much of it appears is the projection's
+business, which is what makes "all views use the same facts" something a test
+can check rather than something a team intends.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
