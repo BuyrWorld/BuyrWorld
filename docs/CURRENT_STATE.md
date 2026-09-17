@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 65 |
-| Test files | 0 | 105 |
+| Modules under `src/` | 0 | 66 |
+| Test files | 0 | 106 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -485,6 +485,23 @@ invites arithmetic on it and there is nothing behind it to divide.
 
 The technical specialist never signs anything off. A card saying a part is
 fine would be the most dangerous sentence this product could produce.
+
+`src/case/intake.mjs` is the five entry routes `specs/05` names, and the
+interesting part is not the routing. Four of the five lead somewhere and one
+does not: rescuing a late delivery needs an engine this build has not got. A
+card offering it anyway would be a door into an empty room, and somebody who
+opens one stops trusting the other four — so the route says it is not ready
+and describes what is absent rather than promising it soon.
+
+Describing a problem routes by written rule. No model: a router that reads a
+sentence with a prompt can be talked into the wrong tool by the sentence, and
+the sentence is being typed by somebody who does not yet know which tool they
+want, which is exactly when being sent confidently to the wrong one costs
+most. The rules are narrow enough that ordinary questions match nothing, and
+where two match it offers both — a late delivery and a price increase in one
+sentence is one problem with two halves, and picking one is picking wrong
+half the time. Nothing is ranked, because a score here would be the
+confidence percentage `specs/06` forbids wearing a different hat.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
