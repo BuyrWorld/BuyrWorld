@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 59 |
-| Test files | 0 | 97 |
+| Modules under `src/` | 0 | 60 |
+| Test files | 0 | 99 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -341,6 +341,26 @@ be the most plausible wrong figure it could produce, so the citation is
 recorded as unverified and the limits are not. A geometric control is kept as
 written rather than read into limits, because the number beside a flatness
 symbol is a zone and not a deviation from a nominal.
+
+`src/studio/staleness.mjs` answers whether something worked out earlier
+still describes the part in front of you. Two things in the Studio are
+derived once and then held — the calculated plan and cost a saved estimate is
+built from, and the review package handed to an engineer — and neither was
+invalidated when the part changed.
+
+The harm was specific, not theoretical. Calculate a cost, add a pocket, save
+the estimate: what is stored is the cost of the part before the pocket, filed
+under the part after it. Build a review package, change a tolerance, export:
+the engineer receives a package citing a requirement that no longer exists.
+Neither said anything was wrong, because from the inside nothing was.
+
+Both refuse now rather than warning, which is what `specs/04` asks for.
+Comparison is of exact serialised forms rather than a hash — "almost always
+right" is the wrong standard for deciding whether a cost belongs to a part —
+and only what a derived thing was actually stamped against is reported, so a
+package that never depended on the quantity is not invalidated by the
+quantity moving. A warning that cries wolf is one people learn to click
+through.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

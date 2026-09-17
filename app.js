@@ -3210,6 +3210,11 @@ async function scExportReview(){
         densityUnit:scVal("sc-du")||null,source:scVal("sc-ds")||null}
     });
     _scPackage=await B.buildReviewPackage(snap);
+    /* What it describes, so an export cannot hand over a package for a part
+       that has since changed. */
+    if(_scPackage&&B.staleStamp){
+      _scPackage=Object.assign({},_scPackage,{stamp:B.staleStamp(scDerivedFrom())});
+    }
   }catch(e){
     _scPackage=null;
     host.innerHTML=scErr(String(e.message||e));
@@ -3261,9 +3266,27 @@ function B_DRAFT_LABEL(){
   return (B&&B.DRAFT_LABEL)||"DRAFT — FOR TECHNICAL REVIEW";
 }
 
-/** Save one artifact. The bytes are the ones the manifest hashed. */
+/**
+ * Save one artifact. The bytes are the ones the manifest hashed.
+ *
+ * And they describe the part the package was built from. Change a tolerance
+ * after building it and the engineer receives a package citing a requirement
+ * that no longer exists — which is the failure `specs/04` names, and the
+ * reason this refuses rather than warning.
+ */
 function scSaveArtifact(name){
   if(!_scPackage||!_scPackage.files[name]) return;
+
+  var B=window.BW;
+  if(_scPackage.stamp&&B&&B.staleCheck){
+    var fresh=B.staleCheck(_scPackage.stamp,scDerivedFrom(),{rebuild:"rebuilt"});
+    if(!fresh.usable){
+      var host=document.getElementById("rev-out");
+      if(host)host.innerHTML=scErr(fresh.said+" Build it again before sending it.")+host.innerHTML;
+      return;
+    }
+  }
+
   var text=_scPackage.files[name];
   /* A DXF is not text/markdown. The bytes were right and the label on them
      was wrong, which works on one machine and confuses a CAD tool on another.
@@ -3773,8 +3796,33 @@ function scRun(){
     cost=B.costPlan(plan,scCostEntries(),{currency:scVal("sc-cur")||"GBP",amortiseTooling:Boolean(amort&&amort.checked)});
   }catch(e){ out.innerHTML=scPlanHTML(plan,u)+scErr(String(e.message||e)); return; }
 
-  _scLast={plan:plan,cost:cost};
+  /* Stamped with the part it was worked out for. Without this, adding a
+     pocket and then saving the estimate stores the cost of the part before
+     the pocket, filed under the part after it — and nothing says so, because
+     from the inside nothing is wrong. */
+  _scLast={plan:plan,cost:cost,
+    stamp:(window.BW&&window.BW.staleStamp)?window.BW.staleStamp(scDerivedFrom()):null};
   out.innerHTML=scPlanHTML(plan,u)+scCostHTML(plan,cost)+scAssumptionsHTML(plan,cost);
+}
+
+/**
+ * What the part is, right now, for deciding whether something worked out
+ * earlier still describes it.
+ *
+ * One function rather than the same four reads in each caller, because the
+ * failure this guards against is precisely a caller that checked three of the
+ * four and let the fourth through.
+ */
+function scDerivedFrom(){
+  return {
+    geometry: typeof _scModel!=="undefined" ? _scModel : null,
+    material: {
+      name: scVal("sc-grade")||null,
+      density: scVal("sc-dv")||null,
+      densityUnit: scVal("sc-du")||null
+    },
+    requirements: typeof _scReqs!=="undefined" ? _scReqs : []
+  };
 }
 
 /* ---- rendering. Numbers in, markup out; nothing computed. ---- */
@@ -5791,6 +5839,18 @@ function bcSave(){
   var name=String((document.getElementById("bc-name")||{}).value||"").trim();
   if(!name){msg.innerHTML='<p style="color:var(--bw-danger);font-size:12.5px;margin:0">Give it a name you will recognise on the other page.</p>';return;}
   var id=name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"build-up";
+  /* An estimate is a figure somebody will argue with later, so it must
+     belong to the part it names. `specs/04` requires recalculation rather
+     than a warning, which is why this refuses instead of adding a caption. */
+  if(_scLast.stamp&&B.staleCheck){
+    var fresh=B.staleCheck(_scLast.stamp,scDerivedFrom(),{rebuild:"worked out again"});
+    if(!fresh.usable){
+      msg.innerHTML='<p style="color:var(--bw-danger);font-size:12.5px;margin:0;line-height:1.6">'
+        +ciEsc(fresh.said)+' Recalculate, then save.</p>';
+      return;
+    }
+  }
+
   var rec,saved;
   try{
     rec=B.estimateFrom(_scLast.plan,_scLast.cost,{

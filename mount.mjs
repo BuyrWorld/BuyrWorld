@@ -18,6 +18,8 @@
            withinLimits as fileWithinLimits, HANDLING as FILE_HANDLING,
            LIMITS as FILE_LIMITS, HEAD_BYTES } from "./src/intake/file-router.mjs";
   import * as viewer from "./src/intake/viewer.mjs";
+  import { stamp as staleStamp, check as staleCheck,
+           DEPENDS as STALE_DEPENDS } from "./src/studio/staleness.mjs";
   import { readTolerance, asTolerance, saidPlainly as toleranceSaid,
            kindOf as toleranceKind, verificationOf as toleranceVerification,
            FORM as TOLERANCE_FORM, APPLIES as TOLERANCE_APPLIES
@@ -108,6 +110,7 @@
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { identifyFile, fileNextStep, fileWithinLimits,
+                staleStamp, staleCheck, STALE_DEPENDS,
                 readTolerance, asTolerance, toleranceSaid, toleranceKind,
                 toleranceVerification, TOLERANCE_FORM, TOLERANCE_APPLIES,
                 readingsFrom, droppedSaid, downscaleTo, VISION_SAID, findConflicts,
