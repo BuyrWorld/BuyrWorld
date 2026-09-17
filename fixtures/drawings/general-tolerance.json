@@ -1,0 +1,41 @@
+{
+  "id": "general-tolerance.png",
+  "note": "Synthetic. Tests the distinction specs/03 asks for: a tolerance marked against one dimension, two dimensions with none, and a general tolerance in the title block. A correct reading attaches the first to thickness, leaves the other two null, and reports the third once as generalTolerance.",
+  "expected": {
+    "partNumber": {
+      "value": "SYN-BRK-2100",
+      "unit": null,
+      "tolerance": null
+    },
+    "material": {
+      "value": "SYNTHETIC ALLOY 6082",
+      "unit": null,
+      "tolerance": null
+    },
+    "condition": {
+      "value": "AS MACHINED",
+      "unit": null,
+      "tolerance": null
+    },
+    "length": {
+      "value": "120.00",
+      "unit": "mm",
+      "tolerance": null
+    },
+    "width": {
+      "value": "64.00",
+      "unit": "mm",
+      "tolerance": null
+    },
+    "thickness": {
+      "value": "12.00",
+      "unit": "mm",
+      "tolerance": "+/-0.05"
+    },
+    "generalTolerance": {
+      "value": "ISO 2768-M",
+      "unit": null,
+      "tolerance": null
+    }
+  }
+}

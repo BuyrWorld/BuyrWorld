@@ -72,7 +72,15 @@ describe("a check that has stopped looking fails", () => {
 
   test("no check script has been added without one", () => {
     const known = new Set(SCRIPTS.map((s) => s.file.replace("scripts/", "")));
-    const exempt = new Set(["verify.mjs", "purge-prompt-logs.mjs"]);   // a runner and an operator tool
+    /* A runner, an operator tool, and a fixture generator. None of the
+       three examines the tree, so none can stop looking at it — which is the
+       thing a floor exists to catch. The exemption is deliberate and listed
+       here rather than inferred from the filename. */
+    const exempt = new Set([
+      "verify.mjs",                 // the runner itself
+      "purge-prompt-logs.mjs",      // an operator tool, run by hand
+      "make-drawing-fixture.mjs",   // draws a synthetic fixture; examines nothing
+    ]);
     for (const name of readdirSync("scripts")) {
       if (!name.endsWith(".mjs") || exempt.has(name)) continue;
       assert.ok(known.has(name),

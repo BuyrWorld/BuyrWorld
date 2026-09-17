@@ -1,0 +1,8 @@
+{
+  "recorded": "2026-09-17",
+  "model": "claude-sonnet-5",
+  "endpoint": "/api/read-document",
+  "note": "A real reply, kept so the pipeline can be tested without a network call or spending credits. It proves what this code does with that answer. It does not prove what the model would say today — re-record it to check that.",
+  "truncated": false,
+  "text": "{\"candidates\":[{\"field\":\"length\",\"value\":\"120.00\",\"unit\":\"MM\",\"tolerance\":null,\"quote\":\"LENGTH: 120.00 MM\",\"legible\":\"clear\"},{\"field\":\"width\",\"value\":\"64.00\",\"unit\":\"MM\",\"tolerance\":null,\"quote\":\"WIDTH: 64.00 MM\",\"legible\":\"clear\"},{\"field\":\"thickness\",\"value\":\"12.00\",\"unit\":\"MM\",\"tolerance\":\"+/-0.05\",\"quote\":\"THICKNESS: 12.00 +/-0.05 MM\",\"legible\":\"clear\"},{\"field\":\"material\",\"value\":\"SYNTHETIC ALLOY 6082\",\"unit\":null,\"tolerance\":null,\"quote\":\"MATERIAL: SYNTHETIC ALLOY 6082\",\"legible\":\"clear\"},{\"field\":\"condition\",\"value\":\"AS MACHINED\",\"unit\":null,\"tolerance\":null,\"quote\":\"FINISH: AS MACHINED\",\"legible\":\"clear\"},{\"field\":\"partNumber\",\"value\":\"SYN-BRK-2100\",\"unit\":null,\"tolerance\":null,\"quote\":\"DRAWING NO: SYN-BRK-2100\",\"legible\":\"clear\"},{\"field\":\"generalTolerance\",\"value\":\"ISO 2768-M\",\"unit\":null,\"tolerance\":null,\"quote\":\"GENERAL TOLERANCE: ISO 2768-M\",\"legible\":\"clear\"}]}"
+}
