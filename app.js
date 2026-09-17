@@ -1185,6 +1185,7 @@ function caseRender(){
     + caseControlsHTML(view)
     + view.sections.map(caseSectionHTML).join("")
     + caseFootHTML(view)
+    + caseSpecialistsHTML()
     + caseBriefHTML()
     + '</div>';
 }
@@ -1270,6 +1271,82 @@ function caseFootHTML(view){
   if (!said) return "";
   return '<p style="margin:0;font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
     + ciEsc(said) + '</p>';
+}
+
+/**
+ * What the specialists make of it.
+ *
+ * Only the ones with something to say, and a line naming the ones that were
+ * not consulted. Five cards on every case is the failure mode `specs/06`
+ * warns about — after the third case where delivery had nothing, nobody reads
+ * any of them.
+ */
+function caseSpecialistsHTML(){
+  var B = window.BW;
+  if (!B || !B.consult || !_defResult) return "";
+
+  var consulted = B.consult({
+    bridge: _defResult,
+    plan: (B.prepareNegotiation && _defResult) ? caseNegotiationPlan() : null
+  });
+  if (!consulted.findings.length && !consulted.notConsulted.length) return "";
+
+  var cards = consulted.findings.map(function(f){
+    var also = f.alsoFrom && f.alsoFrom.length
+      ? ' <span style="color:var(--bw-muted)">and ' + f.alsoFrom.map(function(w){
+          return ciEsc(B.SPECIALIST_TITLE[w] || w); }).join(", ") + '</span>'
+      : '';
+
+    var rows = "";
+    if (f.missing && f.missing.length) {
+      rows += '<div style="font-size:11.5px;color:var(--bw-warning);margin-top:4px">Missing: '
+        + f.missing.map(ciEsc).join("; ") + '</div>';
+    }
+    if (f.action) {
+      rows += '<div style="font-size:11.5px;color:var(--bw-body);margin-top:4px">Do: '
+        + ciEsc(f.action) + '</div>';
+    }
+    if (f.consequence) {
+      rows += '<div style="font-size:11.5px;color:var(--bw-muted);margin-top:4px">If not: '
+        + ciEsc(f.consequence) + '</div>';
+    }
+
+    return '<li style="margin-bottom:10px">'
+      + '<span class="bw-status bw-status--derived">' + ciEsc(B.SPECIALIST_TITLE[f.from] || f.from)
+      + '</span>' + also
+      + '<div style="margin-top:4px;color:var(--bw-body)">' + ciEsc(f.said) + '</div>'
+      + rows + '</li>';
+  }).join("");
+
+  var quiet = consulted.notConsulted.map(function(x){
+    return ciEsc((B.SPECIALIST_TITLE[x.from] || x.from) + " — " + x.why);
+  }).join("; ");
+
+  return '<div style="border-top:1px solid var(--bw-line);padding-top:var(--bw-4);margin-top:var(--bw-4)">'
+    + '<div class="eyebrow" style="margin:0 0 6px">What the specialists make of it</div>'
+    + (cards
+        ? '<ul style="margin:0 0 8px;padding-left:18px;font-size:12.5px;line-height:1.6">'
+          + cards + '</ul>'
+        : '')
+    + (quiet
+        ? '<p style="margin:0;font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
+          + 'Not consulted: ' + quiet + '.</p>'
+        : '')
+    + '<p style="margin:6px 0 0;font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
+    + ciEsc(B.CONFIDENCE_SAID) + '</p>'
+    + '</div>';
+}
+
+/**
+ * The negotiation plan, where one can be built.
+ *
+ * Wrapped because `prepareNegotiation` throws on a bridge it cannot work
+ * with, and a specialist panel that takes the page down with it would be a
+ * poor trade for one card.
+ */
+function caseNegotiationPlan(){
+  try { return window.BW.prepareNegotiation({ bridge: _defResult }); }
+  catch (e) { return null; }
 }
 
 /**

@@ -20,6 +20,8 @@
   import * as viewer from "./src/intake/viewer.mjs";
   import { narrative, sectionOf, SECTION_TITLE } from "./src/case/narrative.mjs";
   import { quoteCase, needsOf } from "./src/case/from-quote.mjs";
+  import { consult, missingAcross, SPECIALIST_TITLE, NOT_CONSULTED,
+           CONFIDENCE_SAID } from "./src/case/specialists.mjs";
   import { brief, readiness as briefReadiness,
            DRAFT_LABEL as BRIEF_DRAFT_LABEL } from "./src/case/brief.mjs";
   import { project, hiddenSaid, defaultDepthFor, ROLE, ROLES, ROLE_TITLE,
@@ -118,6 +120,8 @@
   window.BW = { identifyFile, fileNextStep, fileWithinLimits,
                 narrative, sectionOf, SECTION_TITLE, quoteCase, needsOf,
                 brief, briefReadiness, BRIEF_DRAFT_LABEL,
+                consult, missingAcross, SPECIALIST_TITLE, NOT_CONSULTED,
+                CONFIDENCE_SAID,
                 project, hiddenSaid, defaultDepthFor, ROLE, ROLES, ROLE_TITLE,
                 DEPTH, DEPTHS, SCOPE_SAID,
                 staleStamp, staleCheck, STALE_DEPENDS,

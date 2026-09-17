@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 64 |
-| Test files | 0 | 104 |
+| Modules under `src/` | 0 | 65 |
+| Test files | 0 | 105 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -462,6 +462,29 @@ what to do about them does not.
 An incomplete brief is still offered, because "here is what I cannot answer"
 is a useful thing to tell a manager and refusing to produce one would be the
 tool deciding that for somebody.
+
+`src/case/specialists.mjs` decides who has something to say about a case.
+`specs/06` leads with the rule that shapes it — *"use an orchestrator to
+select relevant specialists, not five verbose chat windows on every task"* —
+so the selection is made on evidence: a specialist appears when the case
+holds what it needs, and is listed as not consulted, with the reason, when it
+does not. Five cards on every case is the failure mode; after the third case
+where delivery had nothing, nobody reads any of them.
+
+Consulted-and-found-nothing is reported differently from never-asked. Left
+blank they look the same, and they are very different claims.
+
+The findings come from engines already here — the bridge holds the
+unsupported share, `negotiation.mjs` builds the ladder and the walk-away,
+`batna.mjs` knows whether a supplier could be replaced. Nothing is generated
+around them. Two specialists agreeing becomes one line naming both; two
+disagreeing stay two findings, because resolving a contradiction by keeping
+the more confident one is the invented consensus the spec forbids — and there
+is no confidence to compare, deliberately. A number for how sure something is
+invites arithmetic on it and there is nothing behind it to divide.
+
+The technical specialist never signs anything off. A card saying a part is
+fine would be the most dangerous sentence this product could produce.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

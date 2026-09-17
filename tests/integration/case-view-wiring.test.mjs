@@ -30,6 +30,10 @@ import {
 import {
   brief, readiness as briefReadiness, DRAFT_LABEL as BRIEF_DRAFT_LABEL,
 } from "../../src/case/brief.mjs";
+import {
+  consult, missingAcross, SPECIALIST, SPECIALIST_TITLE, NOT_CONSULTED, CONFIDENCE_SAID,
+} from "../../src/case/specialists.mjs";
+import { prepareNegotiation } from "../../src/calc/negotiation.mjs";
 
 const app = readFileSync("app.js", "utf8");
 const p = (x) => ratioFromPercent(x);
@@ -67,6 +71,8 @@ function page() {
         narrative, sectionOf, SECTION_TITLE, quoteCase, needsOf, assumptionsToVerify,
         project, hiddenSaid, ROLE, ROLES, ROLE_TITLE, DEPTH, DEPTHS, SCOPE_SAID,
         brief, briefReadiness, BRIEF_DRAFT_LABEL,
+        consult, missingAcross, SPECIALIST_TITLE, NOT_CONSULTED, CONFIDENCE_SAID,
+        prepareNegotiation,
       },
     },
     _defResult: null,
@@ -82,6 +88,7 @@ function page() {
     fnSource("caseSetRole", app), fnSource("caseSetDepth", app),
     fnSource("caseConfirm", app), fnSource("caseBriefHTML", app),
     fnSource("caseBriefTitle", app), fnSource("caseCopyBrief", app),
+    fnSource("caseSpecialistsHTML", app), fnSource("caseNegotiationPlan", app),
     "var _caseConfirmed=Object.create(null);",
   ].join("\n")).runInContext(box);
 
@@ -393,5 +400,59 @@ describe("the brief", () => {
 
   test("the button asks for an action the table registers", () => {
     assert.ok(pageSource().includes("caseCopyBrief:"), "caseCopyBrief is not registered");
+  });
+});
+
+/* ------------------------------------------------------ the specialist cards */
+
+describe("what the specialists make of it", () => {
+  beforeEach(() => { v.calculate(handEntered()); v.render(); });
+
+  test("only the ones with something to say get a card", () => {
+    /* Five cards on every case is the failure mode specs/06 warns about:
+       after the third case where delivery had nothing, nobody reads any of
+       them. */
+    assert.match(v.html(), /Commercial/);
+    assert.match(v.html(), /Negotiation/);
+    assert.equal(/<span class="bw-status bw-status--derived">Technical</.test(v.html()), false);
+  });
+
+  test("the ones that were not consulted are named, with the reason", () => {
+    /* Silence reads as "looked and found nothing", which is a stronger claim
+       than "was never asked". */
+    assert.match(v.html(), /Not consulted:/);
+    assert.match(v.html(), /Technical — this case does not hold what it would need/);
+  });
+
+  test("each card carries what to do and what happens if you do not", () => {
+    /* The content, not the label. Checking for "Do:" passes with the action
+       blanked, which is a test of a prefix rather than of a card. */
+    assert.match(v.html(), /Do: Ask what evidence stands behind the unsupported part/);
+    assert.match(v.html(), /If not: Conceding it sets the base price/);
+    assert.match(v.html(), /Missing: what the unattributed share of the unit cost is made of/);
+  });
+
+  test("and it says these are findings rather than opinions with a confidence", () => {
+    assert.match(v.html(), /neither is a probability/);
+  });
+
+  test("no card carries a confidence percentage", () => {
+    assert.equal(/\d{1,3}\s*% (confident|sure|likely)/i.test(v.html()), false);
+  });
+
+  test("the panel survives a negotiation plan that cannot be built", () => {
+    /* prepareNegotiation throws on a bridge it cannot work with, and taking
+       the page down for one card would be a poor trade. */
+    const bare = page();
+    vm.runInContext(
+      "window.BW.prepareNegotiation = function(){ throw new Error('not enough'); };", bare.box);
+    bare.calculate(handEntered());
+    bare.render();
+    assert.match(bare.html(), /Commercial/, "the whole panel went with the plan");
+    assert.match(bare.html(), /Negotiation — /, "negotiation is not reported as unconsulted");
+  });
+
+  test("a card's text is escaped like everything else", () => {
+    assert.equal(/<script/i.test(v.html()), false);
   });
 });
