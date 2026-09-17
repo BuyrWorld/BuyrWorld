@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 66 |
-| Test files | 0 | 107 |
+| Modules under `src/` | 0 | 67 |
+| Test files | 0 | 108 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -515,6 +515,27 @@ is not certainty, and sending somebody straight to a page on it is the
 confident wrong answer the router exists to avoid. Nothing saved shows
 nothing at all — an empty "recent work" heading on a first visit is a product
 telling somebody they have forgotten something they never did.
+
+`src/case/briefing.mjs` answers what changed since you were last here.
+`specs/05` calls it a daily brief; it is not called that, because "daily"
+implies a schedule, somewhere the schedule runs, and a reason to expect
+something new each morning — and this build holds cases in one browser with
+no accounts and no server. Nothing changes while nobody is here. The smaller
+question is real, and answering it honestly beats answering a bigger one by
+implying facts that do not exist.
+
+What needs somebody is sorted from what does not, and each list is capped at
+three separately — truncating before sorting is how the one thing that
+mattered ends up below three that did not. What is not shown is said rather
+than implied by a short list. Nothing counts consecutive days, nothing is
+overdue, and "nothing changed" is a statement rather than a congratulation
+for the absence of work.
+
+The rule with teeth is the money. Estimated opportunity, agreed savings and a
+realised outcome are three different things and are never added together.
+There is no total field, and the absence is the feature: the three are all
+money sitting in one list, summing them is the easiest thing anybody could
+add here, and it is how a tool starts reporting savings nobody made.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
