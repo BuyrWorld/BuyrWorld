@@ -113,7 +113,7 @@ Every figure below came from the working tree on the date above.
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
 | Modules under `src/` | 0 | 63 |
-| Test files | 0 | 102 |
+| Test files | 0 | 103 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -425,6 +425,24 @@ Two things are marked material, so no role at any depth can hide them: the
 part of the request no driver supports, and any share of unit cost nobody has
 attributed to a driver at all — no movement has been claimed against it and
 none ruled out either.
+
+The case view on the deflation page is the first Phase 2 surface, and it
+decides nothing. Which claims, whether a figure may appear, and what each
+sentence says were all settled before it ran; it turns that into markup and
+no more, which is what keeps "all views use the same facts" true of the
+screen rather than only of the modules. Five lines of `index.html` — one
+container — and the rest is generated.
+
+A withheld figure leaves nothing behind. No dash, no greyed number, no
+asterisk: a placeholder where a figure would go is a figure as far as a
+reader in a hurry is concerned. The sentence beside it already says what is
+missing, and each assumption in the evidence section carries the tick that
+settles it. Confirming every one brings the figures out; confirming most of
+them does not.
+
+Role and depth are the person's, not the case's — `specs/04` says role and
+depth preferences are user settings rather than engineering facts, so they
+are deliberately not saved with a scenario.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

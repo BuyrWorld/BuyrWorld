@@ -1099,9 +1099,206 @@ function defCalc(){
     });
     _defResult=r;
     out.innerHTML=defRender(r,cur);
+    /* A new calculation is a new case: what was confirmed about the last one
+       says nothing about this one. */
+    _caseConfirmed=Object.create(null);
+    caseRender();
   }catch(e){
     out.innerHTML='<div class="card" style="border-color:#FF5C5C;margin:0"><b style="color:#FF5C5C">Cannot calculate.</b><div style="color:var(--muted);font-size:14px;margin-top:6px">'+ciEsc(String(e.message||e))+'</div></div>';
   }
+}
+
+
+/* ------------------------------------------------- the case view */
+
+/**
+ * Who is reading, how much they want, and what they have confirmed.
+ *
+ * Role and depth are preferences and belong to the person rather than to the
+ * case — `specs/04` is explicit that role and depth settings are user
+ * settings, not engineering facts, so they are deliberately not saved with a
+ * scenario.
+ */
+var _caseRole = null;
+var _caseDepth = null;
+
+/**
+ * The assumptions somebody has confirmed, by id.
+ *
+ * This is what makes a figure appear. Every money and percentage figure in
+ * the case waits on the assumptions the provenance layer found, and
+ * confirming one is a person's act — which is why it lives here and not in
+ * the calculation.
+ */
+var _caseConfirmed = Object.create(null);
+
+/** Put the case view down when the calculation is cleared or replaced. */
+function caseClear(){
+  _caseConfirmed = Object.create(null);
+  var host = document.getElementById("case-view");
+  if (host) host.innerHTML = "";
+}
+
+/** A label somebody would recognise, for an assumption waiting to be confirmed. */
+function caseLabelFor(id){
+  var B = window.BW;
+  var all = (_defResult && B && B.assumptionsToVerify) ? B.assumptionsToVerify(_defResult) : [];
+  for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i].figure;
+  return id;
+}
+
+/** The case, from the calculation on screen. */
+function caseNarrative(){
+  var B = window.BW;
+  if (!B || !B.quoteCase || !_defResult) return null;
+  var confirmed = new Set(Object.keys(_caseConfirmed));
+  return B.narrative(
+    B.quoteCase(_defResult, { supplier: String(scVal("def-supplier") || "").trim() || null }),
+    { confirmed: confirmed, labelOf: caseLabelFor });
+}
+
+/**
+ * Draw it.
+ *
+ * Nothing here decides anything. The claims, which of them this view shows,
+ * and whether a figure may appear at all were all settled before this
+ * function ran — it turns the answer into markup and no more, which is what
+ * keeps "all views use the same facts" true of the screen and not only of
+ * the module.
+ */
+function caseRender(){
+  var host = document.getElementById("case-view");
+  var B = window.BW;
+  if (!host) return;
+  if (!B || !B.project) { host.innerHTML = ""; return; }
+
+  var n = caseNarrative();
+  if (!n) { host.innerHTML = ""; return; }
+
+  var role = _caseRole || B.ROLE.BUYER;
+  var view = B.project(n, { role: role, depth: _caseDepth });
+
+  host.innerHTML =
+    '<div class="bw-panel">'
+    + '<div class="bw-panel-head"><div class="bw-panel-title">This, said as a case</div>'
+    + '<span class="bw-status bw-status--derived">from the figures above</span></div>'
+    + caseControlsHTML(view)
+    + view.sections.map(caseSectionHTML).join("")
+    + caseFootHTML(view)
+    + '</div>';
+}
+
+/** The role and depth switches, and the honest word about scope. */
+function caseControlsHTML(view){
+  var B = window.BW;
+  var opt = function(value, label, selected){
+    return '<option value="' + attrEsc(value) + '"' + (selected ? ' selected' : '') + '>'
+      + ciEsc(label) + '</option>';
+  };
+
+  return '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--bw-4)">'
+    + '<label class="bw-field" style="margin:0">Reading as'
+    + '<select class="bwin" aria-label="Read this case as" data-chg="caseSetRole$self">'
+    + B.ROLES.map(function(r){ return opt(r, B.ROLE_TITLE[r], r === view.role); }).join("")
+    + '</select></label>'
+    + '<label class="bw-field" style="margin:0">Depth'
+    + '<select class="bwin" aria-label="How much detail to show" data-chg="caseSetDepth$self">'
+    + B.DEPTHS.map(function(d){ return opt(d, d.charAt(0).toUpperCase() + d.slice(1), d === view.depth); }).join("")
+    + '</select></label>'
+    + '<p style="margin:0;font-size:11.5px;color:var(--bw-muted);line-height:1.5;max-width:46ch">'
+    + ciEsc(B.SCOPE_SAID) + '</p>'
+    + '</div>';
+}
+
+/** One section and its claims. Empty sections keep their heading. */
+function caseSectionHTML(section){
+  var body = section.claims.length
+    ? '<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+      + section.claims.map(caseClaimHTML).join("") + '</ul>'
+    : '<p style="margin:0;font-size:12.5px;color:var(--bw-muted)">Nothing to say here yet.</p>';
+
+  return '<div style="margin-bottom:var(--bw-4)">'
+    + '<div class="eyebrow" style="margin:0 0 6px">' + ciEsc(section.title) + '</div>'
+    + body + '</div>';
+}
+
+/**
+ * One claim.
+ *
+ * A withheld figure leaves nothing behind — no dash, no greyed number, no
+ * asterisk. The sentence already says what it is waiting for, and a
+ * placeholder where a figure would go is a figure as far as a reader in a
+ * hurry is concerned.
+ */
+function caseClaimHTML(c){
+  var figure = c.figure
+    ? ' <b style="color:var(--bw-text)">' + ciEsc(caseFigureText(c.figure)) + '</b>'
+    : '';
+
+  var confirm = "";
+  if (c.section === "evidence-and-missing-information" && c.id && caseIsAssumption(c.id)) {
+    confirm = _caseConfirmed[c.id]
+      ? '<span style="font-size:11.5px;color:var(--bw-muted);margin-left:6px">confirmed</span>'
+      : '<button class="bw-act bw-act-secondary" style="padding:2px 8px;font-size:11px;margin-left:6px"'
+        + ' data-do="caseConfirm" data-a="' + attrEsc(c.id) + '">I have checked this</button>';
+  }
+
+  return '<li' + (c.weight === "material" ? ' style="color:var(--bw-text)"' : '') + '>'
+    + ciEsc(c.said) + figure + confirm + '</li>';
+}
+
+/** Whether an id is one of the assumptions this case is waiting on. */
+function caseIsAssumption(id){
+  var B = window.BW;
+  if (!B || !B.assumptionsToVerify || !_defResult) return false;
+  var all = B.assumptionsToVerify(_defResult);
+  for (var i = 0; i < all.length; i++) if (all[i].id === id) return true;
+  return false;
+}
+
+/** A figure, in the words its kind calls for. */
+function caseFigureText(f){
+  if (f.kind === "money") return f.amount + " " + f.currency;
+  return f.amount;
+}
+
+/** What this view is not showing, and why nothing is missing that matters. */
+function caseFootHTML(view){
+  var B = window.BW;
+  var said = B.hiddenSaid(view);
+  if (!said) return "";
+  return '<p style="margin:0;font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
+    + ciEsc(said) + '</p>';
+}
+
+/* ---- the three things a person can do to it ---- */
+
+function caseSetRole(el){
+  _caseRole = el && el.value ? el.value : null;
+  /* Choosing a role moves the depth to that role's default, and choosing a
+     depth after that keeps it. `specs/05`: a role picks a starting point and
+     the user may override it at any time. */
+  _caseDepth = null;
+  caseRender();
+}
+
+function caseSetDepth(el){
+  _caseDepth = el && el.value ? el.value : null;
+  caseRender();
+}
+
+/**
+ * Confirm one assumption.
+ *
+ * The act that lets a figure appear. It is recorded against this browser like
+ * every other confirmation here, and it confirms an assumption rather than
+ * proving it — the sentence beside it says what was assumed, and ticking it
+ * says somebody read that and stands behind it.
+ */
+function caseConfirm(id){
+  if (!id) return;
+  _caseConfirmed[id] = { by: "this browser", at: new Date().toISOString() };
+  caseRender();
 }
 
 // The negotiation plan. Everything here is computed by src/calc/negotiation.mjs
@@ -8323,6 +8520,12 @@ registerActions({
   /* adapters: the element, or the event, rather than a string */
   cardKey$event: function (_a, _b, ev) { cardKey(ev, this); },
   copyMinutes$self: function () { copyMinutes(this); },
+  /* The case view. Role and depth read the select they are on; confirming an
+     assumption is named by the attribute rather than by position, so the
+     order of the list cannot change which one gets ticked. */
+  caseSetRole$self: function () { caseSetRole(this); },
+  caseSetDepth$self: function () { caseSetDepth(this); },
+  caseConfirm: function (id) { caseConfirm(id); },
   ciCopy$self: function () { ciCopy(this); },
   addQuoteFiles$self: function () { addQuoteFiles(this); },
   loadContractFile$self: function () { loadContractFile(this); },
