@@ -86,6 +86,35 @@ function writeAll(records, store) {
   }
 }
 
+/**
+ * Everything a record holds that this build understands.
+ *
+ * Named rather than implied, because the rule below depends on knowing which
+ * keys are ours: `specs/04` requires migrating a record "without erasing
+ * unknown values", and a later build writing a field this one has never heard
+ * of must survive being opened and saved here.
+ *
+ * That is not hypothetical. Scenario alternatives, specialist findings, next
+ * actions and outcome events are all in the envelope `specs/04` describes and
+ * none of them has a producer yet. Adding empty slots for them now would be
+ * guessing at their shape; keeping whatever a later build writes costs
+ * nothing and guesses at nothing.
+ */
+const KNOWN_KEYS = Object.freeze([
+  "schema", "id", "name", "entry", "goal", "unit", "fields", "revision",
+  "model", "requirements", "review",
+  "savedAt", "updatedAt", "summary", "previous",
+]);
+
+/** The parts of a stored record this build did not write and must not drop. */
+function carriedFrom(record) {
+  const carried = {};
+  for (const key of Object.keys(record ?? {})) {
+    if (!KNOWN_KEYS.includes(key)) carried[key] = record[key];
+  }
+  return Object.freeze(carried);
+}
+
 /* A record this build can read. The schema gate is the same one the other
    stores use: withhold rather than misread something another build wrote. */
 const readable = (r) =>
@@ -118,6 +147,10 @@ export function loadScenarios(store) {
         model: r.model ?? null,
         requirements: Object.freeze([...(r.requirements ?? [])]),
         review: review.items,
+        /* Fields a later build wrote. Carried, not understood. */
+        carried: carriedFrom(r),
+        /* The copy this save replaced, where one was kept. */
+        previous: r.previous ?? null,
         /* Reported rather than swallowed: a row that came back needing a
            second look is something the person who ticked it should be told
            about. */
@@ -186,6 +219,12 @@ export function saveScenario(s, store) {
 
   const r = readiness(s);
   const entry = {
+    /* A later build's fields, kept. The order is not what protects the
+       fields this build owns — `carriedFrom` already excludes every known
+       key, so the two objects cannot collide. Spreading them first is a
+       statement of precedence rather than a guard, and saying so beats a
+       comment describing a protection that cannot fire. */
+    ...(s.carried ?? {}),
     ...s,
     /* The part and what it must satisfy, saved beside the fields. Without
        these a reopened scenario is the form only, and whatever geometry and
@@ -210,13 +249,8 @@ export function saveScenario(s, store) {
     },
   };
 
-  const bytes = serialise(entry).length;
-  if (bytes > MAX_SCENARIO_BYTES) {
-    return {
-      ok: false,
-      error: `This scenario is ${Math.round(bytes / 1024)}KB, over the ${Math.round(MAX_SCENARIO_BYTES / 1024)}KB limit.`,
-    };
-  }
+  /* `carried` is how the unknown fields travelled; it is not one of them. */
+  delete entry.carried;
 
   const all = readAll(store);
   const at = all.findIndex((x) => x && x.id === s.id);
@@ -233,11 +267,59 @@ export function saveScenario(s, store) {
     };
   }
 
+  /* One step back, kept inside the record it belongs to.
+   *
+   * `specs/04`: "retain a recoverable prior version". One step rather than a
+   * history: what this protects against is a save somebody regrets
+   * immediately — a clear that was not meant, a correction applied to the
+   * wrong row — and a chain of versions is a different feature with its own
+   * interface.
+   *
+   * Its own `previous` is dropped, or every save carries the one before it
+   * and a scenario grows without bound. */
+  if (previous) {
+    const kept = { ...previous };
+    delete kept.previous;
+    entry.previous = kept;
+  } else {
+    entry.previous = null;
+  }
+
+  /* The backup never costs the save.
+   *
+   * If the record with its prior copy is over the limit, the prior copy goes
+   * and the save proceeds. Losing the ability to step back is a smaller harm
+   * than refusing to store work somebody just did — and it is said out loud
+   * rather than discovered later by a step-back that does nothing. */
+  let droppedPrevious = false;
+  let bytes = serialise(entry).length;
+  if (bytes > MAX_SCENARIO_BYTES && entry.previous) {
+    entry.previous = null;
+    droppedPrevious = true;
+    bytes = serialise(entry).length;
+  }
+  if (bytes > MAX_SCENARIO_BYTES) {
+    return {
+      ok: false,
+      error: `This scenario is ${Math.round(bytes / 1024)}KB, over the ${Math.round(MAX_SCENARIO_BYTES / 1024)}KB limit.`,
+    };
+  }
+
   if (at >= 0) all[at] = entry; else all.push(entry);
 
   const written = writeAll(all, store);
   if (!written.ok) return written;
-  return { ok: true, replaced: Boolean(previous), id: s.id };
+  return {
+    ok: true,
+    replaced: Boolean(previous),
+    id: s.id,
+    canStepBack: Boolean(entry.previous),
+    droppedPrevious,
+    note: droppedPrevious
+      ? "Saved. There was not room to keep the previous copy as well, so this save "
+        + "cannot be stepped back from."
+      : null,
+  };
 }
 
 export function deleteScenario(id, store) {
@@ -249,4 +331,34 @@ export function deleteScenario(id, store) {
 
 export function clearScenarios(store) {
   return writeAll([], store);
+}
+
+/* ----------------------------------------------------------- stepping back */
+
+/**
+ * The copy a save replaced, if one was kept.
+ *
+ * This reads it rather than restoring it. Putting it back is a save like any
+ * other, and doing it here would go around the revision check that stops one
+ * tab overwriting another's work. The caller looks, decides, and saves.
+ */
+export function previousVersion(id, store) {
+  const record = readAll(store).find((r) => r && r.id === id);
+  if (!record || !record.previous) return null;
+  const p = record.previous;
+  return Object.freeze({
+    ...scenario(p),
+    model: p.model ?? null,
+    requirements: Object.freeze([...(p.requirements ?? [])]),
+    review: reviveItems(p.review).items,
+    carried: carriedFrom(p),
+    savedAt: p.savedAt ?? null,
+    savedSchema: p.schema,
+  });
+}
+
+/** Whether there is anything to step back to. */
+export function canStepBack(id, store) {
+  const record = readAll(store).find((r) => r && r.id === id);
+  return Boolean(record && record.previous);
 }

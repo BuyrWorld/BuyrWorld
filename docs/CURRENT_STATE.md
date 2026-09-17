@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 59 |
-| Test files | 0 | 97 |
+| Modules under `src/` | 0 | 67 |
+| Test files | 0 | 108 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -341,6 +341,207 @@ be the most plausible wrong figure it could produce, so the citation is
 recorded as unverified and the limits are not. A geometric control is kept as
 written rather than read into limits, because the number beside a flatness
 symbol is a zone and not a deviation from a nominal.
+
+`src/studio/staleness.mjs` answers whether something worked out earlier
+still describes the part in front of you. Two things in the Studio are
+derived once and then held — the calculated plan and cost a saved estimate is
+built from, and the review package handed to an engineer — and neither was
+invalidated when the part changed.
+
+The harm was specific, not theoretical. Calculate a cost, add a pocket, save
+the estimate: what is stored is the cost of the part before the pocket, filed
+under the part after it. Build a review package, change a tolerance, export:
+the engineer receives a package citing a requirement that no longer exists.
+Neither said anything was wrong, because from the inside nothing was.
+
+Both refuse now rather than warning, which is what `specs/04` asks for.
+Comparison is of exact serialised forms rather than a hash — "almost always
+right" is the wrong standard for deciding whether a cost belongs to a part —
+and only what a derived thing was actually stamped against is reported, so a
+package that never depended on the quantity is not invalidated by the
+quantity moving. A warning that cries wolf is one people learn to click
+through.
+
+`src/case/narrative.mjs` is what a case says, worked out rather than
+written. `specs/05` asks every case to use five headings — what happened, why
+it matters, your options, the recommended next step, evidence and missing
+information — and five headings like those are exactly the shape of a thing
+that wants to be generated. Generated prose with numbers in it is the failure
+this codebase is built to prevent, so a narrative is not text: it is a list
+of claims, each carrying what it rests on and what it is waiting for, and the
+sentence is assembled from them.
+
+One line of the spec decides whether the whole thing is honest — *"show a
+numerical impact only after relevant inputs are confirmed"*. A claim that
+carries a figure names the inputs it depends on, and if any is unconfirmed
+the figure is absent with the reason in its place. Not rounded, not hedged,
+not grey with an asterisk. A figure that names no dependency is refused at
+construction, and so is a claim whose own sentence already contains its own
+figure — withholding the field does nothing about "about £1,250" in the
+words, and the words are what a reader sees.
+
+Nothing in it renders. Where and how much of it appears is the projection's
+business, which is what makes "all views use the same facts" something a test
+can check rather than something a team intends.
+
+`src/case/projection.mjs` is the same case shown to different people, and
+it is a selection over the claims and nothing else — it cannot add one,
+reword one, or put back a figure that was withheld. That is what makes
+`specs/05`'s "all views use the same facts" a property a test can check
+rather than an intention a team has: there is one set of facts, and every
+view is a subset of it.
+
+Role and depth are separate switches, as the spec requires. Role picks a
+starting depth and caps the next actions — a junior buyer is given one,
+because three next actions is a list to choose from and that is the thing
+somebody new has no basis for doing yet. Depth decides how much detail. The
+one rule that holds everywhere is that no role at any depth hides a material
+claim, and whether a claim is material is decided by the claim rather than by
+the reader.
+
+Scope reports what is true instead of drawing a control. `specs/05` wants
+scope reflecting permitted team, site and region data; there are no accounts
+here and one browser's cases, so a scope control would filter nothing — and a
+control that appears to restrict what somebody sees while restricting nothing
+is a claim about safety that is not true.
+
+`src/case/from-quote.mjs` is the first producer — a supplier's price
+increase, said as a case. `cost-bridge.mjs` already decomposed a claimed
+increase into the part the drivers warrant and the part nothing supports;
+what was missing was anything turning that into the five sections a person
+reads. So it arranges and does not calculate: every figure it carries came
+out of the bridge in the bridge's own exact types, and a test asserts no
+arithmetic helper is even imported.
+
+The rule it exists to enforce is the softer neighbour of one already here.
+The bridge refuses to let an `ai-inferred` value into arithmetic at all. This
+handles the figure that is arithmetically sound and rests on a share of unit
+cost somebody assumed rather than sourced — real, and showing it as settled
+is how an assumption becomes a negotiating position. Those figures wait on
+every assumption `assumptionsToVerify` found, and partial confirmation is not
+confirmation.
+
+Two things are marked material, so no role at any depth can hide them: the
+part of the request no driver supports, and any share of unit cost nobody has
+attributed to a driver at all — no movement has been claimed against it and
+none ruled out either.
+
+The case view on the deflation page is the first Phase 2 surface, and it
+decides nothing. Which claims, whether a figure may appear, and what each
+sentence says were all settled before it ran; it turns that into markup and
+no more, which is what keeps "all views use the same facts" true of the
+screen rather than only of the modules. Five lines of `index.html` — one
+container — and the rest is generated.
+
+A withheld figure leaves nothing behind. No dash, no greyed number, no
+asterisk: a placeholder where a figure would go is a figure as far as a
+reader in a hurry is concerned. The sentence beside it already says what is
+missing, and each assumption in the evidence section carries the tick that
+settles it. Confirming every one brings the figures out; confirming most of
+them does not.
+
+Role and depth are the person's, not the case's — `specs/04` says role and
+depth preferences are user settings rather than engineering facts, so they
+are deliberately not saved with a scenario.
+
+`src/case/brief.mjs` is the last thing the Phase 2 gate asks for — a draft
+a junior buyer can send their manager. It composes rather than summarises:
+every line comes from a claim already resolved against what is confirmed,
+which is the only way to guarantee the thing that matters most here. A figure
+withheld on screen cannot reappear in the brief. A brief is the artefact that
+leaves the building, and if the rule held everywhere except the document
+somebody emails it would hold nowhere that counted.
+
+It leads with what is missing rather than burying it. A case is read top to
+bottom and can afford to end with the gaps; a brief is skimmed, and a caveat
+at the end of a skimmed document is a caveat nobody read. It says it is a
+draft in the opening lines and again at the close, and it separates the
+calculation from the judgement — the figures come from a tested engine and
+what to do about them does not.
+
+An incomplete brief is still offered, because "here is what I cannot answer"
+is a useful thing to tell a manager and refusing to produce one would be the
+tool deciding that for somebody.
+
+`src/case/specialists.mjs` decides who has something to say about a case.
+`specs/06` leads with the rule that shapes it — *"use an orchestrator to
+select relevant specialists, not five verbose chat windows on every task"* —
+so the selection is made on evidence: a specialist appears when the case
+holds what it needs, and is listed as not consulted, with the reason, when it
+does not. Five cards on every case is the failure mode; after the third case
+where delivery had nothing, nobody reads any of them.
+
+Consulted-and-found-nothing is reported differently from never-asked. Left
+blank they look the same, and they are very different claims.
+
+The findings come from engines already here — the bridge holds the
+unsupported share, `negotiation.mjs` builds the ladder and the walk-away,
+`batna.mjs` knows whether a supplier could be replaced. Nothing is generated
+around them. Two specialists agreeing becomes one line naming both; two
+disagreeing stay two findings, because resolving a contradiction by keeping
+the more confident one is the invented consensus the spec forbids — and there
+is no confidence to compare, deliberately. A number for how sure something is
+invites arithmetic on it and there is nothing behind it to divide.
+
+The technical specialist never signs anything off. A card saying a part is
+fine would be the most dangerous sentence this product could produce.
+
+`src/case/intake.mjs` is the five entry routes `specs/05` names, and the
+interesting part is not the routing. Four of the five lead somewhere and one
+does not: rescuing a late delivery needs an engine this build has not got. A
+card offering it anyway would be a door into an empty room, and somebody who
+opens one stops trusting the other four — so the route says it is not ready
+and describes what is absent rather than promising it soon.
+
+Describing a problem routes by written rule. No model: a router that reads a
+sentence with a prompt can be talked into the wrong tool by the sentence, and
+the sentence is being typed by somebody who does not yet know which tool they
+want, which is exactly when being sent confidently to the wrong one costs
+most. The rules are narrow enough that ordinary questions match nothing, and
+where two match it offers both — a late delivery and a price increase in one
+sentence is one problem with two halves, and picking one is picking wrong
+half the time. Nothing is ranked, because a score here would be the
+confidence percentage `specs/06` forbids wearing a different hat.
+
+The task band on the home page is where those routes are shown. It sits
+after the hero rather than replacing it: `specs/05` asks the page to lead
+with "What are we solving today?", and what a public home page opens with is
+a decision for whoever owns the site rather than one to take while
+implementing a spec. Sixteen lines of markup; everything in it is built in
+app.js.
+
+Describing a problem offers buttons rather than navigating. Matching one rule
+is not certainty, and sending somebody straight to a page on it is the
+confident wrong answer the router exists to avoid. Nothing saved shows
+nothing at all — an empty "recent work" heading on a first visit is a product
+telling somebody they have forgotten something they never did.
+
+`src/case/briefing.mjs` answers what changed since you were last here.
+`specs/05` calls it a daily brief; it is not called that, because "daily"
+implies a schedule, somewhere the schedule runs, and a reason to expect
+something new each morning — and this build holds cases in one browser with
+no accounts and no server. Nothing changes while nobody is here. The smaller
+question is real, and answering it honestly beats answering a bigger one by
+implying facts that do not exist.
+
+What needs somebody is sorted from what does not, and each list is capped at
+three separately — truncating before sorting is how the one thing that
+mattered ends up below three that did not. What is not shown is said rather
+than implied by a short list. Nothing counts consecutive days, nothing is
+overdue, and "nothing changed" is a statement rather than a congratulation
+for the absence of work.
+
+The rule with teeth is the money. Estimated opportunity, agreed savings and a
+realised outcome are three different things and are never added together.
+There is no total field, and the absence is the feature: the three are all
+money sitting in one list, summing them is the easiest thing anybody could
+add here, and it is how a tool starts reporting savings nobody made.
+
+It is shown on the home band, above the routes, and only when something has
+moved. Marking it seen is a deliberate act rather than something loading
+does: clearing it on load means a reload loses it, and somebody refreshing to
+read it again finds it gone with no way back — the worst possible behaviour
+for a list whose whole job is to be read.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

@@ -30,6 +30,11 @@ const ALLOWED = new Map([
   // Three navigation entries used to sit here. The sidebar rewrite escapes nav
   // labels with ciEsc and builds the active state by concatenation rather than
   // interpolation, so there is nothing left to excuse.
+  ["body", "the intake band's markup, assembled in intakeRenderRoutes and "
+    + "intakeDescribe. Every value in it is a route's own title, sentence or "
+    + "page name from src/case/intake.mjs — none comes from a person — and "
+    + "each still goes through ciEsc or attrEsc on the way in, so the variable "
+    + "holds escaped markup by the time it is concatenated"],
   ["elId", "an element id this code chose itself"],
   ["msgs[0]", "loader text from a hardcoded array"],
   ["etaHtml", "loader markup this code built"],

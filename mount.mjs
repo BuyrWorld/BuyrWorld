@@ -18,6 +18,21 @@
            withinLimits as fileWithinLimits, HANDLING as FILE_HANDLING,
            LIMITS as FILE_LIMITS, HEAD_BYTES } from "./src/intake/file-router.mjs";
   import * as viewer from "./src/intake/viewer.mjs";
+  import { narrative, sectionOf, SECTION_TITLE } from "./src/case/narrative.mjs";
+  import { quoteCase, needsOf } from "./src/case/from-quote.mjs";
+  import { changes as caseChanges, money as briefingMoney,
+           saidPlainly as briefingSaid, anythingToSay,
+           MONEY_KIND, MONEY_SAID } from "./src/case/briefing.mjs";
+  import { ROUTES as INTAKE_ROUTES, routeFor, saidAboutUnready,
+           resumable, resumableSaid } from "./src/case/intake.mjs";
+  import { consult, missingAcross, SPECIALIST_TITLE, NOT_CONSULTED,
+           CONFIDENCE_SAID } from "./src/case/specialists.mjs";
+  import { brief, readiness as briefReadiness,
+           DRAFT_LABEL as BRIEF_DRAFT_LABEL } from "./src/case/brief.mjs";
+  import { project, hiddenSaid, defaultDepthFor, ROLE, ROLES, ROLE_TITLE,
+           DEPTH, DEPTHS, SCOPE_SAID } from "./src/case/projection.mjs";
+  import { stamp as staleStamp, check as staleCheck,
+           DEPENDS as STALE_DEPENDS } from "./src/studio/staleness.mjs";
   import { readTolerance, asTolerance, saidPlainly as toleranceSaid,
            kindOf as toleranceKind, verificationOf as toleranceVerification,
            FORM as TOLERANCE_FORM, APPLIES as TOLERANCE_APPLIES
@@ -108,6 +123,16 @@
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { identifyFile, fileNextStep, fileWithinLimits,
+                narrative, sectionOf, SECTION_TITLE, quoteCase, needsOf,
+                brief, briefReadiness, BRIEF_DRAFT_LABEL,
+                consult, missingAcross, SPECIALIST_TITLE, NOT_CONSULTED,
+                INTAKE_ROUTES, routeFor, saidAboutUnready, resumable, resumableSaid,
+                caseChanges, briefingMoney, briefingSaid, anythingToSay,
+                MONEY_KIND, MONEY_SAID,
+                CONFIDENCE_SAID,
+                project, hiddenSaid, defaultDepthFor, ROLE, ROLES, ROLE_TITLE,
+                DEPTH, DEPTHS, SCOPE_SAID,
+                staleStamp, staleCheck, STALE_DEPENDS,
                 readTolerance, asTolerance, toleranceSaid, toleranceKind,
                 toleranceVerification, TOLERANCE_FORM, TOLERANCE_APPLIES,
                 readingsFrom, droppedSaid, downscaleTo, VISION_SAID, findConflicts,

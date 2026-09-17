@@ -367,6 +367,15 @@ var PILLAR_WORDS=["No","One","Two","Three","Four","Five","Six","Seven","Eight","
   intro.textContent=(PILLAR_WORDS[n]||String(n))+" ways in, depending on the job in front of you.";
 })();
 
+/* The task band above them. Drawn once at load: the routes do not change, and
+   the resumable list is re-drawn whenever saved work does. */
+(function(){
+  if (typeof intakeRenderRoutes === "function") {
+    try { intakeRenderChanges(); intakeRenderRoutes(); intakeRenderResume(); }
+    catch (e) { console.error("The intake band did not draw:", e && e.message); }
+  }
+})();
+
 document.getElementById("pillars").innerHTML=PILLARS.map(([t,d,_ic,icon,dest])=>`
 <div class="card glow-hover" role="button" tabindex="0" data-key="cardKey$event" style="cursor:pointer" data-do="go" data-a="${dest}">
   <svg viewBox="0 0 24 24" aria-hidden="true" style="width:26px;height:26px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;margin-bottom:12px">${icon}</svg>
@@ -1099,9 +1108,547 @@ function defCalc(){
     });
     _defResult=r;
     out.innerHTML=defRender(r,cur);
+    /* A new calculation is a new case: what was confirmed about the last one
+       says nothing about this one. */
+    _caseConfirmed=Object.create(null);
+    caseRender();
   }catch(e){
     out.innerHTML='<div class="card" style="border-color:#FF5C5C;margin:0"><b style="color:#FF5C5C">Cannot calculate.</b><div style="color:var(--muted);font-size:14px;margin-top:6px">'+ciEsc(String(e.message||e))+'</div></div>';
   }
+}
+
+
+
+
+/* ------------------------------------------------ what changed since last time */
+
+/**
+ * When somebody last said they had seen this.
+ *
+ * Its own key rather than part of a case, because it is about the person and
+ * not about any case — and because losing it should cost nothing worse than
+ * seeing a list again.
+ */
+var INTAKE_SEEN_KEY = "bw.lastSeen.v1";
+
+function intakeLastSeen(){
+  try { return localStorage.getItem(INTAKE_SEEN_KEY); }
+  catch (e) { return null; }
+}
+
+/**
+ * Mark it seen.
+ *
+ * A deliberate act rather than something that happens on load. Clearing the
+ * list by loading the page means a reload loses it, and somebody who
+ * refreshes to read it again finds it gone with no way back — which is the
+ * worst possible behaviour for a list whose whole job is to be read.
+ */
+function intakeMarkSeen(){
+  try { localStorage.setItem(INTAKE_SEEN_KEY, new Date().toISOString()); }
+  catch (e) { /* storage refused; the list simply shows again next time */ }
+  intakeRenderChanges();
+}
+
+/**
+ * What has moved since then.
+ *
+ * Shown only when there is something to show. A heading over an empty list is
+ * a product telling somebody to look at nothing.
+ */
+function intakeRenderChanges(){
+  var host = document.getElementById("intake-changed");
+  var B = window.BW;
+  if (!host) return;
+  if (!B || !B.caseChanges) { host.innerHTML = ""; return; }
+
+  var stores;
+  try {
+    stores = {
+      scenarios: B.loadScenarios ? B.loadScenarios(null) : [],
+      estimates: B.loadEstimates ? B.loadEstimates() : [],
+      outcomes: B.loadOutcomes ? B.loadOutcomes() : []
+    };
+  } catch (e) { host.innerHTML = ""; return; }
+
+  var seen = intakeLastSeen();
+  var r = B.caseChanges(stores, seen);
+  if (!B.anythingToSay(r)) { host.innerHTML = ""; return; }
+
+  var list = function(items, heading){
+    if (!items.length) return "";
+    return '<div style="margin-bottom:14px">'
+      + '<div class="eyebrow" style="margin-bottom:6px">' + ciEsc(heading) + '</div>'
+      + '<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+      + items.map(function(c){
+          return '<li><b style="color:var(--bw-text)">' + ciEsc(c.title) + '</b> '
+            + '<span style="color:var(--bw-muted)">(' + ciEsc(c.kind) + ')</span> &mdash; '
+            + ciEsc(c.said)
+            + (c.why ? ' <span style="color:var(--bw-warning)">' + ciEsc(c.why) + '</span>' : '')
+            + '</li>';
+        }).join("")
+      + '</ul></div>';
+  };
+
+  host.innerHTML = '<div class="bw-panel" style="margin:0 0 28px">'
+    + '<div class="bw-panel-head"><div class="bw-panel-title">Since you were last here</div>'
+    + '<span class="bw-status bw-status--derived">from your saved work</span></div>'
+    + list(r.needsYou, "Needs something from you")
+    + list(r.canWait, "Moved, and can wait")
+    + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+    + '<button class="bw-act bw-act-secondary" style="margin:0" data-do="intakeMarkSeen">'
+    + 'Seen it</button>'
+    + '<span style="font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
+    + ciEsc(B.briefingSaid(r, { firstVisit: !seen })) + '</span>'
+    + '</div></div>';
+}
+
+/* ------------------------------------------------- the task-led way in */
+
+/**
+ * The five routes, as cards.
+ *
+ * The one that is not ready is shown, and shown as not ready. Leaving it out
+ * would be tidier and would mean somebody with a late delivery finds nothing
+ * and concludes the product has no opinion about it — when the truth is that
+ * it has no engine for it, which is a different thing and worth saying.
+ */
+function intakeRenderRoutes(){
+  var host = document.getElementById("intake-routes");
+  var B = window.BW;
+  if (!host) return;
+  if (!B || !B.INTAKE_ROUTES) { host.innerHTML = ""; return; }
+
+  host.innerHTML = '<div class="grid3">' + B.INTAKE_ROUTES.map(function(r){
+    var body = '<div class="eyebrow" style="margin-bottom:6px">' + ciEsc(r.title) + '</div>'
+      + '<p style="color:var(--muted);font-size:13px;line-height:1.6;margin:0 0 10px">'
+      + ciEsc(r.said) + '</p>';
+
+    if (r.note) {
+      body += '<p style="color:var(--muted);font-size:11.5px;line-height:1.5;margin:0 0 10px">'
+        + ciEsc(r.note) + '</p>';
+    }
+
+    if (r.ready) {
+      body += '<button class="bw-act bw-act-secondary" style="margin:0" data-do="go" data-a="'
+        + attrEsc(r.page) + '">Open</button>';
+    } else {
+      body += '<p style="color:var(--bw-warning);font-size:11.5px;line-height:1.55;margin:0">'
+        + ciEsc(r.whyNot) + '</p>';
+    }
+
+    return '<div class="card"' + (r.ready ? '' : ' style="opacity:.75"') + '>' + body + '</div>';
+  }).join("") + '</div>';
+}
+
+/**
+ * Where a described problem goes.
+ *
+ * It offers rather than navigates. Sending somebody straight to a page on one
+ * rule firing would be the confident wrong answer this is built to avoid, and
+ * the cost of being wrong is highest for the person who cannot yet tell they
+ * are in the wrong tool.
+ */
+function intakeDescribe(){
+  var host = document.getElementById("intake-answer");
+  var box = document.getElementById("intake-say");
+  var B = window.BW;
+  if (!host || !box || !B || !B.routeFor) return;
+
+  var r = B.routeFor(box.value);
+  var body = '<p style="margin:0 0 8px;font-size:12.5px;color:var(--bw-body);line-height:1.6">'
+    + ciEsc(r.why) + '</p>';
+
+  if (r.matched.length) {
+    body += '<div style="display:flex;gap:8px;flex-wrap:wrap">' + r.matched.map(function(m){
+      return m.ready
+        ? '<button class="bw-act bw-act-primary" style="margin:0" data-do="go" data-a="'
+          + attrEsc(m.page) + '">' + ciEsc(m.title) + '</button>'
+        : '<span class="bw-status bw-status--derived">' + ciEsc(m.title) + ' — not in this build</span>';
+    }).join("") + '</div>';
+  }
+
+  var unready = B.saidAboutUnready(r);
+  if (unready) {
+    body += '<p style="margin:8px 0 0;font-size:11.5px;color:var(--bw-warning);line-height:1.55">'
+      + ciEsc(unready) + '</p>';
+  }
+
+  host.innerHTML = '<div class="bw-panel" style="margin:0">' + body + '</div>';
+}
+
+/** Enter in the box does what the button does. */
+function intakeKey(e){
+  if (e && e.key === "Enter") intakeDescribe();
+}
+
+/**
+ * Work to come back to.
+ *
+ * Three at most, and none at all when there is none — an empty "recent work"
+ * heading on a first visit is a product telling somebody they have forgotten
+ * something they never did.
+ */
+function intakeRenderResume(){
+  var host = document.getElementById("intake-resume");
+  var B = window.BW;
+  if (!host) return;
+  if (!B || !B.resumable || !B.loadScenarios) { host.innerHTML = ""; return; }
+
+  var items;
+  try { items = B.resumable(B.loadScenarios(null)); }
+  catch (e) { host.innerHTML = ""; return; }
+
+  if (!items.length) { host.innerHTML = ""; return; }
+
+  host.innerHTML = '<div class="eyebrow" style="margin-bottom:10px">Pick up where you left off</div>'
+    + '<div class="grid3">' + items.map(function(it){
+      return '<div class="card">'
+        + '<div style="color:var(--bw-text);font-size:14px;margin-bottom:4px">' + ciEsc(it.title) + '</div>'
+        + '<p style="color:var(--muted);font-size:12px;line-height:1.6;margin:0 0 10px">'
+        + ciEsc(B.resumableSaid(it)) + '</p>'
+        + '<button class="bw-act bw-act-secondary" style="margin:0" data-do="intakeResume" data-a="'
+        + attrEsc(it.id) + '">Open it</button></div>';
+    }).join("") + '</div>';
+}
+
+/** Open a saved scenario from the home page. */
+function intakeResume(id){
+  go("shouldcost");
+  if (typeof scOpenDraft === "function") scOpenDraft(id);
+}
+
+/* ------------------------------------------------- the case view */
+
+/**
+ * Who is reading, how much they want, and what they have confirmed.
+ *
+ * Role and depth are preferences and belong to the person rather than to the
+ * case — `specs/04` is explicit that role and depth settings are user
+ * settings, not engineering facts, so they are deliberately not saved with a
+ * scenario.
+ */
+var _caseRole = null;
+var _caseDepth = null;
+
+/**
+ * The assumptions somebody has confirmed, by id.
+ *
+ * This is what makes a figure appear. Every money and percentage figure in
+ * the case waits on the assumptions the provenance layer found, and
+ * confirming one is a person's act — which is why it lives here and not in
+ * the calculation.
+ */
+var _caseConfirmed = Object.create(null);
+
+/** Put the case view down when the calculation is cleared or replaced. */
+function caseClear(){
+  _caseConfirmed = Object.create(null);
+  var host = document.getElementById("case-view");
+  if (host) host.innerHTML = "";
+}
+
+/** A label somebody would recognise, for an assumption waiting to be confirmed. */
+function caseLabelFor(id){
+  var B = window.BW;
+  var all = (_defResult && B && B.assumptionsToVerify) ? B.assumptionsToVerify(_defResult) : [];
+  for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i].figure;
+  return id;
+}
+
+/** The case, from the calculation on screen. */
+function caseNarrative(){
+  var B = window.BW;
+  if (!B || !B.quoteCase || !_defResult) return null;
+  var confirmed = new Set(Object.keys(_caseConfirmed));
+  return B.narrative(
+    B.quoteCase(_defResult, { supplier: String(scVal("def-supplier") || "").trim() || null }),
+    { confirmed: confirmed, labelOf: caseLabelFor });
+}
+
+/**
+ * Draw it.
+ *
+ * Nothing here decides anything. The claims, which of them this view shows,
+ * and whether a figure may appear at all were all settled before this
+ * function ran — it turns the answer into markup and no more, which is what
+ * keeps "all views use the same facts" true of the screen and not only of
+ * the module.
+ */
+function caseRender(){
+  var host = document.getElementById("case-view");
+  var B = window.BW;
+  if (!host) return;
+  if (!B || !B.project) { host.innerHTML = ""; return; }
+
+  var n = caseNarrative();
+  if (!n) { host.innerHTML = ""; return; }
+
+  var role = _caseRole || B.ROLE.BUYER;
+  var view = B.project(n, { role: role, depth: _caseDepth });
+
+  host.innerHTML =
+    '<div class="bw-panel">'
+    + '<div class="bw-panel-head"><div class="bw-panel-title">This, said as a case</div>'
+    + '<span class="bw-status bw-status--derived">from the figures above</span></div>'
+    + caseControlsHTML(view)
+    + view.sections.map(caseSectionHTML).join("")
+    + caseFootHTML(view)
+    + caseSpecialistsHTML()
+    + caseBriefHTML()
+    + '</div>';
+}
+
+/** The role and depth switches, and the honest word about scope. */
+function caseControlsHTML(view){
+  var B = window.BW;
+  var opt = function(value, label, selected){
+    return '<option value="' + attrEsc(value) + '"' + (selected ? ' selected' : '') + '>'
+      + ciEsc(label) + '</option>';
+  };
+
+  return '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--bw-4)">'
+    + '<label class="bw-field" style="margin:0">Reading as'
+    + '<select class="bwin" aria-label="Read this case as" data-chg="caseSetRole$self">'
+    + B.ROLES.map(function(r){ return opt(r, B.ROLE_TITLE[r], r === view.role); }).join("")
+    + '</select></label>'
+    + '<label class="bw-field" style="margin:0">Depth'
+    + '<select class="bwin" aria-label="How much detail to show" data-chg="caseSetDepth$self">'
+    + B.DEPTHS.map(function(d){ return opt(d, d.charAt(0).toUpperCase() + d.slice(1), d === view.depth); }).join("")
+    + '</select></label>'
+    + '<p style="margin:0;font-size:11.5px;color:var(--bw-muted);line-height:1.5;max-width:46ch">'
+    + ciEsc(B.SCOPE_SAID) + '</p>'
+    + '</div>';
+}
+
+/** One section and its claims. Empty sections keep their heading. */
+function caseSectionHTML(section){
+  var body = section.claims.length
+    ? '<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+      + section.claims.map(caseClaimHTML).join("") + '</ul>'
+    : '<p style="margin:0;font-size:12.5px;color:var(--bw-muted)">Nothing to say here yet.</p>';
+
+  return '<div style="margin-bottom:var(--bw-4)">'
+    + '<div class="eyebrow" style="margin:0 0 6px">' + ciEsc(section.title) + '</div>'
+    + body + '</div>';
+}
+
+/**
+ * One claim.
+ *
+ * A withheld figure leaves nothing behind — no dash, no greyed number, no
+ * asterisk. The sentence already says what it is waiting for, and a
+ * placeholder where a figure would go is a figure as far as a reader in a
+ * hurry is concerned.
+ */
+function caseClaimHTML(c){
+  var figure = c.figure
+    ? ' <b style="color:var(--bw-text)">' + ciEsc(caseFigureText(c.figure)) + '</b>'
+    : '';
+
+  var confirm = "";
+  if (c.section === "evidence-and-missing-information" && c.id && caseIsAssumption(c.id)) {
+    confirm = _caseConfirmed[c.id]
+      ? '<span style="font-size:11.5px;color:var(--bw-muted);margin-left:6px">confirmed</span>'
+      : '<button class="bw-act bw-act-secondary" style="padding:2px 8px;font-size:11px;margin-left:6px"'
+        + ' data-do="caseConfirm" data-a="' + attrEsc(c.id) + '">I have checked this</button>';
+  }
+
+  return '<li' + (c.weight === "material" ? ' style="color:var(--bw-text)"' : '') + '>'
+    + ciEsc(c.said) + figure + confirm + '</li>';
+}
+
+/** Whether an id is one of the assumptions this case is waiting on. */
+function caseIsAssumption(id){
+  var B = window.BW;
+  if (!B || !B.assumptionsToVerify || !_defResult) return false;
+  var all = B.assumptionsToVerify(_defResult);
+  for (var i = 0; i < all.length; i++) if (all[i].id === id) return true;
+  return false;
+}
+
+/** A figure, in the words its kind calls for. */
+function caseFigureText(f){
+  if (f.kind === "money") return f.amount + " " + f.currency;
+  return f.amount;
+}
+
+/** What this view is not showing, and why nothing is missing that matters. */
+function caseFootHTML(view){
+  var B = window.BW;
+  var said = B.hiddenSaid(view);
+  if (!said) return "";
+  return '<p style="margin:0;font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
+    + ciEsc(said) + '</p>';
+}
+
+/**
+ * What the specialists make of it.
+ *
+ * Only the ones with something to say, and a line naming the ones that were
+ * not consulted. Five cards on every case is the failure mode `specs/06`
+ * warns about — after the third case where delivery had nothing, nobody reads
+ * any of them.
+ */
+function caseSpecialistsHTML(){
+  var B = window.BW;
+  if (!B || !B.consult || !_defResult) return "";
+
+  var consulted = B.consult({
+    bridge: _defResult,
+    plan: (B.prepareNegotiation && _defResult) ? caseNegotiationPlan() : null
+  });
+  if (!consulted.findings.length && !consulted.notConsulted.length) return "";
+
+  var cards = consulted.findings.map(function(f){
+    var also = f.alsoFrom && f.alsoFrom.length
+      ? ' <span style="color:var(--bw-muted)">and ' + f.alsoFrom.map(function(w){
+          return ciEsc(B.SPECIALIST_TITLE[w] || w); }).join(", ") + '</span>'
+      : '';
+
+    var rows = "";
+    if (f.missing && f.missing.length) {
+      rows += '<div style="font-size:11.5px;color:var(--bw-warning);margin-top:4px">Missing: '
+        + f.missing.map(ciEsc).join("; ") + '</div>';
+    }
+    if (f.action) {
+      rows += '<div style="font-size:11.5px;color:var(--bw-body);margin-top:4px">Do: '
+        + ciEsc(f.action) + '</div>';
+    }
+    if (f.consequence) {
+      rows += '<div style="font-size:11.5px;color:var(--bw-muted);margin-top:4px">If not: '
+        + ciEsc(f.consequence) + '</div>';
+    }
+
+    return '<li style="margin-bottom:10px">'
+      + '<span class="bw-status bw-status--derived">' + ciEsc(B.SPECIALIST_TITLE[f.from] || f.from)
+      + '</span>' + also
+      + '<div style="margin-top:4px;color:var(--bw-body)">' + ciEsc(f.said) + '</div>'
+      + rows + '</li>';
+  }).join("");
+
+  var quiet = consulted.notConsulted.map(function(x){
+    return ciEsc((B.SPECIALIST_TITLE[x.from] || x.from) + " — " + x.why);
+  }).join("; ");
+
+  return '<div style="border-top:1px solid var(--bw-line);padding-top:var(--bw-4);margin-top:var(--bw-4)">'
+    + '<div class="eyebrow" style="margin:0 0 6px">What the specialists make of it</div>'
+    + (cards
+        ? '<ul style="margin:0 0 8px;padding-left:18px;font-size:12.5px;line-height:1.6">'
+          + cards + '</ul>'
+        : '')
+    + (quiet
+        ? '<p style="margin:0;font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
+          + 'Not consulted: ' + quiet + '.</p>'
+        : '')
+    + '<p style="margin:6px 0 0;font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
+    + ciEsc(B.CONFIDENCE_SAID) + '</p>'
+    + '</div>';
+}
+
+/**
+ * The negotiation plan, where one can be built.
+ *
+ * Wrapped because `prepareNegotiation` throws on a bridge it cannot work
+ * with, and a specialist panel that takes the page down with it would be a
+ * poor trade for one card.
+ */
+function caseNegotiationPlan(){
+  try { return window.BW.prepareNegotiation({ bridge: _defResult }); }
+  catch (e) { return null; }
+}
+
+/**
+ * The brief, and the sentence beside the button.
+ *
+ * The last thing the Phase 2 gate asks for. It is offered whether or not
+ * every figure is settled, because an incomplete brief is often exactly what
+ * somebody needs to send — "here is what I cannot answer" is useful to tell a
+ * manager, and refusing to produce one would be this deciding that for them.
+ */
+function caseBriefHTML(){
+  var B = window.BW;
+  if (!B || !B.brief) return "";
+  var n = caseNarrative();
+  if (!n) return "";
+
+  var b = B.brief(n, { title: caseBriefTitle() });
+  return '<div style="border-top:1px solid var(--bw-line);padding-top:var(--bw-4);margin-top:var(--bw-4)">'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
+    + '<button class="bw-act bw-act-primary" style="margin:0" data-do="caseCopyBrief">'
+    + 'Copy a brief for my manager</button>'
+    + '<span style="font-size:11.5px;color:var(--bw-muted);line-height:1.6;max-width:52ch">'
+    + ciEsc(B.briefReadiness(b)) + '</span></div>'
+    + '<div id="case-brief-msg" style="margin-top:8px;font-size:12px;color:var(--bw-muted)"></div>'
+    + '</div>';
+}
+
+/** A title somebody will recognise in their sent folder. */
+function caseBriefTitle(){
+  var supplier = String(scVal("def-supplier") || "").trim();
+  return supplier ? supplier + " — price increase" : "Supplier price increase";
+}
+
+/**
+ * Put the brief on the clipboard.
+ *
+ * Copying rather than downloading: what somebody does with this is paste it
+ * into an email they are already writing, and a file in the downloads folder
+ * is a step further from that rather than nearer.
+ */
+function caseCopyBrief(){
+  var B = window.BW;
+  var msg = document.getElementById("case-brief-msg");
+  var n = caseNarrative();
+  if (!B || !B.brief || !n || !msg) return;
+
+  var b = B.brief(n, { title: caseBriefTitle() });
+  var done = function(said){ msg.textContent = said; };
+
+  /* The promise is handed back. Nothing in the page awaits it — the action
+     table calls this and moves on — but a function whose whole effect lands
+     a tick later is one a test cannot check without it, and returning it
+     costs nothing. */
+  try {
+    return navigator.clipboard.writeText(b.text).then(function(){
+      done(b.complete
+        ? "Copied. It is a draft: nothing in it has been agreed."
+        : "Copied. It states the position without figures, and says what is missing.");
+    }, function(){ done("The clipboard refused. Select the text and copy it by hand."); });
+  } catch (e) {
+    done("The clipboard is not available in this browser. Select the text and copy it by hand.");
+    return Promise.resolve();
+  }
+}
+
+/* ---- the three things a person can do to it ---- */
+
+function caseSetRole(el){
+  _caseRole = el && el.value ? el.value : null;
+  /* Choosing a role moves the depth to that role's default, and choosing a
+     depth after that keeps it. `specs/05`: a role picks a starting point and
+     the user may override it at any time. */
+  _caseDepth = null;
+  caseRender();
+}
+
+function caseSetDepth(el){
+  _caseDepth = el && el.value ? el.value : null;
+  caseRender();
+}
+
+/**
+ * Confirm one assumption.
+ *
+ * The act that lets a figure appear. It is recorded against this browser like
+ * every other confirmation here, and it confirms an assumption rather than
+ * proving it — the sentence beside it says what was assumed, and ticking it
+ * says somebody read that and stands behind it.
+ */
+function caseConfirm(id){
+  if (!id) return;
+  _caseConfirmed[id] = { by: "this browser", at: new Date().toISOString() };
+  caseRender();
 }
 
 // The negotiation plan. Everything here is computed by src/calc/negotiation.mjs
@@ -3210,6 +3757,11 @@ async function scExportReview(){
         densityUnit:scVal("sc-du")||null,source:scVal("sc-ds")||null}
     });
     _scPackage=await B.buildReviewPackage(snap);
+    /* What it describes, so an export cannot hand over a package for a part
+       that has since changed. */
+    if(_scPackage&&B.staleStamp){
+      _scPackage=Object.assign({},_scPackage,{stamp:B.staleStamp(scDerivedFrom())});
+    }
   }catch(e){
     _scPackage=null;
     host.innerHTML=scErr(String(e.message||e));
@@ -3261,9 +3813,27 @@ function B_DRAFT_LABEL(){
   return (B&&B.DRAFT_LABEL)||"DRAFT — FOR TECHNICAL REVIEW";
 }
 
-/** Save one artifact. The bytes are the ones the manifest hashed. */
+/**
+ * Save one artifact. The bytes are the ones the manifest hashed.
+ *
+ * And they describe the part the package was built from. Change a tolerance
+ * after building it and the engineer receives a package citing a requirement
+ * that no longer exists — which is the failure `specs/04` names, and the
+ * reason this refuses rather than warning.
+ */
 function scSaveArtifact(name){
   if(!_scPackage||!_scPackage.files[name]) return;
+
+  var B=window.BW;
+  if(_scPackage.stamp&&B&&B.staleCheck){
+    var fresh=B.staleCheck(_scPackage.stamp,scDerivedFrom(),{rebuild:"rebuilt"});
+    if(!fresh.usable){
+      var host=document.getElementById("rev-out");
+      if(host)host.innerHTML=scErr(fresh.said+" Build it again before sending it.")+host.innerHTML;
+      return;
+    }
+  }
+
   var text=_scPackage.files[name];
   /* A DXF is not text/markdown. The bytes were right and the label on them
      was wrong, which works on one machine and confuses a CAD tool on another.
@@ -3773,8 +4343,33 @@ function scRun(){
     cost=B.costPlan(plan,scCostEntries(),{currency:scVal("sc-cur")||"GBP",amortiseTooling:Boolean(amort&&amort.checked)});
   }catch(e){ out.innerHTML=scPlanHTML(plan,u)+scErr(String(e.message||e)); return; }
 
-  _scLast={plan:plan,cost:cost};
+  /* Stamped with the part it was worked out for. Without this, adding a
+     pocket and then saving the estimate stores the cost of the part before
+     the pocket, filed under the part after it — and nothing says so, because
+     from the inside nothing is wrong. */
+  _scLast={plan:plan,cost:cost,
+    stamp:(window.BW&&window.BW.staleStamp)?window.BW.staleStamp(scDerivedFrom()):null};
   out.innerHTML=scPlanHTML(plan,u)+scCostHTML(plan,cost)+scAssumptionsHTML(plan,cost);
+}
+
+/**
+ * What the part is, right now, for deciding whether something worked out
+ * earlier still describes it.
+ *
+ * One function rather than the same four reads in each caller, because the
+ * failure this guards against is precisely a caller that checked three of the
+ * four and let the fourth through.
+ */
+function scDerivedFrom(){
+  return {
+    geometry: typeof _scModel!=="undefined" ? _scModel : null,
+    material: {
+      name: scVal("sc-grade")||null,
+      density: scVal("sc-dv")||null,
+      densityUnit: scVal("sc-du")||null
+    },
+    requirements: typeof _scReqs!=="undefined" ? _scReqs : []
+  };
 }
 
 /* ---- rendering. Numbers in, markup out; nothing computed. ---- */
@@ -5791,6 +6386,18 @@ function bcSave(){
   var name=String((document.getElementById("bc-name")||{}).value||"").trim();
   if(!name){msg.innerHTML='<p style="color:var(--bw-danger);font-size:12.5px;margin:0">Give it a name you will recognise on the other page.</p>';return;}
   var id=name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"build-up";
+  /* An estimate is a figure somebody will argue with later, so it must
+     belong to the part it names. `specs/04` requires recalculation rather
+     than a warning, which is why this refuses instead of adding a caption. */
+  if(_scLast.stamp&&B.staleCheck){
+    var fresh=B.staleCheck(_scLast.stamp,scDerivedFrom(),{rebuild:"worked out again"});
+    if(!fresh.usable){
+      msg.innerHTML='<p style="color:var(--bw-danger);font-size:12.5px;margin:0;line-height:1.6">'
+        +ciEsc(fresh.said)+' Recalculate, then save.</p>';
+      return;
+    }
+  }
+
   var rec,saved;
   try{
     rec=B.estimateFrom(_scLast.plan,_scLast.cost,{
@@ -8263,6 +8870,17 @@ registerActions({
   /* adapters: the element, or the event, rather than a string */
   cardKey$event: function (_a, _b, ev) { cardKey(ev, this); },
   copyMinutes$self: function () { copyMinutes(this); },
+  /* The case view. Role and depth read the select they are on; confirming an
+     assumption is named by the attribute rather than by position, so the
+     order of the list cannot change which one gets ticked. */
+  caseSetRole$self: function () { caseSetRole(this); },
+  caseSetDepth$self: function () { caseSetDepth(this); },
+  caseConfirm: function (id) { caseConfirm(id); },
+  caseCopyBrief: function () { caseCopyBrief(); },
+  intakeDescribe: function () { intakeDescribe(); },
+  intakeKey$event: function (_a, _b, ev) { intakeKey(ev); },
+  intakeResume: function (id) { intakeResume(id); },
+  intakeMarkSeen: function () { intakeMarkSeen(); },
   ciCopy$self: function () { ciCopy(this); },
   addQuoteFiles$self: function () { addQuoteFiles(this); },
   loadContractFile$self: function () { loadContractFile(this); },
