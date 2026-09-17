@@ -28,7 +28,7 @@ rendering — and `mount.mjs` loads the calculation engine. They were one inline
 block until the page dropped `unsafe-inline` from its security policy, which
 needed the code out of the markup.
 
-**The source.** 61 modules under `src/`. Calculation modules remain
+**The source.** 62 modules under `src/`. Calculation modules remain
 independent of the browser; the new Studio renderer includes a DOM adapter.
 
 *The arithmetic itself:*

@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 61 |
-| Test files | 0 | 100 |
+| Modules under `src/` | 0 | 62 |
+| Test files | 0 | 101 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -383,6 +383,27 @@ words, and the words are what a reader sees.
 Nothing in it renders. Where and how much of it appears is the projection's
 business, which is what makes "all views use the same facts" something a test
 can check rather than something a team intends.
+
+`src/case/projection.mjs` is the same case shown to different people, and
+it is a selection over the claims and nothing else — it cannot add one,
+reword one, or put back a figure that was withheld. That is what makes
+`specs/05`'s "all views use the same facts" a property a test can check
+rather than an intention a team has: there is one set of facts, and every
+view is a subset of it.
+
+Role and depth are separate switches, as the spec requires. Role picks a
+starting depth and caps the next actions — a junior buyer is given one,
+because three next actions is a list to choose from and that is the thing
+somebody new has no basis for doing yet. Depth decides how much detail. The
+one rule that holds everywhere is that no role at any depth hides a material
+claim, and whether a claim is material is decided by the claim rather than by
+the reader.
+
+Scope reports what is true instead of drawing a control. `specs/05` wants
+scope reflecting permitted team, site and region data; there are no accounts
+here and one browser's cases, so a scope control would filter nothing — and a
+control that appears to restrict what somebody sees while restricting nothing
+is a claim about safety that is not true.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
