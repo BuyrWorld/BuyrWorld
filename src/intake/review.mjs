@@ -126,6 +126,13 @@ export function reviewItem(candidate, { method, document: doc, label = null } = 
       quote: candidate.quote ?? null,
       confidence: candidate.confidence ?? null,
       region: candidate.region ?? null,
+      /* The tolerance printed against this dimension, where one was. It
+         belongs to the evidence rather than to the value: a corrected
+         thickness does not change what the drawing said its limits were, and
+         somebody confirming 10.00 is confirming 10.00 ±0.05 or nothing.
+
+         Null means none was printed, which is not the same as zero. */
+      tolerance: candidate.tolerance ?? null,
       method,
     }),
 

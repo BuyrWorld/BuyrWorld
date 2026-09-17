@@ -4801,7 +4801,19 @@ function exResultHTML(which,r){
       +(c.missingUnit?'<div style="font-size:11.5px;color:var(--bw-warning)">no unit stated</div>':'')
       +'</td>'
       +'<td><input class="bwin" value="'+attrEsc(c.value)+'" data-ex="'+attrEsc(which)+'" data-ex-row="'+i+'" aria-label="'+attrEsc(row.label)+' value"></td>'
-      +'<td>'+(c.unit?ciEsc(c.unit):'<span style="color:var(--bw-warning)">&mdash;</span>')+'</td>'
+      +'<td>'+(c.unit?ciEsc(c.unit):'<span style="color:var(--bw-warning)">&mdash;</span>')
+      /* A tolerance printed against this dimension. Shown beside the value
+         because that is what it governs, and a value confirmed without its
+         limits is half a requirement. An unreadable one is shown as written:
+         a geometric control is a real requirement and a reviewer reading it
+         beats this reading it wrongly. */
+      +(c.tolerance
+        ?'<div style="font-size:11.5px;margin-top:3px;color:'
+          +(c.tolerance.readable?'var(--bw-muted)':'var(--bw-warning)')+'" title="'
+          +attrEsc(c.tolerance.said)+'">'+ciEsc(c.tolerance.printed)
+          +(c.tolerance.readable?'':' &mdash; not read as limits')+'</div>'
+        :'')
+      +'</td>'
       +'<td class="n">'+c.page+'</td>'
       +'<td style="font-family:monospace;font-size:11.5px;color:var(--bw-muted)">'+ciEsc(c.quote)+'</td>'
       +'<td><span class="bw-status bw-status--'+chip(c.confidence)+'">'+ciEsc(c.confidence)+'</span></td>'

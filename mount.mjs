@@ -18,6 +18,10 @@
            withinLimits as fileWithinLimits, HANDLING as FILE_HANDLING,
            LIMITS as FILE_LIMITS, HEAD_BYTES } from "./src/intake/file-router.mjs";
   import * as viewer from "./src/intake/viewer.mjs";
+  import { readTolerance, asTolerance, saidPlainly as toleranceSaid,
+           kindOf as toleranceKind, verificationOf as toleranceVerification,
+           FORM as TOLERANCE_FORM, APPLIES as TOLERANCE_APPLIES
+         } from "./src/intake/read-tolerance.mjs";
   import { readingsFrom, droppedSaid, downscaleTo, SAID as VISION_SAID,
            CONSENT_SAID, CONSENT_CHOICES, PROMPT_VERSION as VISION_PROMPT_VERSION
          } from "./src/intake/vision-read.mjs";
@@ -104,6 +108,8 @@
   import { renderDecisionPackHTML } from "./src/render/decision-pack-html.mjs";
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { identifyFile, fileNextStep, fileWithinLimits,
+                readTolerance, asTolerance, toleranceSaid, toleranceKind,
+                toleranceVerification, TOLERANCE_FORM, TOLERANCE_APPLIES,
                 readingsFrom, droppedSaid, downscaleTo, VISION_SAID, findConflicts,
                 CONSENT_SAID, CONSENT_CHOICES, VISION_PROMPT_VERSION,
                 jobSubmission, submitExtraction, resultApplicable, resultAsComparison,

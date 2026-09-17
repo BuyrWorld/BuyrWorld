@@ -942,3 +942,59 @@ describe("several pages read separately", () => {
     assert.match(r.why, /in the form asked for/);
   });
 });
+
+/* --------------------------------------------------------- tolerances shown */
+
+describe("a tolerance reaches the table it was read for", () => {
+  /** Render one candidate carrying a tolerance, the way a vision read does. */
+  function rowFor(tolerance) {
+    const r = {
+      filename: "d.jpg", target: EX_TARGET.DRAWING,
+      candidates: [{
+        field: "thickness", label: "Thickness", value: "10.00", unit: "mm",
+        page: 1, quote: "THICKNESS: 10.00 +/-0.05 mm", confidence: EX_CONFIDENCE.RECOGNISED,
+        state: "proposed", confirmedBy: null, missingUnit: false, flag: false,
+        tolerance,
+      }],
+      coverage: { pagesProvided: 1, pagesWithText: 1, pagesInDocument: 1, complete: true,
+                  unread: 0, withoutText: 0 },
+      conflicts: [], blockers: [], method: "read from a picture",
+    };
+    sandbox._exState.scx = r;
+    vm.runInContext('out_html = exResultHTML("scx", _exState.scx);', sandbox);
+    return sandbox.out_html;
+  }
+
+  test("a readable tolerance is shown beside the value it governs", () => {
+    /* It was read and then lost at the queue once already — carried into the
+       evidence but never rendered would be the same defect one seam later. */
+    const out = rowFor({ printed: "+/-0.05", form: "symmetric", readable: true,
+                         said: "Plus or minus 0.05." });
+    assert.match(out, /\+\/-0\.05/);
+    assert.match(out, /title="Plus or minus 0\.05\."/);
+  });
+
+  test("an unreadable one is shown as written, and marked as not read", () => {
+    /* A geometric control is a real requirement. Hiding it because this
+       cannot parse it loses a requirement; showing it as limits invents one. */
+    const out = rowFor({ printed: "flatness 0.05", form: "unreadable", readable: false,
+                         said: "This is a geometric control, not a size tolerance." });
+    assert.match(out, /flatness 0\.05/);
+    assert.match(out, /not read as limits/);
+  });
+
+  test("a dimension with no tolerance shows nothing rather than a dash", () => {
+    /* Missing is not zero and it is not an empty tolerance either. A blank
+       where a tolerance would go says "none printed"; a dash reads as one. */
+    const out = rowFor(null);
+    assert.equal(/not read as limits/.test(out), false);
+  });
+
+  test("a tolerance carrying markup cannot break out of the row", () => {
+    const out = rowFor({ printed: '+/-0.05"><img src=x onerror=alert(1)>', form: "unreadable",
+                         readable: false, said: 'x" onmouseover="alert(1)' });
+    assert.equal(/<img src=x/.test(out), false);
+    assert.equal(/onmouseover="alert/.test(out), false);
+    assert.match(out, /&quot;|&lt;/);
+  });
+});

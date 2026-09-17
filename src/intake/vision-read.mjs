@@ -32,6 +32,8 @@
  *     photograph can misread a photograph.
  */
 
+import { readTolerance, saidPlainly as toleranceSaid, APPLIES } from "./read-tolerance.mjs";
+
 /**
  * The only fields anything may be proposed into.
  *
@@ -61,13 +63,14 @@ export const FIELDS = Object.freeze({
   elongation: "Elongation",
   heatTreatment: "Heat treatment called out",
   grainDirection: "Grain direction is specified",
+  generalTolerance: "General tolerance (title block)",
   pagesDeclared: "Pages the document declares",
 });
 
 const KNOWN = new Set(Object.keys(FIELDS));
 
 /** Bumped whenever the instruction changes, so a stored reading says which. */
-export const PROMPT_VERSION = "document-read/2026-09-16";
+export const PROMPT_VERSION = "document-read/2026-09-17";
 
 /** Why a proposal was dropped. Reported rather than silently filtered. */
 export const DROPPED = Object.freeze({
@@ -76,6 +79,7 @@ export const DROPPED = Object.freeze({
   NO_QUOTE: "no printed text quoted for it",
   QUOTE_ABSENT: "the quoted text does not contain the value",
   MEASURED: "described as measured from the image rather than printed on it",
+  TOLERANCE_ABSENT: "the tolerance is not in the text quoted for it",
   TOO_LONG: "longer than any value on a drawing",
 });
 
@@ -108,17 +112,25 @@ export function instruction(target = "drawing") {
     fields,
     "",
     "Reply with JSON only, no prose before or after, in this shape:",
-    '{"candidates":[{"field":"thickness","value":"5","unit":"mm","quote":"THICKNESS 5 mm",',
-    '"legible":"clear"}]}',
+    '{"candidates":[{"field":"thickness","value":"5","unit":"mm","tolerance":"+/-0.05",',
+    '"quote":"THICKNESS 5 +/-0.05 mm","legible":"clear"}]}',
     "",
-    "  field    — one of the names above, exactly",
-    "  value    — the characters as printed, not tidied or converted",
-    "  unit     — as printed, or null if no unit is printed next to it",
-    "  quote    — the printed text you read it from, copied exactly",
-    '  legible  — "clear", "faint" or "uncertain"',
+    "  field     — one of the names above, exactly",
+    "  value     — the characters as printed, not tidied or converted",
+    "  unit      — as printed, or null if no unit is printed next to it",
+    "  tolerance — the tolerance printed against THIS dimension, copied exactly, or null.",
+    "              Only where it is printed against the dimension itself. A tolerance in",
+    "              the title block is not this — report that once as generalTolerance.",
+    '  quote     — the printed text you read it from, copied exactly. If you give a',
+    "              tolerance, the quote must contain it as well as the value.",
+    '  legible   — "clear", "faint" or "uncertain"',
     "",
     "Omit any field you cannot read. An omitted field is the correct answer for anything",
     "not on the document, and a guess is worse than a gap. Report nothing you did not read.",
+    "",
+    "Never work a tolerance out. If a dimension has none printed against it, its tolerance",
+    "is null — do not carry one down from the title block, and do not read a geometric",
+    "control symbol as a size tolerance.",
   ].join("\n");
 }
 
@@ -181,13 +193,45 @@ export function checkCandidate(raw) {
   const unit = raw?.unit === null || raw?.unit === undefined ? null : String(raw.unit).trim() || null;
   const legible = ["clear", "faint", "uncertain"].includes(raw?.legible) ? raw.legible : "uncertain";
 
+  /* A tolerance rides on the dimension it governs, because that is where it
+     is printed and what it means. It is held to the same evidence rule as the
+     value: if the quoted text does not contain it, it was not read off the
+     drawing.
+
+     The dimension is not lost for it. A good thickness with an invented
+     tolerance is still a good thickness — the tolerance is dropped, the drop
+     is reported, and the reading stands. */
+  const toleranceText = raw?.tolerance === null || raw?.tolerance === undefined
+    ? null : String(raw.tolerance).trim() || null;
+
+  let tolerance = null;
+  let toleranceDropped = null;
+  if (toleranceText) {
+    if (!flat(quote).includes(flat(toleranceText))) {
+      toleranceDropped = Object.freeze({ field, why: DROPPED.TOLERANCE_ABSENT });
+    } else {
+      const read = readTolerance(toleranceText);
+      /* Unreadable is not absent, and the two stay apart: an unreadable one
+         is kept as written so a person can read it, which is what specs/03
+         asks for GD&T and anything else outside the parser. */
+      tolerance = Object.freeze({
+        printed: toleranceText,
+        form: read.form,
+        readable: read.ok,
+        said: toleranceSaid(read, APPLIES.MARKED),
+      });
+    }
+  }
+
   return {
     ok: true,
+    droppedTolerance: toleranceDropped,
     candidate: Object.freeze({
       field,
       label: FIELDS[field],
       value,
       unit,
+      tolerance,
       quote: quote.slice(0, MAX_QUOTE),
       page: Number(raw?.page) || 1,
       /* Legibility is the model's own account of the picture, and is shown as
@@ -222,6 +266,9 @@ export function readingsFrom(text) {
   for (const raw of parsed.data.candidates) {
     const checked = checkCandidate(raw);
     if (!checked.ok) { dropped.push(Object.freeze({ field: checked.field, why: checked.why })); continue; }
+    /* A tolerance that could not show its evidence, reported beside the
+       reading that survived it. */
+    if (checked.droppedTolerance) dropped.push(checked.droppedTolerance);
     /* One reading per field. A second is a disagreement, and choosing between
        them here would be exactly the silent resolution this avoids
        everywhere else. */

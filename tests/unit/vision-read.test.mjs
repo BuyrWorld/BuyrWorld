@@ -337,3 +337,81 @@ describe("how large it is sent", () => {
     assert.ok(p.height >= 1, "the short side rounded away to nothing");
   });
 });
+
+/* ------------------------------------------------------------- tolerances */
+
+describe("a tolerance rides on the dimension it governs", () => {
+  const withTol = (tol, quote) => reply({
+    field: "thickness", value: "10.00", unit: "mm", tolerance: tol,
+    quote, legible: "clear",
+  });
+
+  test("a printed tolerance comes through with the dimension", () => {
+    const c = readingsFrom(withTol("+/-0.05", "THICKNESS: 10.00 +/-0.05 mm")).candidates[0];
+    assert.equal(c.value, "10.00");
+    assert.equal(c.tolerance.printed, "+/-0.05");
+    assert.equal(c.tolerance.readable, true);
+    assert.equal(c.tolerance.form, "symmetric");
+  });
+
+  test("a dimension with no tolerance printed has none, not zero", () => {
+    /* Missing is not zero. A tolerance of zero is an impossible requirement,
+       and defaulting to one would put it on every unmarked dimension. */
+    const c = readingsFrom(reply(good())).candidates[0];
+    assert.equal(c.tolerance, null);
+  });
+
+  test("a tolerance not in the quoted text is dropped, and the dimension survives", () => {
+    /* The same evidence rule as the value. A good thickness with an invented
+       tolerance is still a good thickness — losing the whole reading over it
+       would cost more than it saves. */
+    const r = readingsFrom(withTol("+/-0.05", "THICKNESS: 10.00 mm"));
+    assert.equal(r.candidates.length, 1);
+    assert.equal(r.candidates[0].value, "10.00");
+    assert.equal(r.candidates[0].tolerance, null);
+    assert.equal(r.dropped[0].why, DROPPED.TOLERANCE_ABSENT);
+  });
+
+  test("an unreadable tolerance is kept as written rather than discarded", () => {
+    /* specs/03: GD&T outside the parser is a raw review item. Shown, and not
+       turned into limits. */
+    const c = readingsFrom(withTol("flatness 0.05", "THICKNESS: 10.00 mm flatness 0.05"))
+      .candidates[0];
+    assert.equal(c.tolerance.readable, false);
+    assert.equal(c.tolerance.printed, "flatness 0.05");
+    assert.match(c.tolerance.said, /geometric control/);
+  });
+
+  test("the instruction forbids carrying one down from the title block", () => {
+    /* The mistake that would look most like helpfulness: applying the general
+       tolerance to every dimension that has none of its own, which is a
+       question about the drawing rather than about the text. */
+    assert.match(instruction(), /Never work a tolerance out/);
+    assert.match(instruction(), /do not carry one down from the title block/);
+    assert.match(instruction(), /do not read a geometric\ncontrol symbol as a size tolerance/);
+  });
+
+  test("the general tolerance is its own field, reported once", () => {
+    assert.equal(FIELDS.generalTolerance, "General tolerance (title block)");
+    assert.match(instruction(), /A tolerance in\n.*the title block is not this — report that once as generalTolerance/);
+
+    const c = readingsFrom(reply({ field: "generalTolerance", value: "ISO 2768-m", unit: null,
+      quote: "GENERAL TOLERANCE: ISO 2768-m", legible: "clear" })).candidates[0];
+    assert.equal(c.field, "generalTolerance");
+    assert.equal(c.value, "ISO 2768-m");
+  });
+
+  test("a general tolerance is not marked as missing a unit", () => {
+    /* It is a class or a deviation, not a measurement of the part, so the
+       missing-unit warning would be noise on every drawing that has one. */
+    const c = readingsFrom(reply({ field: "generalTolerance", value: "ISO 2768-m", unit: null,
+      quote: "GENERAL TOLERANCE: ISO 2768-m", legible: "clear" })).candidates[0];
+    assert.equal(c.missingUnit, false);
+  });
+
+  test("the tolerance still has to be in the quote even when the value is", () => {
+    const r = readingsFrom(withTol("+/-0.99", "THICKNESS: 10.00 +/-0.05 mm"));
+    assert.equal(r.candidates[0].tolerance, null);
+    assert.equal(r.dropped.length, 1);
+  });
+});

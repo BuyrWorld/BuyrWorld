@@ -345,3 +345,47 @@ describe("the queue", () => {
     assert.throws(() => { "use strict"; i.evidence.value = "99"; }, TypeError);
   });
 });
+
+/* -------------------------------------------------------------- tolerances */
+
+describe("a tolerance travels with the reading it belongs to", () => {
+  test("it reaches the evidence rather than stopping at the seam", () => {
+    /* It did stop here. The vision route read a tolerance, built a candidate
+       carrying it, and `reviewItem` copied a fixed list of fields that did
+       not include it — so a feature that worked end to end in its own tests
+       lost its answer at the handover. Sixth time this shape has turned up. */
+    const i = reviewItem(candidate({
+      tolerance: { printed: "+/-0.05", form: "symmetric", readable: true, said: "Plus or minus 0.05." },
+    }), { method: METHOD.VISION, document: DOC });
+
+    assert.ok(i.evidence.tolerance, "the tolerance was dropped on the way in");
+    assert.equal(i.evidence.tolerance.printed, "+/-0.05");
+    assert.equal(i.evidence.tolerance.readable, true);
+  });
+
+  test("no tolerance printed is null, not zero", () => {
+    assert.equal(item().evidence.tolerance, null);
+  });
+
+  test("correcting the value does not change what the drawing said its limits were", () => {
+    /* Somebody confirming 10.00 is confirming 10.00 ±0.05 or nothing, and a
+       correction to the nominal is not a statement about the tolerance. */
+    const i = reviewItem(candidate({
+      value: "10.00",
+      tolerance: { printed: "+/-0.05", form: "symmetric", readable: true, said: "Plus or minus 0.05." },
+    }), { method: METHOD.VISION, document: DOC });
+
+    const fixed = correct(i, { value: "10.05" }, "a buyer");
+    assert.equal(fixed.value, "10.05");
+    assert.equal(fixed.evidence.tolerance.printed, "+/-0.05");
+    assert.equal(fixed.evidence.value, "10.00");
+  });
+
+  test("an unreadable tolerance is carried too, because it is still evidence", () => {
+    const i = reviewItem(candidate({
+      tolerance: { printed: "flatness 0.05", form: "unreadable", readable: false, said: "…" },
+    }), { method: METHOD.VISION, document: DOC });
+    assert.equal(i.evidence.tolerance.readable, false);
+    assert.equal(i.evidence.tolerance.printed, "flatness 0.05");
+  });
+});

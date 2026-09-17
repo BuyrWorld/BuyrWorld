@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 58 |
-| Test files | 0 | 95 |
+| Modules under `src/` | 0 | 59 |
+| Test files | 0 | 96 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -325,6 +325,21 @@ only three things are read off the request — the image, its type, and whether
 it is a drawing or a certificate. Nothing else the caller sends reaches the
 model. Telemetry is counts and statuses only; the payload is somebody's
 drawing, and the audit's critical finding was logged prompt content.
+
+`src/intake/read-tolerance.mjs` reads a tolerance off a drawing. The exact
+side already existed — `requirements.mjs` reduces three notations to one band
+in nanometres, which is why one thou and a tenth of a thou survive in the
+last place — so this is only the reading, and mostly the refusing.
+
+Two refusals matter more than the parsing. A general title-block tolerance is
+not applied to anything: which dimensions it governs is a question about the
+drawing, not about the text, and answering it here would put limits on
+features nobody checked. And a class is not a number — "ISO 2768-m" cites a
+table this product does not carry, and a deviation remembered from one would
+be the most plausible wrong figure it could produce, so the citation is
+recorded as unverified and the limits are not. A geometric control is kept as
+written rather than read into limits, because the number beside a flatness
+symbol is a zone and not a deviation from a nominal.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
