@@ -367,6 +367,15 @@ var PILLAR_WORDS=["No","One","Two","Three","Four","Five","Six","Seven","Eight","
   intro.textContent=(PILLAR_WORDS[n]||String(n))+" ways in, depending on the job in front of you.";
 })();
 
+/* The task band above them. Drawn once at load: the routes do not change, and
+   the resumable list is re-drawn whenever saved work does. */
+(function(){
+  if (typeof intakeRenderRoutes === "function") {
+    try { intakeRenderRoutes(); intakeRenderResume(); }
+    catch (e) { console.error("The intake band did not draw:", e && e.message); }
+  }
+})();
+
 document.getElementById("pillars").innerHTML=PILLARS.map(([t,d,_ic,icon,dest])=>`
 <div class="card glow-hover" role="button" tabindex="0" data-key="cardKey$event" style="cursor:pointer" data-do="go" data-a="${dest}">
   <svg viewBox="0 0 24 24" aria-hidden="true" style="width:26px;height:26px;stroke:var(--lime);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;margin-bottom:12px">${icon}</svg>
@@ -1108,6 +1117,122 @@ function defCalc(){
   }
 }
 
+
+
+/* ------------------------------------------------- the task-led way in */
+
+/**
+ * The five routes, as cards.
+ *
+ * The one that is not ready is shown, and shown as not ready. Leaving it out
+ * would be tidier and would mean somebody with a late delivery finds nothing
+ * and concludes the product has no opinion about it — when the truth is that
+ * it has no engine for it, which is a different thing and worth saying.
+ */
+function intakeRenderRoutes(){
+  var host = document.getElementById("intake-routes");
+  var B = window.BW;
+  if (!host) return;
+  if (!B || !B.INTAKE_ROUTES) { host.innerHTML = ""; return; }
+
+  host.innerHTML = '<div class="grid3">' + B.INTAKE_ROUTES.map(function(r){
+    var body = '<div class="eyebrow" style="margin-bottom:6px">' + ciEsc(r.title) + '</div>'
+      + '<p style="color:var(--muted);font-size:13px;line-height:1.6;margin:0 0 10px">'
+      + ciEsc(r.said) + '</p>';
+
+    if (r.note) {
+      body += '<p style="color:var(--muted);font-size:11.5px;line-height:1.5;margin:0 0 10px">'
+        + ciEsc(r.note) + '</p>';
+    }
+
+    if (r.ready) {
+      body += '<button class="bw-act bw-act-secondary" style="margin:0" data-do="go" data-a="'
+        + attrEsc(r.page) + '">Open</button>';
+    } else {
+      body += '<p style="color:var(--bw-warning);font-size:11.5px;line-height:1.55;margin:0">'
+        + ciEsc(r.whyNot) + '</p>';
+    }
+
+    return '<div class="card"' + (r.ready ? '' : ' style="opacity:.75"') + '>' + body + '</div>';
+  }).join("") + '</div>';
+}
+
+/**
+ * Where a described problem goes.
+ *
+ * It offers rather than navigates. Sending somebody straight to a page on one
+ * rule firing would be the confident wrong answer this is built to avoid, and
+ * the cost of being wrong is highest for the person who cannot yet tell they
+ * are in the wrong tool.
+ */
+function intakeDescribe(){
+  var host = document.getElementById("intake-answer");
+  var box = document.getElementById("intake-say");
+  var B = window.BW;
+  if (!host || !box || !B || !B.routeFor) return;
+
+  var r = B.routeFor(box.value);
+  var body = '<p style="margin:0 0 8px;font-size:12.5px;color:var(--bw-body);line-height:1.6">'
+    + ciEsc(r.why) + '</p>';
+
+  if (r.matched.length) {
+    body += '<div style="display:flex;gap:8px;flex-wrap:wrap">' + r.matched.map(function(m){
+      return m.ready
+        ? '<button class="bw-act bw-act-primary" style="margin:0" data-do="go" data-a="'
+          + attrEsc(m.page) + '">' + ciEsc(m.title) + '</button>'
+        : '<span class="bw-status bw-status--derived">' + ciEsc(m.title) + ' — not in this build</span>';
+    }).join("") + '</div>';
+  }
+
+  var unready = B.saidAboutUnready(r);
+  if (unready) {
+    body += '<p style="margin:8px 0 0;font-size:11.5px;color:var(--bw-warning);line-height:1.55">'
+      + ciEsc(unready) + '</p>';
+  }
+
+  host.innerHTML = '<div class="bw-panel" style="margin:0">' + body + '</div>';
+}
+
+/** Enter in the box does what the button does. */
+function intakeKey(e){
+  if (e && e.key === "Enter") intakeDescribe();
+}
+
+/**
+ * Work to come back to.
+ *
+ * Three at most, and none at all when there is none — an empty "recent work"
+ * heading on a first visit is a product telling somebody they have forgotten
+ * something they never did.
+ */
+function intakeRenderResume(){
+  var host = document.getElementById("intake-resume");
+  var B = window.BW;
+  if (!host) return;
+  if (!B || !B.resumable || !B.loadScenarios) { host.innerHTML = ""; return; }
+
+  var items;
+  try { items = B.resumable(B.loadScenarios(null)); }
+  catch (e) { host.innerHTML = ""; return; }
+
+  if (!items.length) { host.innerHTML = ""; return; }
+
+  host.innerHTML = '<div class="eyebrow" style="margin-bottom:10px">Pick up where you left off</div>'
+    + '<div class="grid3">' + items.map(function(it){
+      return '<div class="card">'
+        + '<div style="color:var(--bw-text);font-size:14px;margin-bottom:4px">' + ciEsc(it.title) + '</div>'
+        + '<p style="color:var(--muted);font-size:12px;line-height:1.6;margin:0 0 10px">'
+        + ciEsc(B.resumableSaid(it)) + '</p>'
+        + '<button class="bw-act bw-act-secondary" style="margin:0" data-do="intakeResume" data-a="'
+        + attrEsc(it.id) + '">Open it</button></div>';
+    }).join("") + '</div>';
+}
+
+/** Open a saved scenario from the home page. */
+function intakeResume(id){
+  go("shouldcost");
+  if (typeof scOpenDraft === "function") scOpenDraft(id);
+}
 
 /* ------------------------------------------------- the case view */
 
@@ -8668,6 +8793,9 @@ registerActions({
   caseSetDepth$self: function () { caseSetDepth(this); },
   caseConfirm: function (id) { caseConfirm(id); },
   caseCopyBrief: function () { caseCopyBrief(); },
+  intakeDescribe: function () { intakeDescribe(); },
+  intakeKey$event: function (_a, _b, ev) { intakeKey(ev); },
+  intakeResume: function (id) { intakeResume(id); },
   ciCopy$self: function () { ciCopy(this); },
   addQuoteFiles$self: function () { addQuoteFiles(this); },
   loadContractFile$self: function () { loadContractFile(this); },

@@ -665,9 +665,24 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <div class="ticker" id="ticker"></div>
   </div>
 
+  <!-- The task-led way in. specs/05 asks the page to lead with this; it sits
+       after the hero rather than replacing it, because what the public home
+       page opens with is a decision for whoever owns the site. Everything in
+       it is built in app.js, so this is the whole of its markup. -->
   <section class="sec"><div class="wrap">
     <div class="eyebrow" style="margin-bottom:10px">Start here</div>
-    <h2 style="font-size:34px;margin-bottom:10px">What do you need today?</h2>
+    <h2 style="font-size:34px;margin-bottom:10px">What are we solving today?</h2>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:20px;line-height:1.6">Describe it in your own words, or pick one. Nothing is uploaded and nothing is guessed at &mdash; if what you type does not match, it says so rather than sending you somewhere.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <input class="bwin" id="intake-say" style="flex:1;min-width:280px" placeholder="A supplier wants a 9% increase" aria-label="Describe what you are solving" data-key="intakeKey$event">
+      <button class="bw-act bw-act-primary" style="margin:0" data-do="intakeDescribe">Find where this goes</button>
+    </div>
+    <div id="intake-answer" style="margin-bottom:18px"></div>
+    <div id="intake-routes" style="margin-bottom:28px"></div>
+    <div id="intake-resume" style="margin-bottom:34px"></div>
+
+    <div class="eyebrow" style="margin-bottom:10px">Or by capability</div>
+    <h2 style="font-size:24px;margin-bottom:10px">What do you need today?</h2>
     <p id="pillars-intro" style="color:var(--muted);max-width:640px;margin-bottom:28px;line-height:1.6"></p>
     <div class="grid4" id="pillars" style="margin-bottom:46px"></div>
     <div class="eyebrow" style="margin-bottom:10px">Explore everything</div>

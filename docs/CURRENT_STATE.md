@@ -113,7 +113,7 @@ Every figure below came from the working tree on the date above.
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
 | Modules under `src/` | 0 | 66 |
-| Test files | 0 | 106 |
+| Test files | 0 | 107 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -502,6 +502,19 @@ where two match it offers both — a late delivery and a price increase in one
 sentence is one problem with two halves, and picking one is picking wrong
 half the time. Nothing is ranked, because a score here would be the
 confidence percentage `specs/06` forbids wearing a different hat.
+
+The task band on the home page is where those routes are shown. It sits
+after the hero rather than replacing it: `specs/05` asks the page to lead
+with "What are we solving today?", and what a public home page opens with is
+a decision for whoever owns the site rather than one to take while
+implementing a spec. Sixteen lines of markup; everything in it is built in
+app.js.
+
+Describing a problem offers buttons rather than navigating. Matching one rule
+is not certainty, and sending somebody straight to a page on it is the
+confident wrong answer the router exists to avoid. Nothing saved shows
+nothing at all — an empty "recent work" heading on a first visit is a product
+telling somebody they have forgotten something they never did.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
