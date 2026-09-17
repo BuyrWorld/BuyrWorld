@@ -73,7 +73,7 @@ export const WEIGHT = Object.freeze({
  * an unmet need shows neither the figure nor a hedge — it shows the need.
  */
 export function claim({
-  section, said, figure = null, needs = [], evidence = [],
+  section, said, figure = null, needs, evidence = [],
   weight = WEIGHT.NORMAL, id = null,
 } = {}) {
   if (!SECTIONS.includes(section)) {
@@ -82,13 +82,23 @@ export function claim({
   if (!said || !String(said).trim()) {
     throw new TypeError("A claim has to say something.");
   }
-  if (figure !== null && needs.length === 0) {
-    /* A figure that depends on nothing is a figure nobody has to confirm,
-       which is the exact hole `specs/05` closes. If it genuinely rests on
-       nothing, say so by naming no figure. */
+  /* A figure has to say what it depends on — and saying "nothing" is a
+   * different statement from not saying.
+   *
+   * The first version of this refused an empty list, on the reasoning that a
+   * figure depending on nothing is a figure nobody has to confirm. That is
+   * wrong for the case it was supposed to protect: a cost bridge whose every
+   * driver is evidenced genuinely has nothing outstanding, and its figures
+   * should show. What the rule is actually for is stopping a producer from
+   * forgetting, so it is silence that is refused rather than emptiness —
+   * which is the same blank/unknown/zero distinction the rest of this
+   * codebase turns on. */
+  if (figure !== null && needs === undefined) {
     throw new TypeError(
-      "A figure has to name the inputs it depends on, or it cannot be withheld when they are missing.");
+      "A figure has to say what it depends on. Pass needs: [] if it genuinely depends on "
+      + "nothing — that is a different statement from not saying.");
   }
+  const dependsOn = needs ?? [];
   /* A figure written into the sentence as well survives being withheld.
    *
    * The mechanism above removes `figure`; it cannot remove "about £1,250" from
@@ -120,7 +130,7 @@ export function claim({
     section,
     said: String(said).trim(),
     figure: figure === null ? null : Object.freeze({ ...figure }),
-    needs: Object.freeze([...needs]),
+    needs: Object.freeze([...dependsOn]),
     evidence: Object.freeze(evidence.map((e) => Object.freeze({ ...e }))),
     weight,
   });

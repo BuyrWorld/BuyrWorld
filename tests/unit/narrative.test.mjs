@@ -43,13 +43,26 @@ describe("a claim", () => {
     assert.throws(() => claim({ section: SECTION.HAPPENED, said: "   " }), /say something/);
   });
 
-  test("a figure has to name what it depends on", () => {
-    /* The hole this closes: a figure that depends on nothing is a figure
-       nobody has to confirm, and it would show on an empty case. */
+  test("a figure has to say what it depends on", () => {
+    /* The hole this closes is a producer forgetting, which would put a figure
+       on screen that nobody ever has to confirm. */
     assert.throws(
       () => claim({ section: SECTION.MATTERS, said: "It costs this much",
                     figure: { amount: "1250.00", currency: "GBP" } }),
-      /name the inputs it depends on/);
+      /say what it depends on/);
+  });
+
+  test("and depending on nothing is a thing it may say", () => {
+    /* An earlier version refused an empty list, which is wrong for the case
+       the rule exists to protect: a cost bridge whose every driver is
+       evidenced has nothing outstanding, and its figures should show. Silence
+       is refused; emptiness is an answer. The same blank/unknown/zero
+       distinction the rest of this codebase turns on. */
+    const c = claim({ section: SECTION.MATTERS, said: "It costs this much.", needs: [],
+                      figure: { amount: "1250.00", currency: "GBP" } });
+    assert.equal(c.figure.amount, "1250.00");
+    assert.equal(resolve(c, new Set()).figure.amount, "1250.00",
+      "a figure depending on nothing was withheld anyway");
   });
 
   test("a claim with no figure needs nothing", () => {

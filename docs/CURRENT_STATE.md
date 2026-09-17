@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 62 |
-| Test files | 0 | 101 |
+| Modules under `src/` | 0 | 63 |
+| Test files | 0 | 102 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -404,6 +404,27 @@ scope reflecting permitted team, site and region data; there are no accounts
 here and one browser's cases, so a scope control would filter nothing — and a
 control that appears to restrict what somebody sees while restricting nothing
 is a claim about safety that is not true.
+
+`src/case/from-quote.mjs` is the first producer — a supplier's price
+increase, said as a case. `cost-bridge.mjs` already decomposed a claimed
+increase into the part the drivers warrant and the part nothing supports;
+what was missing was anything turning that into the five sections a person
+reads. So it arranges and does not calculate: every figure it carries came
+out of the bridge in the bridge's own exact types, and a test asserts no
+arithmetic helper is even imported.
+
+The rule it exists to enforce is the softer neighbour of one already here.
+The bridge refuses to let an `ai-inferred` value into arithmetic at all. This
+handles the figure that is arithmetically sound and rests on a share of unit
+cost somebody assumed rather than sourced — real, and showing it as settled
+is how an assumption becomes a negotiating position. Those figures wait on
+every assumption `assumptionsToVerify` found, and partial confirmation is not
+confirmation.
+
+Two things are marked material, so no role at any depth can hide them: the
+part of the request no driver supports, and any share of unit cost nobody has
+attributed to a driver at all — no movement has been claimed against it and
+none ruled out either.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
