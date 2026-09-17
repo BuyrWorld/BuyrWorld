@@ -341,3 +341,111 @@ export function methodSaid(item) {
 
 /** The audit trail, oldest first, for one item. */
 export const history = (item) => item.revisions;
+
+/* -------------------------------------------------------- coming back */
+
+/**
+ * Rebuild a stored decision, or refuse it.
+ *
+ * A queue that survives a refresh has to come back from `localStorage`, and
+ * `localStorage` is a text file the person using the browser can edit. That
+ * is not a privilege problem — somebody who can write their own storage could
+ * equally type the value into the form — but it is an integrity one, and the
+ * rule this product already follows applies: withhold rather than misread.
+ *
+ * The rule that matters: **a decision has to carry the record of being made.**
+ * `confirm`, `correct`, `markUnknown` and `reject` all append a revision
+ * naming who and when, and refuse without one. A stored item claiming to be
+ * confirmed with an empty history was not confirmed by anybody — it is an
+ * assertion wearing a decision's clothes, and treating it as usable would let
+ * an unattributed value into arithmetic through the back door the front door
+ * is bolted against.
+ *
+ * Such an item is not discarded. The reading is real and worth keeping; it
+ * comes back proposed, which is where every reading starts, and says so.
+ */
+export function reviveItem(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  if (!raw.field || !raw.evidence || typeof raw.evidence !== "object") return null;
+  if (!raw.document || !raw.document.filename) return null;
+  if (!KNOWN_METHODS.has(raw.evidence.method)) return null;
+
+  const revisions = Array.isArray(raw.revisions) ? raw.revisions : [];
+  const attributed = revisions.filter(
+    (r) => r && typeof r === "object" && r.by && r.at && r.action in ACTION_TO_DISPOSITION);
+
+  const claimed = Object.values(DISPOSITION).includes(raw.disposition)
+    ? raw.disposition : DISPOSITION.PROPOSED;
+
+  /* Any disposition other than proposed is a claim that somebody acted. */
+  const honoured = claimed === DISPOSITION.PROPOSED || attributed.length > 0
+    ? claimed : DISPOSITION.PROPOSED;
+
+  const unattributed = honoured !== claimed;
+
+  return Object.freeze({
+    field: String(raw.field),
+    label: raw.label ? String(raw.label) : String(raw.field),
+    document: Object.freeze({
+      filename: String(raw.document.filename),
+      revision: raw.document.revision ?? null,
+      fingerprint: raw.document.fingerprint ?? null,
+    }),
+    evidence: Object.freeze({
+      value: raw.evidence.value ?? null,
+      unit: raw.evidence.unit ?? null,
+      page: raw.evidence.page ?? null,
+      quote: raw.evidence.quote ?? null,
+      confidence: raw.evidence.confidence ?? null,
+      region: raw.evidence.region ?? null,
+      tolerance: raw.evidence.tolerance ?? null,
+      method: raw.evidence.method,
+    }),
+    disposition: honoured,
+    /* A refused decision loses its value too: the value of a corrected item
+       is the correction, and keeping it while discarding the correction would
+       show a number nobody can account for. */
+    value: unattributed ? (raw.evidence.value ?? null) : (raw.value ?? null),
+    unit: unattributed ? (raw.evidence.unit ?? null) : (raw.unit ?? null),
+    why: unattributed ? null : (raw.why ?? null),
+    revisions: Object.freeze(attributed.map((r) => Object.freeze({
+      action: r.action, by: String(r.by), at: String(r.at),
+      from: r.from ?? null, to: r.to ?? null, why: r.why ?? null,
+    }))),
+    /* Said out loud rather than fixed silently, because somebody who ticked
+       that row deserves to know it is untucked. */
+    restored: unattributed
+      ? "This was stored as decided with no record of who decided it, so it is back to "
+        + "needing a look."
+      : null,
+  });
+}
+
+const ACTION_TO_DISPOSITION = Object.freeze({
+  [ACTION.CONFIRM]: DISPOSITION.CONFIRMED,
+  [ACTION.CORRECT]: DISPOSITION.CORRECTED,
+  [ACTION.UNKNOWN]: DISPOSITION.UNKNOWN,
+  [ACTION.REJECT]: DISPOSITION.REJECTED,
+});
+
+/**
+ * A whole stored queue, with what could not be rebuilt reported.
+ *
+ * Dropping items quietly would make a corrupted record look like a shorter
+ * document.
+ */
+export function reviveItems(list) {
+  const rows = Array.isArray(list) ? list : [];
+  const items = [];
+  const refused = [];
+  for (const raw of rows) {
+    const item = reviveItem(raw);
+    if (item) items.push(item);
+    else refused.push(Object.freeze({ field: raw?.field ?? null }));
+  }
+  return Object.freeze({
+    items: Object.freeze(items),
+    refused: Object.freeze(refused),
+    untucked: Object.freeze(items.filter((i) => i.restored)),
+  });
+}

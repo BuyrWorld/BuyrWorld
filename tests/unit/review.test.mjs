@@ -20,7 +20,7 @@ import {
   reviewItem, queue, carryForward, needsReReview, documentRef, sameDocument,
   confirm, correct, markUnknown, reject,
   usable, confirmedValues, outstanding, sourceConflict, sourceConflicts,
-  stateOf, methodSaid, history,
+  stateOf, methodSaid, history, reviveItem, reviveItems,
   METHOD, ACTION, DISPOSITION,
 } from "../../src/intake/review.mjs";
 
@@ -387,5 +387,147 @@ describe("a tolerance travels with the reading it belongs to", () => {
     }), { method: METHOD.VISION, document: DOC });
     assert.equal(i.evidence.tolerance.readable, false);
     assert.equal(i.evidence.tolerance.printed, "flatness 0.05");
+  });
+});
+
+/* -------------------------------------------------------- surviving a refresh */
+
+/**
+ * Coming back from storage.
+ *
+ * The queue has to survive a refresh or somebody who ticked fourteen rows
+ * loses all of it — and loses the audit trail, which is the thing the queue
+ * exists to keep. It comes back from `localStorage`, which is a text file the
+ * person using the browser can edit.
+ *
+ * That is not a privilege problem: somebody who can write their own storage
+ * could type the value into the form instead. It is an integrity one, and the
+ * rule is the one this product already follows — withhold rather than
+ * misread.
+ */
+describe("a stored decision has to carry the record of being made", () => {
+  const stored = (over = {}) => JSON.parse(JSON.stringify({
+    ...confirm(item(), "a buyer"), ...over,
+  }));
+
+  test("a real one comes back whole", () => {
+    const back = reviveItem(stored());
+    assert.equal(back.disposition, DISPOSITION.CONFIRMED);
+    assert.equal(usable(back), true);
+    assert.equal(back.revisions.length, 1);
+    assert.equal(back.revisions[0].by, "a buyer");
+    assert.equal(back.restored, null);
+  });
+
+  test("a correction comes back with what it replaced still under it", () => {
+    const back = reviveItem(JSON.parse(JSON.stringify(correct(item(), { value: "5.2" }, "a buyer"))));
+    assert.equal(back.value, "5.2");
+    assert.equal(back.evidence.value, "5");
+    assert.equal(back.revisions[0].from, "5");
+  });
+
+  test("confirmed with no history is not confirmed", () => {
+    /* An assertion wearing a decision's clothes. Honouring it would let an
+       unattributed value into arithmetic through the back door the front door
+       is bolted against. */
+    const back = reviveItem(stored({ revisions: [] }));
+    assert.equal(back.disposition, DISPOSITION.PROPOSED);
+    assert.equal(usable(back), false);
+  });
+
+  test("and it says so rather than quietly untucking the row", () => {
+    /* Somebody who ticked that row deserves to know it came back unticked. */
+    const back = reviveItem(stored({ revisions: [] }));
+    assert.match(back.restored, /no record of who decided it/);
+  });
+
+  test("a revision with no name does not count as one", () => {
+    for (const bad of [{ action: "confirm", at: "2026-09-17T00:00:00Z" },
+                       { action: "confirm", by: "x" },
+                       { action: "invented", by: "x", at: "2026-09-17T00:00:00Z" },
+                       "not an object", null]) {
+      const back = reviveItem(stored({ revisions: [bad] }));
+      assert.equal(back.disposition, DISPOSITION.PROPOSED, JSON.stringify(bad));
+    }
+  });
+
+  test("a refused decision loses its value too, back to what was read", () => {
+    /* Keeping a correction's value while discarding the correction would show
+       a number nobody can account for. */
+    const back = reviveItem(JSON.parse(JSON.stringify({
+      ...correct(item(), { value: "9.9" }, "a buyer"), revisions: [],
+    })));
+    assert.equal(back.value, "5", "the correction survived without its record");
+    assert.equal(back.why, null);
+  });
+
+  test("a row that is not a reading at all is refused outright", () => {
+    for (const bad of [null, "text", {}, { field: "thickness" },
+                       { field: "x", evidence: {}, document: { filename: "d.pdf" } }]) {
+      assert.equal(reviveItem(bad), null, JSON.stringify(bad));
+    }
+  });
+
+  test("a reading that does not say which document is refused", () => {
+    /* Otherwise it can never be sent back for review, because there is
+       nothing to compare the next document against — and a decision that
+       cannot be invalidated is one that outlives its evidence. */
+    const orphan = stored();
+    delete orphan.document;
+    assert.equal(reviveItem(orphan), null);
+
+    assert.equal(reviveItem({ ...stored(), document: {} }), null, "a document with no filename");
+    assert.equal(reviveItem({ ...stored(), document: null }), null);
+  });
+
+  test("an unknown method is refused, because it cannot be weighed", () => {
+    const back = reviveItem(stored({ evidence: { ...stored().evidence, method: "telepathy" } }));
+    assert.equal(back, null);
+  });
+
+  test("the document it was decided about comes back with it", () => {
+    /* Without this, reopening a case whose drawing has since changed would
+       trust decisions made about the old one. */
+    const back = reviveItem(stored());
+    assert.equal(sameDocument(back.document, DOC), true);
+  });
+
+  test("and a changed document still sends those rows back", () => {
+    const back = reviveItem(stored());
+    const other = documentRef({ filename: "brk-a-102.pdf", revision: "C", fingerprint: "def" });
+    const fresh = queue(extraction(candidate()),
+      { method: METHOD.RULE, document: other, existing: [back] });
+    assert.equal(fresh[0].disposition, DISPOSITION.PROPOSED);
+  });
+
+  test("an item comes back frozen, like one that never left", () => {
+    /* JSON.parse hands back a mutable object, and everything downstream
+       assumes it cannot be written to. */
+    const back = reviveItem(stored());
+    assert.throws(() => { "use strict"; back.disposition = DISPOSITION.CONFIRMED; }, TypeError);
+    assert.throws(() => { "use strict"; back.evidence.value = "99"; }, TypeError);
+  });
+
+  test("a whole queue reports what it could not rebuild", () => {
+    /* Dropping rows quietly would make a corrupted record look like a shorter
+       document. */
+    const r = reviveItems([stored(), "rubbish", stored({ revisions: [] })]);
+    assert.equal(r.items.length, 2);
+    assert.equal(r.refused.length, 1);
+    assert.equal(r.untucked.length, 1);
+  });
+
+  test("nothing stored is an empty queue, not a failure", () => {
+    for (const nothing of [null, undefined, [], "not a list"]) {
+      assert.deepEqual([...reviveItems(nothing).items], []);
+    }
+  });
+
+  test("a tolerance survives the round trip", () => {
+    const withTol = reviewItem(candidate({
+      tolerance: { printed: "+/-0.05", form: "symmetric", readable: true, said: "Plus or minus 0.05." },
+    }), { method: METHOD.VISION, document: DOC });
+    const back = reviveItem(JSON.parse(JSON.stringify(confirm(withTol, "a buyer"))));
+    assert.equal(back.evidence.tolerance.printed, "+/-0.05");
   });
 });

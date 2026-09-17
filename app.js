@@ -2586,7 +2586,15 @@ function scFormScenario(){
    * scenario() does not know about has to go on after the last withField. */
   return Object.freeze(Object.assign({}, s, {
     model: _scModel || null,
-    requirements: _scReqs.slice()
+    requirements: _scReqs.slice(),
+    /* What was decided about the drawing this scenario was read from. Only
+       the Studio's queue: the certificate path is a different document on a
+       different page, and storing it here would put one case's certificate
+       inside another case's scenario. */
+    /* Guarded like the other crossings between the Studio and the intake
+       state: the two are separate concerns in one file, and a test that
+       loads this function alone should not need the other's variables. */
+    review: (typeof _exReview !== "undefined" && _exReview.scx) ? _exReview.scx.slice() : []
   }));
 }
 
@@ -2609,6 +2617,13 @@ function scApplyScenario(s){
   _scModel = s.model || null;
   _scHistory = _scModel && B.geometryHistory ? B.geometryHistory(_scModel) : null;
 
+  /* The decisions made about the drawing, already rebuilt and checked by the
+     store. A scenario saved before the queue existed comes back with none,
+     rather than inheriting whatever was on screen. */
+  if(typeof _exReview!=="undefined"){
+    _exReview.scx = s.review && s.review.length ? s.review.slice() : null;
+  }
+
   var unit=document.getElementById("sc-unit");
   if(unit&&s.unit)unit.value=s.unit;
   scEntry(s.entry===B.SC_ENTRY.UPLOAD?"upload":"manual");
@@ -2626,6 +2641,19 @@ function scApplyScenario(s){
   scDraftStatus("Reopened " + (s.name||s.id) + "."
     + (s.savedSchema === 1
       ? " It was saved before the part and its requirements were stored, so it has neither."
+      : "")
+    + (s.savedSchema === 2
+      ? " It was saved before the reading decisions were stored, so nothing is ticked."
+      : "")
+    + (s.review && s.review.length
+      ? " " + s.review.length + " reading(s) came back with it."
+      : "")
+    /* An untucked row is one that was stored as decided with no record of who
+       decided it. Saying so beats letting somebody rediscover it by finding a
+       tick missing. */
+    + (s.reviewUntucked && s.reviewUntucked.length
+      ? " " + s.reviewUntucked.length + " need checking again: they were stored as decided "
+        + "with no record of who decided them."
       : ""));
 }
 

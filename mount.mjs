@@ -39,7 +39,7 @@
            confirmedValues, outstanding as reviewOutstanding,
            sourceConflicts, stateOf as reviewStateOf, methodSaid,
            METHOD as REVIEW_METHOD, DISPOSITION as REVIEW_DISPOSITION,
-           history as reviewHistory } from "./src/intake/review.mjs";
+           history as reviewHistory, reviveItems } from "./src/intake/review.mjs";
   import { alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL } from "./src/calc/batna.mjs";
   import { comparablePart, compare, findComparable, priceGap, ATTRIBUTES } from "./src/calc/comparable.mjs";
   import { scanOpportunities, SEVERITY } from "./src/calc/radar.mjs";
@@ -120,7 +120,7 @@
                 reviewConfirm, reviewCorrect, reviewUnknown, reviewReject,
                 confirmedValues, reviewOutstanding, sourceConflicts,
                 reviewStateOf, methodSaid, REVIEW_METHOD, REVIEW_DISPOSITION,
-                reviewHistory,
+                reviewHistory, reviveItems,
                 FILE_HANDLING, FILE_LIMITS, HEAD_BYTES, viewer,
                 costBridge, partialAcceptance, delayEffect, formatPercent,
                 pc: ratioFromPercent, moneyFromDecimal, moneyToDecimalString,

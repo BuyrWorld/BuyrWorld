@@ -257,7 +257,8 @@ coordinate round trip is the thing its tests actually pin down, at every
 rotation. And panning stops at the edges, because a viewer that lets the page
 slide out of sight reads as a failed upload.
 
-`src/intake/review.mjs` is the confirmation queue, and the four answers a
+`src/intake/review.mjs` is the confirmation queue — stored with the scenario
+at schema 3, so it survives a refresh — and the four answers a
 person can give about a reading rather than two. A tick and an editable box
 covered "it says this and it is right" and "it says this and the right value
 is that"; neither covered "the drawing does not give this" or "that reading

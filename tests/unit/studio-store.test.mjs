@@ -18,6 +18,9 @@ import {
 import {
   scenario, withField, ENTRY, GOAL, SOURCE, stateOf, STATE,
 } from "../../src/studio/scenario.mjs";
+import {
+  reviewItem, documentRef, confirm, correct, usable, METHOD,
+} from "../../src/intake/review.mjs";
 
 /** A localStorage stand-in that can also be told to fail. */
 function memory({ failWrites = false } = {}) {
@@ -252,5 +255,122 @@ describe("the list of saved work", () => {
     // Same timestamp segment, different sequence segment.
     assert.equal(a.split("-")[1], b.split("-")[1], "the test is only meaningful within one tick");
     assert.notEqual(a.split("-")[2], b.split("-")[2]);
+  });
+});
+
+/* ------------------------------------------------ the queue across a refresh */
+
+/**
+ * What somebody decided about the drawing, reopened.
+ *
+ * The queue lived in memory only. Confirm fourteen rows, hit refresh, and
+ * every decision went — including the record of who changed what from what,
+ * which is the thing the queue was built to keep.
+ *
+ * The version step is the same shape as the one that added the model and its
+ * requirements: a field appears, nothing changes meaning, and a record written
+ * by the older build comes back with the field empty rather than being
+ * refused.
+ */
+describe("the review queue survives a refresh", () => {
+  const DOC = documentRef({ filename: "brk-a-102.pdf", revision: "B", fingerprint: "abc" });
+  const reading = () => reviewItem(
+    { field: "thickness", label: "Thickness", value: "5", unit: "mm",
+      page: 1, quote: "Thickness 5 mm", confidence: "labelled" },
+    { method: METHOD.RULE, document: DOC });
+
+  const withReview = (items) => ({ ...draft(), review: items });
+
+  test("a confirmed row comes back confirmed, with who and when", () => {
+    const store = memory();
+    saveScenario(withReview([confirm(reading(), "a buyer")]), store);
+
+    const back = loadScenarios(store)[0];
+    assert.equal(back.review.length, 1);
+    assert.equal(back.review[0].disposition, "confirmed");
+    assert.equal(usable(back.review[0]), true);
+    assert.equal(back.review[0].revisions[0].by, "a buyer");
+  });
+
+  test("a correction comes back with the reading it replaced still under it", () => {
+    /* The whole point of storing the queue rather than the values. */
+    const store = memory();
+    saveScenario(withReview([correct(reading(), { value: "5.2" }, "a buyer")]), store);
+
+    const back = loadScenarios(store)[0].review[0];
+    assert.equal(back.value, "5.2");
+    assert.equal(back.evidence.value, "5");
+    assert.equal(back.revisions[0].from, "5");
+  });
+
+  test("the document each decision was made about comes back too", () => {
+    /* Without it, reopening a case whose drawing has since changed would
+       trust decisions made about the old one. */
+    const store = memory();
+    saveScenario(withReview([confirm(reading(), "a buyer")]), store);
+    assert.equal(loadScenarios(store)[0].review[0].document.fingerprint, "abc");
+  });
+
+  test("a scenario saved before the queue existed comes back without one", () => {
+    /* Version 2, read by a build that writes version 3. Refusing it would
+       discard somebody's saved work over a field that did not exist when they
+       saved it. */
+    const store = memory();
+    const old = { ...draft(), schema: 2, savedAt: new Date().toISOString() };
+    store._put([old]);
+
+    const back = loadScenarios(store);
+    assert.equal(back.length, 1, "a version-2 record was refused");
+    assert.deepEqual([...back[0].review], []);
+    assert.equal(back[0].savedSchema, 2);
+  });
+
+  test("a decision stored with no record of being made comes back needing a look", () => {
+    /* localStorage is a text file the person can edit. This is not a
+       privilege problem — they could type the value instead — but an
+       unattributed decision is not one, and it is reported rather than
+       silently untucked. */
+    const store = memory();
+    const tampered = JSON.parse(JSON.stringify(confirm(reading(), "a buyer")));
+    tampered.revisions = [];
+    saveScenario(withReview([tampered]), store);
+
+    const back = loadScenarios(store)[0];
+    assert.equal(back.review[0].disposition, "proposed");
+    assert.equal(usable(back.review[0]), false);
+    assert.equal(back.reviewUntucked.length, 1);
+    assert.match(back.reviewUntucked[0].restored, /no record of who decided it/);
+  });
+
+  test("a row that is not a reading is refused and counted", () => {
+    const store = memory();
+    saveScenario(withReview([confirm(reading(), "a buyer"), { nonsense: true }]), store);
+
+    const back = loadScenarios(store)[0];
+    assert.equal(back.review.length, 1);
+    assert.equal(back.reviewRefused.length, 1);
+  });
+
+  test("the store still says which schema it writes", () => {
+    assert.equal(SCHEMA_VERSION, 3);
+    assert.equal(storeStatus(memory()).schema, 3);
+  });
+
+  test("a queue does not push a scenario over the size limit on its own", () => {
+    /* Fourteen rows with quotes and histories is the realistic case, and a
+       save that fails at the end of a review would be the worst moment for
+       it. */
+    const store = memory();
+    const many = [];
+    for (let n = 0; n < 20; n++) {
+      many.push(confirm(reviewItem(
+        { field: `field${n}`, label: `Field ${n}`, value: "123.45", unit: "mm", page: 2,
+          quote: "A quote of the sort a drawing actually carries, with a label and a value",
+          confidence: "labelled" },
+        { method: METHOD.RULE, document: DOC }), "a buyer"));
+    }
+    const r = saveScenario(withReview(many), store);
+    assert.equal(r.ok, true, r.error);
+    assert.equal(loadScenarios(store)[0].review.length, 20);
   });
 });

@@ -166,10 +166,26 @@ read elsewhere, and the two sets of readings end up in one queue.
 
 ## Still open in Phase 1
 
-- **Full case envelope and migration**, and the vertical slice surviving
-  refresh, reopen, new-case reset and worker failure. New-case reset is
-  covered — the queue, the extraction and the preview are all cleared, and a
-  test fails if one is missed. Refresh and reopen are not: the review queue
-  lives in memory and does not persist with the scenario.
 - **Region selection wired to a control.** Built and tested; not yet
-  connected, because the thing that consumes a crop is an OCR result.
+  connected, because the thing that consumes a crop is an OCR result, and
+  route 4 does not produce one.
+- **A corpus of real drawings.** Two synthetic fixtures show the pipeline
+  works. `specs/03`'s accuracy contract wants held-out real drawings at
+  several quality levels, with precision, recall and abstention reported by
+  field and format, before anybody leans on the reader.
+
+## Closed since: the case envelope
+
+The vertical slice now survives refresh, reopen and new-case reset. The
+review queue is stored with the scenario at schema 3 — a version-2 record is
+a version-3 record with no queue, so older saved work still opens and says
+why it has none.
+
+Two things that mattered more than the storage itself. Each decision keeps
+the document reference it was made about, so reopening a case whose drawing
+has since changed sends those rows back for review rather than trusting them.
+And `localStorage` is a text file the person using the browser can edit — not
+a privilege problem, since they could type the value instead, but an
+integrity one: a stored decision that carries no record of who made it comes
+back needing a look, and the count is reported rather than the row quietly
+appearing unticked.

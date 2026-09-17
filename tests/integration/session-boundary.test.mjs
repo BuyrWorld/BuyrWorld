@@ -22,6 +22,9 @@ import vm from "node:vm";
 
 import { fnSource } from "../helpers/page.mjs";
 import {
+  reviewItem, documentRef, confirm, correct, METHOD,
+} from "../../src/intake/review.mjs";
+import {
   scenario, withField, readiness, started as scStarted, SOURCE, ENTRY, GOAL,
 } from "../../src/studio/scenario.mjs";
 import {
@@ -93,6 +96,8 @@ function studio() {
     "var _scModel=null; var _scHistory=null; var _scReqs=[];",
     "var _scPreview=null; var _scPackage=null; var _scLast=null;",
     "var _scCompare=null; var _scReadStartedAt=null;",
+    "var _exReview={scx:null,ctx:null}; var _exState={scx:null,ctx:null};",
+    "function exViewClose(){}",
     "function scClear(){}",
     "function scRenderBuilder(){} function scAiStatus(){} function scRenderFieldStates(){}",
     "function scRenderDrafts(){} function scTouched(){}",
@@ -112,6 +117,16 @@ function studio() {
       "JSON.stringify(_scModel ? window.BW.featureIds(_scModel) : null)", sandbox)),
     reqCount: () => vm.runInContext("_scReqs.length", sandbox),
     saved: () => loadScenarios(store),
+    /* The reading decisions, as the page holds them. */
+    review: () => vm.runInContext("_exReview.scx", sandbox),
+    setReview: (items) => {
+      sandbox.__items = items;
+      vm.runInContext("_exReview.scx = __items;", sandbox);
+    },
+    setCtxReview: (items) => {
+      sandbox.__ctx = items;
+      vm.runInContext("_exReview.ctx = __ctx;", sandbox);
+    },
   };
 }
 
@@ -299,7 +314,30 @@ describe("a scenario saved by the older build", () => {
     projectA(s);
     s.run("scSaveDraft();");
     assert.equal(s.saved()[0].savedSchema, SCHEMA_VERSION);
-    assert.equal(SCHEMA_VERSION, 2);
+
+    /* A tripwire, not a fact worth asserting for its own sake. Moving the
+       version is allowed; doing it without noticing is not, because every
+       bump carries the same obligation — the versions before it stay
+       readable, or somebody's saved work is discarded over a field that did
+       not exist when they saved it. Bump the number here once the tests
+       above still pass for each older schema. */
+    assert.equal(SCHEMA_VERSION, 3);
+  });
+
+  test("and every version before it is still readable", () => {
+    /* The obligation itself, checked rather than trusted to the comment
+       above. Schema 1 predates the part and its requirements; schema 2
+       predates the reading decisions. Both were somebody's saved work. */
+    const s = studio();
+    for (const schema of [1, 2]) {
+      s.store._put(JSON.stringify([{
+        schema, id: `SCN-v${schema}`, name: `Saved by schema ${schema}`,
+        fields: { goodParts: { value: "250" } },
+        updatedAt: "2026-09-14T00:00:00.000Z",
+      }]));
+      assert.equal(s.saved().length, 1, `a schema-${schema} record was refused`);
+      assert.equal(s.saved()[0].savedSchema, schema);
+    }
   });
 });
 
@@ -327,5 +365,127 @@ describe("everything per-scenario is cleared", () => {
   test("starting a new scenario and reopening one both go through it", () => {
     assert.match(fnSource("scNewDraft", app), /scClearSession\(\)/);
     assert.match(fnSource("scApplyScenario", app), /scClearSession\(\)/);
+  });
+});
+
+/* ------------------------------------------- the reading decisions, reopened */
+
+/**
+ * Confirm rows, save, reopen.
+ *
+ * The queue lived in memory. Somebody who ticked fourteen readings against a
+ * drawing, saved the case and came back to it found every one unticked, and
+ * the record of who confirmed what — the part that answers "why does the case
+ * say 5.2 when the drawing says 5.0" — gone with them.
+ *
+ * Run against the page's own save and open, because the seam is where this
+ * would break: the store can hold a queue perfectly and still never be handed
+ * one.
+ */
+describe("what was decided about the drawing comes back", () => {
+  const DOC = documentRef({ filename: "brk-a-102.pdf", revision: "B", fingerprint: "abc" });
+  const reading = (field, value) => reviewItem(
+    { field, label: field, value, unit: "mm", page: 1,
+      quote: `${field} ${value} mm`, confidence: "labelled" },
+    { method: METHOD.RULE, document: DOC });
+
+  test("confirmed readings survive a save and reopen", () => {
+    const s = studio();
+    projectA(s);
+    s.setReview([confirm(reading("thickness", "5"), "this browser"),
+                 confirm(reading("width", "200"), "this browser")]);
+    s.run("scSaveDraft();");
+
+    const id = s.saved()[0].id;
+    s.run("scNewDraft();");
+    assert.equal(s.review(), null, "the new case kept the last one's decisions");
+
+    s.run(`scOpenDraft(${JSON.stringify(id)});`);
+    const back = s.review();
+    assert.equal(back.length, 2);
+    assert.equal(back[0].disposition, "confirmed");
+    assert.equal(back[0].revisions[0].by, "this browser");
+  });
+
+  test("a correction comes back with the reading it replaced", () => {
+    const s = studio();
+    projectA(s);
+    s.setReview([correct(reading("thickness", "5"), { value: "5.2" }, "this browser")]);
+    s.run("scSaveDraft();");
+    const id = s.saved()[0].id;
+    s.run("scNewDraft();");
+    s.run(`scOpenDraft(${JSON.stringify(id)});`);
+
+    const back = s.review()[0];
+    assert.equal(back.value, "5.2");
+    assert.equal(back.evidence.value, "5", "what the drawing said did not come back");
+  });
+
+  test("and it says how many came back, rather than leaving it to be noticed", () => {
+    const s = studio();
+    projectA(s);
+    s.setReview([confirm(reading("thickness", "5"), "this browser")]);
+    s.run("scSaveDraft();");
+    const id = s.saved()[0].id;
+    s.run(`scOpenDraft(${JSON.stringify(id)});`);
+    assert.match(s.status(), /1 reading\(s\) came back with it/);
+  });
+
+  test("a scenario with no decisions reopens without inheriting any", () => {
+    /* The leak this would most easily introduce: reopening case B while case
+       A's ticks are still in memory. */
+    const s = studio();
+    projectA(s);
+    s.run("scSaveDraft();");
+    const id = s.saved()[0].id;
+
+    s.setReview([confirm(reading("thickness", "999"), "this browser")]);
+    s.run(`scOpenDraft(${JSON.stringify(id)});`);
+    assert.equal(s.review(), null, "another case's decisions survived the reopen");
+  });
+
+  test("a scenario saved before the queue existed says so", () => {
+    const s = studio();
+    s.store._put(JSON.stringify([{
+      schema: 2, id: "SCN-v2", name: "Saved by the older build",
+      fields: { goodParts: { value: "250" } },
+      updatedAt: "2026-09-16T00:00:00.000Z",
+    }]));
+    s.run('scOpenDraft("SCN-v2");');
+    assert.match(s.status(), /saved before the reading decisions were stored/);
+    assert.equal(s.review(), null);
+  });
+
+  test("a decision stored with no record of being made comes back untucked, and is named", () => {
+    const s = studio();
+    projectA(s);
+    const tampered = JSON.parse(JSON.stringify(confirm(reading("thickness", "5"), "this browser")));
+    tampered.revisions = [];
+    s.setReview([tampered]);
+    s.run("scSaveDraft();");
+    const id = s.saved()[0].id;
+    s.run("scNewDraft();");
+    s.run(`scOpenDraft(${JSON.stringify(id)});`);
+
+    assert.equal(s.review()[0].disposition, "proposed");
+    assert.match(s.status(), /need checking again/);
+  });
+
+  test("only the Studio's queue is stored, not the certificate path's", () => {
+    /* They are different documents on different pages. Storing the
+       certificate one inside a scenario would put one case's certificate into
+       another case's part.
+
+       The rows here are real decisions rather than placeholders: rubbish is
+       refused on the way back in by reviveItems, so a test using it would
+       pass whether or not the certificate queue leaked. */
+    const s = studio();
+    projectA(s);
+    s.setReview(null);
+    s.setCtxReview([confirm(reading("heat", "H-77213"), "this browser")]);
+    s.run("scSaveDraft();");
+
+    assert.deepEqual([...s.saved()[0].review], [],
+      "the certificate path's decisions were stored inside the scenario");
   });
 });

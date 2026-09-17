@@ -20,19 +20,21 @@
 
 import { scenario, readiness, started } from "../studio/scenario.mjs";
 import { serialise, deserialise } from "./outcome-store.mjs";
+import { reviveItems } from "../intake/review.mjs";
 
 const KEY = "bw.studio.v1";
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /* Versions this build can still read.
  *
  * A version-1 record is a version-2 record that carries no model and no
- * requirements — the fields were added, nothing changed meaning. Refusing to
- * read one would discard somebody's saved work to enforce a distinction that
- * does not exist. Anything outside this list is still withheld rather than
- * guessed at. */
-const READABLE_SCHEMAS = Object.freeze([1, 2]);
+ * requirements; a version-2 record is a version-3 record that carries no
+ * review queue. Each time, fields were added and nothing changed meaning.
+ * Refusing to read one would discard somebody's saved work to enforce a
+ * distinction that does not exist. Anything outside this list is still
+ * withheld rather than guessed at. */
+const READABLE_SCHEMAS = Object.freeze([1, 2, 3]);
 
 /* Generous next to the estimate store's 64KB: a scenario carries per-field
    provenance, which is several times the size of the values themselves. */
@@ -105,12 +107,25 @@ export function loadScenarios(store) {
     /* scenario() knows the form fields; the model and the requirements ride
        along beside them, already rebuilt by deserialise. A version-1 record
        simply has neither. */
-    .map((r) => Object.freeze({
-      ...scenario(r),
-      model: r.model ?? null,
-      requirements: Object.freeze([...(r.requirements ?? [])]),
-      savedSchema: r.schema,
-    }))
+    .map((r) => {
+      /* What somebody decided about the drawing, rebuilt rather than trusted.
+         This comes out of localStorage, which the person using the browser
+         can edit, and `reviveItems` refuses a decision that carries no record
+         of being made — see review.mjs. A version-2 record simply has none. */
+      const review = reviveItems(r.review);
+      return Object.freeze({
+        ...scenario(r),
+        model: r.model ?? null,
+        requirements: Object.freeze([...(r.requirements ?? [])]),
+        review: review.items,
+        /* Reported rather than swallowed: a row that came back needing a
+           second look is something the person who ticked it should be told
+           about. */
+        reviewUntucked: review.untucked,
+        reviewRefused: review.refused,
+        savedSchema: r.schema,
+      });
+    })
     .sort((a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")));
 }
 
@@ -178,6 +193,11 @@ export function saveScenario(s, store) {
        project's requirements appearing on another. */
     model: s.model ?? null,
     requirements: Object.freeze([...(s.requirements ?? [])]),
+    /* The decisions made about the drawing this scenario was built from.
+       Without them a reopened case shows every reading unticked, and the
+       record of who confirmed what — the thing the queue exists to keep — is
+       the part that is gone. */
+    review: Object.freeze([...(s.review ?? [])]),
     schema: SCHEMA_VERSION,
     savedAt: new Date().toISOString(),
     updatedAt: s.updatedAt ?? new Date().toISOString(),
