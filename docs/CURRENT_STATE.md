@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 67 |
-| Test files | 0 | 108 |
+| Modules under `src/` | 0 | 68 |
+| Test files | 0 | 109 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -542,6 +542,19 @@ moved. Marking it seen is a deliberate act rather than something loading
 does: clearing it on load means a reload loses it, and somebody refreshing to
 read it again finds it gone with no way back — the worst possible behaviour
 for a list whose whole job is to be read.
+
+`src/calc/scenarios.mjs` is the start of Phase 3 — the three what-ifs
+`specs/06` names, in the calculation layer where the no-float rule holds. A
+scenario is a copy carrying an explicit badge and the plan revision it was
+explored against; nothing about exploring one changes the plan, and adopting
+one is a separate act with a name against it.
+
+Missing inputs produce questions rather than figures, and one missing input
+withholds everything. Four of five answered is the most tempting moment to
+show what can be shown, and a comparison with three of four columns invites
+somebody to read the three. Nothing is scored or totalled: a composite would
+let a cost saving outvote a missed build date, which is a judgement nobody
+asked this to make.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
