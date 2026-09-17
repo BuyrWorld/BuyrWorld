@@ -112,8 +112,8 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 63 |
-| Test files | 0 | 103 |
+| Modules under `src/` | 0 | 64 |
+| Test files | 0 | 104 |
 | Tests | 0 | 1,931, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
@@ -443,6 +443,25 @@ them does not.
 Role and depth are the person's, not the case's — `specs/04` says role and
 depth preferences are user settings rather than engineering facts, so they
 are deliberately not saved with a scenario.
+
+`src/case/brief.mjs` is the last thing the Phase 2 gate asks for — a draft
+a junior buyer can send their manager. It composes rather than summarises:
+every line comes from a claim already resolved against what is confirmed,
+which is the only way to guarantee the thing that matters most here. A figure
+withheld on screen cannot reappear in the brief. A brief is the artefact that
+leaves the building, and if the rule held everywhere except the document
+somebody emails it would hold nowhere that counted.
+
+It leads with what is missing rather than burying it. A case is read top to
+bottom and can afford to end with the gaps; a brief is skimmed, and a caveat
+at the end of a skimmed document is a caveat nobody read. It says it is a
+draft in the opening lines and again at the close, and it separates the
+calculation from the judgement — the figures come from a tested engine and
+what to do about them does not.
+
+An incomplete brief is still offered, because "here is what I cannot answer"
+is a useful thing to tell a manager and refusing to produce one would be the
+tool deciding that for somebody.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

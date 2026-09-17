@@ -27,6 +27,9 @@ import { quoteCase, needsOf } from "../../src/case/from-quote.mjs";
 import {
   project, hiddenSaid, ROLE, ROLES, ROLE_TITLE, DEPTH, DEPTHS, SCOPE_SAID,
 } from "../../src/case/projection.mjs";
+import {
+  brief, readiness as briefReadiness, DRAFT_LABEL as BRIEF_DRAFT_LABEL,
+} from "../../src/case/brief.mjs";
 
 const app = readFileSync("app.js", "utf8");
 const p = (x) => ratioFromPercent(x);
@@ -48,9 +51,12 @@ function page() {
   const els = new Map();
   els.set("case-view", { id: "case-view", innerHTML: "" });
   els.set("def-supplier", { id: "def-supplier", value: "Northgate (synthetic)" });
+  els.set("case-brief-msg", { id: "case-brief-msg", textContent: "" });
 
+  const copied = [];
   const box = {
     document: { getElementById: (id) => els.get(id) ?? null },
+    navigator: { clipboard: { writeText: (t) => { copied.push(t); return Promise.resolve(); } } },
     console,
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
@@ -60,6 +66,7 @@ function page() {
       BW: {
         narrative, sectionOf, SECTION_TITLE, quoteCase, needsOf, assumptionsToVerify,
         project, hiddenSaid, ROLE, ROLES, ROLE_TITLE, DEPTH, DEPTHS, SCOPE_SAID,
+        brief, briefReadiness, BRIEF_DRAFT_LABEL,
       },
     },
     _defResult: null,
@@ -73,12 +80,13 @@ function page() {
     fnSource("caseClaimHTML", app), fnSource("caseIsAssumption", app),
     fnSource("caseFigureText", app), fnSource("caseFootHTML", app),
     fnSource("caseSetRole", app), fnSource("caseSetDepth", app),
-    fnSource("caseConfirm", app),
+    fnSource("caseConfirm", app), fnSource("caseBriefHTML", app),
+    fnSource("caseBriefTitle", app), fnSource("caseCopyBrief", app),
     "var _caseConfirmed=Object.create(null);",
   ].join("\n")).runInContext(box);
 
   return {
-    box, els,
+    box, els, copied,
     calculate: (bridge) => { box.__b = bridge; vm.runInContext("_defResult=__b;", box); },
     render: () => vm.runInContext("caseRender();", box),
     html: () => els.get("case-view").innerHTML,
@@ -87,6 +95,8 @@ function page() {
     setDepth: (d) => vm.runInContext(`caseSetDepth({ value: ${JSON.stringify(d)} });`, box),
     clear: () => vm.runInContext("caseClear();", box),
     confirmed: () => vm.runInContext("Object.keys(_caseConfirmed)", box),
+    copyBrief: () => vm.runInContext("caseCopyBrief();", box),
+    briefMsg: () => (els.get("case-brief-msg") || {}).textContent || "",
   };
 }
 
@@ -318,5 +328,70 @@ describe("it is wired the way the page requires", () => {
     nasty.render();
     assert.equal(/<img src=x/.test(nasty.html()), false);
     assert.match(nasty.html(), /&lt;img/);
+  });
+});
+
+/* --------------------------------------------------- the brief for a manager */
+
+describe("the brief", () => {
+  beforeEach(() => { v.calculate(handEntered()); v.render(); });
+
+  test("it is offered even while figures are missing", () => {
+    /* An incomplete brief is often exactly what somebody needs to send:
+       "here is what I cannot answer" is useful to tell a manager, and
+       refusing to produce one would be the tool deciding that for them. */
+    assert.match(v.html(), /Copy a brief for my manager/);
+    assert.match(v.html(), /unconfirmed/);
+    assert.match(v.html(), /worth sending/);
+  });
+
+  test("copying it puts markdown on the clipboard", () => {
+    v.copyBrief();
+    assert.equal(v.copied.length, 1);
+    assert.match(v.copied[0], /^# Northgate \(synthetic\) — price increase/);
+    assert.match(v.copied[0], /## What happened/);
+  });
+
+  test("and what is copied carries no figure while any is unconfirmed", () => {
+    /* The rule following the text out of the building, which is the only
+       place it finally matters. */
+    v.copyBrief();
+    assert.equal(/\d+\.\d{2}\s*(GBP|%)/.test(v.copied[0]), false, v.copied[0]);
+  });
+
+  test("confirming everything puts the figures into what is copied", () => {
+    for (const id of needsOf(handEntered())) v.confirm(id);
+    v.copyBrief();
+    assert.match(v.copied[0], /\d+\.\d{2} GBP/);
+  });
+
+  test("it says what happened afterwards, and that it is a draft", async () => {
+    /* The clipboard resolves a tick later, so the message it sets does too. */
+    await v.copyBrief();
+    assert.match(v.briefMsg(), /Copied/);
+    assert.match(v.briefMsg(), /says what is missing/);
+  });
+
+  test("a complete one says nothing has been agreed", async () => {
+    for (const id of needsOf(handEntered())) v.confirm(id);
+    await v.copyBrief();
+    assert.match(v.briefMsg(), /nothing in it has been agreed/i);
+  });
+
+  test("a refusing clipboard is reported rather than silently doing nothing", async () => {
+    /* A button that appears to work and does not is worse than one that
+       says it cannot. */
+    const bare = page();
+    bare.calculate(handEntered());
+    bare.render();
+    vm.runInContext(
+      "navigator = { clipboard: { writeText: function(){ return Promise.reject(new Error('no')); } } };",
+      bare.box);
+    await bare.copyBrief();
+    assert.match(bare.briefMsg(), /copy it by hand/);
+  });
+
+  test("the button asks for an action the table registers", () => {
+    assert.ok(pageSource().includes("caseCopyBrief:"), "caseCopyBrief is not registered");
   });
 });

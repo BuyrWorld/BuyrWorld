@@ -20,6 +20,8 @@
   import * as viewer from "./src/intake/viewer.mjs";
   import { narrative, sectionOf, SECTION_TITLE } from "./src/case/narrative.mjs";
   import { quoteCase, needsOf } from "./src/case/from-quote.mjs";
+  import { brief, readiness as briefReadiness,
+           DRAFT_LABEL as BRIEF_DRAFT_LABEL } from "./src/case/brief.mjs";
   import { project, hiddenSaid, defaultDepthFor, ROLE, ROLES, ROLE_TITLE,
            DEPTH, DEPTHS, SCOPE_SAID } from "./src/case/projection.mjs";
   import { stamp as staleStamp, check as staleCheck,
@@ -115,6 +117,7 @@
   import { STEEL_A } from "./src/data/sample-indices.mjs";
   window.BW = { identifyFile, fileNextStep, fileWithinLimits,
                 narrative, sectionOf, SECTION_TITLE, quoteCase, needsOf,
+                brief, briefReadiness, BRIEF_DRAFT_LABEL,
                 project, hiddenSaid, defaultDepthFor, ROLE, ROLES, ROLE_TITLE,
                 DEPTH, DEPTHS, SCOPE_SAID,
                 staleStamp, staleCheck, STALE_DEPENDS,

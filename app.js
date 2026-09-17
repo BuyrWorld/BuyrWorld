@@ -1185,6 +1185,7 @@ function caseRender(){
     + caseControlsHTML(view)
     + view.sections.map(caseSectionHTML).join("")
     + caseFootHTML(view)
+    + caseBriefHTML()
     + '</div>';
 }
 
@@ -1269,6 +1270,69 @@ function caseFootHTML(view){
   if (!said) return "";
   return '<p style="margin:0;font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
     + ciEsc(said) + '</p>';
+}
+
+/**
+ * The brief, and the sentence beside the button.
+ *
+ * The last thing the Phase 2 gate asks for. It is offered whether or not
+ * every figure is settled, because an incomplete brief is often exactly what
+ * somebody needs to send — "here is what I cannot answer" is useful to tell a
+ * manager, and refusing to produce one would be this deciding that for them.
+ */
+function caseBriefHTML(){
+  var B = window.BW;
+  if (!B || !B.brief) return "";
+  var n = caseNarrative();
+  if (!n) return "";
+
+  var b = B.brief(n, { title: caseBriefTitle() });
+  return '<div style="border-top:1px solid var(--bw-line);padding-top:var(--bw-4);margin-top:var(--bw-4)">'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
+    + '<button class="bw-act bw-act-primary" style="margin:0" data-do="caseCopyBrief">'
+    + 'Copy a brief for my manager</button>'
+    + '<span style="font-size:11.5px;color:var(--bw-muted);line-height:1.6;max-width:52ch">'
+    + ciEsc(B.briefReadiness(b)) + '</span></div>'
+    + '<div id="case-brief-msg" style="margin-top:8px;font-size:12px;color:var(--bw-muted)"></div>'
+    + '</div>';
+}
+
+/** A title somebody will recognise in their sent folder. */
+function caseBriefTitle(){
+  var supplier = String(scVal("def-supplier") || "").trim();
+  return supplier ? supplier + " — price increase" : "Supplier price increase";
+}
+
+/**
+ * Put the brief on the clipboard.
+ *
+ * Copying rather than downloading: what somebody does with this is paste it
+ * into an email they are already writing, and a file in the downloads folder
+ * is a step further from that rather than nearer.
+ */
+function caseCopyBrief(){
+  var B = window.BW;
+  var msg = document.getElementById("case-brief-msg");
+  var n = caseNarrative();
+  if (!B || !B.brief || !n || !msg) return;
+
+  var b = B.brief(n, { title: caseBriefTitle() });
+  var done = function(said){ msg.textContent = said; };
+
+  /* The promise is handed back. Nothing in the page awaits it — the action
+     table calls this and moves on — but a function whose whole effect lands
+     a tick later is one a test cannot check without it, and returning it
+     costs nothing. */
+  try {
+    return navigator.clipboard.writeText(b.text).then(function(){
+      done(b.complete
+        ? "Copied. It is a draft: nothing in it has been agreed."
+        : "Copied. It states the position without figures, and says what is missing.");
+    }, function(){ done("The clipboard refused. Select the text and copy it by hand."); });
+  } catch (e) {
+    done("The clipboard is not available in this browser. Select the text and copy it by hand.");
+    return Promise.resolve();
+  }
 }
 
 /* ---- the three things a person can do to it ---- */
@@ -8526,6 +8590,7 @@ registerActions({
   caseSetRole$self: function () { caseSetRole(this); },
   caseSetDepth$self: function () { caseSetDepth(this); },
   caseConfirm: function (id) { caseConfirm(id); },
+  caseCopyBrief: function () { caseCopyBrief(); },
   ciCopy$self: function () { ciCopy(this); },
   addQuoteFiles$self: function () { addQuoteFiles(this); },
   loadContractFile$self: function () { loadContractFile(this); },
