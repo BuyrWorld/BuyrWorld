@@ -166,9 +166,16 @@ read elsewhere, and the two sets of readings end up in one queue.
 
 ## Still open in Phase 1
 
-- **Region selection wired to a control.** Built and tested; not yet
-  connected, because the thing that consumes a crop is an OCR result, and
-  route 4 does not produce one.
+- **Region selection wired to a control.** Built and tested; still not
+  connected, and now said out loud rather than left as an absence. Nothing
+  that reads a document here reports coordinates — the rule reader is handed a
+  PDF's text layer rather than its geometry, and the vision reader is not asked
+  for boxes, because a box drawn in the wrong place is worse evidence than no
+  box: it looks checkable and is wrong. So `cropsSaid` counts how many
+  readings carry a region and says so under the table. Today that is none of
+  them, and the sentence tells a reviewer to read the quoted characters, which
+  is the evidence that does exist. It is written as a count, so the day a
+  reader does report regions the sentence changes by itself.
 - **A corpus of real drawings.** Two synthetic fixtures show the pipeline
   works. `specs/03`'s accuracy contract wants held-out real drawings at
   several quality levels, with precision, recall and abstention reported by

@@ -52,7 +52,7 @@
            confirm as reviewConfirm, correct as reviewCorrect,
            markUnknown as reviewUnknown, reject as reviewReject,
            confirmedValues, outstanding as reviewOutstanding,
-           sourceConflicts, stateOf as reviewStateOf, methodSaid,
+           sourceConflicts, stateOf as reviewStateOf, methodSaid, cropsSaid,
            METHOD as REVIEW_METHOD, DISPOSITION as REVIEW_DISPOSITION,
            history as reviewHistory, reviveItems } from "./src/intake/review.mjs";
   /* The call: what to take in, what was written down, and what it commits
@@ -193,7 +193,7 @@
                 reviewQueue, documentRef, needsReReview,
                 reviewConfirm, reviewCorrect, reviewUnknown, reviewReject,
                 confirmedValues, reviewOutstanding, sourceConflicts,
-                reviewStateOf, methodSaid, REVIEW_METHOD, REVIEW_DISPOSITION,
+                reviewStateOf, methodSaid, cropsSaid, REVIEW_METHOD, REVIEW_DISPOSITION,
                 reviewHistory, reviveItems,
                 FILE_HANDLING, FILE_LIMITS, HEAD_BYTES, viewer,
                 costBridge, partialAcceptance, delayEffect, formatPercent,

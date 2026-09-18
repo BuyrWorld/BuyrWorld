@@ -339,6 +339,40 @@ export function methodSaid(item) {
   }
 }
 
+/**
+ * What a reviewer can actually see of where a value came from.
+ *
+ * `specs/03` asks for *"visible source crops"*. Not one reading in this build
+ * carries one: `region` is null everywhere, because the rule reader is handed
+ * a PDF's text layer rather than its geometry, and the vision reader is not
+ * asked for coordinates — and a box drawn in the wrong place is worse evidence
+ * than no box, because it is checkable-looking and wrong.
+ *
+ * So the queue says so. A reviewer who has been told there is no crop reads
+ * the quoted characters, which is the evidence that does exist; one who has
+ * not been told looks for a picture, does not find it, and assumes there was
+ * nothing to check.
+ *
+ * Written as a count rather than a constant so that the day a reader does
+ * report regions, this sentence changes by itself.
+ */
+export function cropsSaid(items = []) {
+  const total = items.length;
+  if (total === 0) return "";
+
+  const withCrop = items.filter((i) => i.evidence?.region).length;
+  if (withCrop === total) {
+    return "Each reading shows the part of the page it was taken from.";
+  }
+  if (withCrop > 0) {
+    return `${withCrop} of ${total} readings show the part of the page they were taken from. `
+         + "For the rest, the evidence is the page number and the exact characters quoted.";
+  }
+  return "None of these shows a crop of the page: nothing that read this document reports "
+       + "where on the page it looked. The evidence you can check is the page number and the "
+       + "exact characters quoted against each value — read those rather than the value.";
+}
+
 /** The audit trail, oldest first, for one item. */
 export const history = (item) => item.revisions;
 

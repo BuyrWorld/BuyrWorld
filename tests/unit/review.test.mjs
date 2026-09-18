@@ -20,7 +20,7 @@ import {
   reviewItem, queue, carryForward, needsReReview, documentRef, sameDocument,
   confirm, correct, markUnknown, reject,
   usable, confirmedValues, outstanding, sourceConflict, sourceConflicts,
-  stateOf, methodSaid, history, reviveItem, reviveItems,
+  stateOf, methodSaid, cropsSaid, history, reviveItem, reviveItems,
   METHOD, ACTION, DISPOSITION,
 } from "../../src/intake/review.mjs";
 
@@ -529,5 +529,51 @@ describe("a stored decision has to carry the record of being made", () => {
     }), { method: METHOD.VISION, document: DOC });
     const back = reviveItem(JSON.parse(JSON.stringify(confirm(withTol, "a buyer"))));
     assert.equal(back.evidence.tolerance.printed, "+/-0.05");
+  });
+});
+
+/* --------------------------------------------------- what the eye can check */
+
+describe("what a reviewer can see of where a value came from", () => {
+  const items = (count, withRegion = 0) => Array.from({ length: count }, (_, i) => ({
+    evidence: { region: i < withRegion ? { page: 1, x: 10, y: 10, w: 40, h: 12 } : null },
+  }));
+
+  test("with no crops anywhere, it says so and says what to read instead", () => {
+    const said = cropsSaid(items(3));
+    assert.match(said, /None of these shows a crop/);
+    assert.match(said, /exact characters quoted/);
+    assert.match(said, /read those rather than the value/);
+  });
+
+  test("it does not pretend a crop is coming", () => {
+    /* "Crops are not available yet" invites somebody to wait for one. The
+       sentence says what the evidence is, because that is what a reviewer
+       has to work with today. */
+    assert.equal(/coming soon|not yet available|in a future/i.test(cropsSaid(items(3))), false);
+  });
+
+  test("with some, it counts them rather than rounding the claim either way", () => {
+    assert.match(cropsSaid(items(4, 1)), /1 of 4 readings show/);
+    assert.match(cropsSaid(items(4, 1)), /For the rest/);
+  });
+
+  test("with all of them, it says so plainly", () => {
+    assert.match(cropsSaid(items(2, 2)), /Each reading shows the part of the page/);
+  });
+
+  test("and an empty queue says nothing at all", () => {
+    assert.equal(cropsSaid([]), "");
+    assert.equal(cropsSaid(), "");
+  });
+
+  test("a real queue today carries no crops, which is the sentence it gets", () => {
+    /* Through the real queue rather than a shape written here: if a reader
+       ever starts reporting regions, this test is where it shows up. */
+    const real = queue(
+      { candidates: [{ field: "width", label: "Width", value: "64", unit: "mm", page: 1,
+                       quote: "64 mm" }] },
+      { method: METHOD.RULE, document: documentRef({ filename: "a.pdf" }) });
+    assert.match(cropsSaid(real), /None of these shows a crop/);
   });
 });

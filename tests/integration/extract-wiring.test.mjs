@@ -101,7 +101,8 @@ beforeEach(() => {
     ctRenderRows: () => {},
   };
   vm.createContext(sandbox);
-  const src = ["exErr", "exResultHTML", "exApply", "exDecisionHTML"].map(fnSource).join("\n")
+  const src = ["exErr", "exResultHTML", "exCropsHTML", "exApply", "exDecisionHTML"]
+    .map(fnSource).join("\n")
     + "\n" + html.slice(html.indexOf("var EX_TO_FORM="), html.indexOf("function exApply("));
   new vm.Script(src).runInContext(sandbox);
 });
@@ -698,8 +699,8 @@ describe("a reading can be ruled out, not only ticked", () => {
       _exReview: { scx: null },
     };
     vm.createContext(box);
-    new vm.Script(["exErr", "exResultHTML", "exDecisionHTML", "exItem", "exSetItem",
-                   "exRerender", "exDecide", "exUndecide"].map(fnSource).join("\n"))
+    new vm.Script(["exErr", "exResultHTML", "exCropsHTML", "exDecisionHTML", "exItem",
+                   "exSetItem", "exRerender", "exDecide", "exUndecide"].map(fnSource).join("\n"))
       .runInContext(box);
 
     const doc = documentRef({ filename: "brk-a-102.pdf", fingerprint: "abc" });

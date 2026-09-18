@@ -6810,7 +6810,24 @@ function exResultHTML(which,r){
       +'<button class="bw-act bw-act-primary" data-ex-act="apply" data-ex="'+attrEsc(which)+'">Use the confirmed values &rarr;</button>'
       +'</div>'
       +'<div id="'+attrEsc(which)+'-apply" style="margin-top:var(--bw-3)"></div>':'')
-    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-4) 0 0;line-height:1.55">'+ciEsc(r.method)+'</p>';
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-4) 0 0;line-height:1.55">'+ciEsc(r.method)+'</p>'
+    /* What a reviewer can actually see of where each value came from. Said
+       once, under the table, rather than left for somebody to wonder about:
+       a person who has not been told there is no crop looks for one, does not
+       find it, and concludes there was nothing to check. */
+    +exCropsHTML(which);
+}
+
+/** The one sentence about source evidence, from the queue this path holds. */
+function exCropsHTML(which){
+  var B=window.BW;
+  var items=(typeof _exReview!=="undefined"&&_exReview[which])?_exReview[which]:null;
+  if(!B||!B.cropsSaid||!items||!items.length) return "";
+  var said=B.cropsSaid(items);
+  return said
+    ? '<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-2) 0 0;line-height:1.55">'
+      +ciEsc(said)+'</p>'
+    : "";
 }
 
 
