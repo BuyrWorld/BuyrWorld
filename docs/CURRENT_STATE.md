@@ -112,9 +112,9 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 75 |
-| Test files | 0 | 121 |
-| Tests | 0 | 3,532, all passing |
+| Modules under `src/` | 0 | 76 |
+| Test files | 0 | 123 |
+| Tests | 0 | 3,548, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
 
@@ -678,6 +678,17 @@ rules, so a corrupt file is refused in the same words somebody typing it would
 see. Ids and the revision survive, because a requirement points at `hole-2`
 and a rebuilt model would give that name to something else. The review package
 writes this format now, and a test opens the file the package actually ships.
+
+`src/studio/from-drawing.mjs` closes Phase 5's first clause from the other
+end: the three dimensions somebody confirmed off the drawing fill the Part
+Builder's boxes. The word doing the work is *confirmed* — it is handed
+`review.confirmedValues`, which contains only what a person confirmed or
+corrected, so a proposed reading cannot become a model carrying the same
+authority as one somebody checked. Two of three is not a block and the third
+is not zero; a value with no unit is refused in `units.mjs`'s own words; and a
+drawing giving a diameter is refused as a bar rather than squared off into a
+part nobody drew. It fills the boxes and stops there — building is still *Set
+the block*, pressed by somebody looking at the numbers.
 
 `src/studio/to-cost.mjs` is the transfer the September audit asked for: *"Do
 not silently use model mass as purchased stock mass. A future explicit,

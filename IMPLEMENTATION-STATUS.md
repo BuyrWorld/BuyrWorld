@@ -37,6 +37,7 @@
 | Practice against a rule-driven supplier | built | `src/case/practice.mjs` |
 | **v5 Phase 5** — a model written and read back exactly | built | `src/studio/model-io.mjs` |
 | The part carried into the costing form, deliberately | built | `src/studio/to-cost.mjs` |
+| Confirmed drawing dimensions reaching the builder | built | `src/studio/from-drawing.mjs` |
 
 ## What does not exist
 
@@ -53,7 +54,7 @@
 
 ## What to do next
 
-**`docs/BROWSER-CHECKS.md`** — 95 checks in the order worth doing them, each
+**`docs/BROWSER-CHECKS.md`** — 99 checks in the order worth doing them, each
 mapped to the pack acceptance line it closes. **Nothing here has been opened
 in a browser**, and v5 Phases 1 to 4 have added a reader, a case view, three
 what-ifs, a chain, three call screens and a practice room since that list was

@@ -317,6 +317,17 @@ this part into the plan*.
       quotation marks.
 - [ ] At 390px the three allowance boxes stack and the buttons wrap.
 
+And the other direction, from the drawing into the builder:
+
+- [ ] With nothing confirmed, **Use the confirmed drawing values** fills
+      nothing and names each dimension it is waiting on.
+- [ ] Read a drawing, confirm width, length and thickness in the review queue,
+      then press it: the three boxes fill and the status says where each came
+      from.
+- [ ] No model appears until you press **Set the block**. That is the point.
+- [ ] Correct one value in the queue before using it. The status says
+      *corrected by a person* for that one.
+
 ---
 
 ## What executing the code has already settled

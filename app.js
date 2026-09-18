@@ -4977,6 +4977,31 @@ function scBuilderStatus(message,bad){
   el.innerHTML='<span style="color:var('+(bad?"--bw-danger":"--bw-muted")+')">'+ciEsc(message)+'</span>';
 }
 
+/**
+ * Fill the three boxes from what somebody confirmed off the drawing.
+ *
+ * It fills them and stops there. Building the block is still "Set the block",
+ * pressed by a person looking at the numbers — `specs/02` asks for confirmed
+ * dimensions to reach the model, not to become it while nobody was watching.
+ */
+function scFromDrawing(){
+  var B=window.BW;
+  if(!B||!B.blockFromDrawing||!B.confirmedValues){ scBuilderStatus("The engine did not load.",true); return; }
+
+  var items=(typeof _exReview!=="undefined"&&_exReview.scx)?_exReview.scx:[];
+  var r=B.blockFromDrawing(B.confirmedValues(items));
+  if(!r.ok){
+    scBuilderStatus(r.why+" "+r.missing.map(function(m){return m.why;}).join(" "),true);
+    return;
+  }
+
+  defSet("pb-w",scMm(r.dims.widthUm));
+  defSet("pb-l",scMm(r.dims.lengthUm));
+  defSet("pb-t",scMm(r.dims.thicknessUm));
+  scBuilderStatus(r.from.map(function(f){return f.said;}).join(" ")
+    +" Nothing is built yet — check them and select Set the block.",false);
+}
+
 /** Start or resize the block. */
 function scSetBlock(){
   var B=window.BW;
@@ -10215,6 +10240,7 @@ registerActions({
   /* Practice. Every one of these acts on a synthetic session and none of them
      can reach the case: see src/case/practice.mjs, which imports nothing. */
   /* The blank, and carrying it into the costing form. */
+  scFromDrawing: function () { scFromDrawing(); },
   toCostSet$self: function (name) { toCostSet(this, name); },
   toCostWork: function () { toCostWork(); },
   toCostTake: function () { toCostTake(); },

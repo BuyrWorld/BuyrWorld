@@ -71,6 +71,8 @@
      half — and the deliberate transfer from the part to the costing form. */
   import { writeModel, readModel, roundtrips as modelRoundtrips,
            FORMAT as MODEL_FORMAT } from "./src/studio/model-io.mjs";
+  import { blockFrom as blockFromDrawing, NEEDED as DRAWING_NEEDS }
+    from "./src/studio/from-drawing.mjs";
   import { propose as proposeBlank, accept as acceptBlank,
            stillAbout as blankStillAbout, ALLOWANCES as BLANK_ALLOWANCES }
     from "./src/studio/to-cost.mjs";
@@ -211,6 +213,7 @@
                 CALL_GOAL, CALL_GOAL_SAID, CALL_GOALS, CALL_OWNER, CALL_PHASE, NOTE_SOURCE,
                 writeModel, readModel, modelRoundtrips, MODEL_FORMAT,
                 proposeBlank, acceptBlank, blankStillAbout, BLANK_ALLOWANCES,
+                blockFromDrawing, DRAWING_NEEDS,
                 practiceStart, practiceSay, practiceDone, practiceFeedback,
                 importForPractice, PRACTICE_LABEL, PRACTICE_GOAL,
                 PRACTICE_DIFFICULTY, PRACTICE_DIFFICULTY_SAID,
