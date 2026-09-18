@@ -1348,6 +1348,10 @@ function caseClear(){
      a plan that is gone has no alternatives — leaving them would offer a
      comparison against figures no longer on the screen. */
   whatIfClear();
+  /* And the call. Notes about a case that has been put down are still the
+     person's, which is why this is the one place they are dropped and it
+     happens only where the case itself is. */
+  callClear();
   var host = document.getElementById("case-view");
   if (host) host.innerHTML = "";
 }
@@ -1402,6 +1406,7 @@ function caseRender(){
     + whatIfHTML()
     + caseSpecialistsHTML()
     + caseBriefHTML()
+    + callHTML()
     + '</div>';
 }
 
@@ -1655,6 +1660,458 @@ function caseConfirm(id){
   if (!id) return;
   _caseConfirmed[id] = { by: "this browser", at: new Date().toISOString() };
   caseRender();
+}
+
+/* ------------------------------------------------- before, during and after a call
+
+   `src/case/call.mjs` is the model; this is the three screens. One block with
+   three tabs rather than three routes: a call is a thing you do about a case,
+   and a person who has to navigate away from the case to prepare for it will
+   arrive at the call without it.
+
+   The rule the whole screen turns on is at the bottom of it. Notes live here,
+   in this tab, in memory, until somebody presses save — no autosave, nothing
+   written on a route change, nothing kept when the tab closes. The line above
+   the button says so rather than leaving people to find out.
+*/
+
+/** The sheet, once prepared. Null until somebody opens the block. */
+var _callSheet = null;
+
+/** What was written down. Not stored anywhere until saved. */
+var _callNotes = [];
+
+/** What the notes propose was agreed. Null until the notes have been read. */
+var _callItems = null;
+
+/** Which of the three is open; null closes the block. */
+var _callScreen = null;
+
+/** The id this call was saved under, so saving twice replaces rather than grows. */
+var _callId = null;
+
+/** The dictation machine. Unavailable in this build, and it says why. */
+var _callSpeech = null;
+
+/** The whole block, or nothing when there is no case to have a call about. */
+function callHTML(){
+  var B = window.BW;
+  if (!B || !B.prepareCall || !_defResult) return "";
+
+  var tabs = [["before", "Before"], ["during", "During"], ["after", "After"]]
+    .map(function(pair){
+      var open = pair[0] === _callScreen;
+      return '<button class="bw-act ' + (open ? "bw-act-primary" : "bw-act-secondary")
+        + '" style="margin:0" aria-pressed="' + (open ? "true" : "false")
+        + '" data-do="callOpen" data-a="' + attrEsc(ciEsc(pair[0])) + '">'
+        + ciEsc(pair[1]) + '</button>';
+    }).join("");
+
+  return '<div style="border-top:1px solid var(--bw-line);padding-top:var(--bw-4);margin-top:var(--bw-4)">'
+    + '<div class="eyebrow" style="margin:0 0 6px">The call</div>'
+    + '<p style="margin:0 0 10px;font-size:11.5px;color:var(--bw-muted);line-height:1.6;max-width:62ch">'
+    + ciEsc("What to take in, somewhere to write while you are in it, and what to do with "
+            + "what was said. Nothing here is kept until you save it, and nothing is sent to "
+            + "anybody at all.") + '</p>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">' + tabs + '</div>'
+    + (_callScreen === "before" ? callBeforeHTML() : "")
+    + (_callScreen === "during" ? callDuringHTML() : "")
+    + (_callScreen === "after" ? callAfterHTML() : "")
+    + '</div>';
+}
+
+/* -------------------------------------------------------------- before */
+
+/** What the case can tell somebody walking into the call. */
+function callBeforeHTML(){
+  var B = window.BW;
+  var sheet = _callSheet;
+  if (!sheet) return "";
+
+  var goals = B.CALL_GOALS.map(function(g){
+    return '<option value="' + attrEsc(ciEsc(g)) + '"' + (sheet.goal === g ? ' selected' : '')
+      + '>' + ciEsc(B.CALL_GOAL_SAID[g]) + '</option>';
+  }).join("");
+
+  var questions = sheet.questions.map(function(q, i){
+    return '<label class="bw-field" style="margin:0 0 8px">'
+      + ciEsc("Question " + (i + 1)) + (q.mine ? ciEsc(" — yours") : "")
+      + '<input class="bwin" value="' + attrEsc(ciEsc(q.said || ""))
+      + '" placeholder="' + attrEsc(ciEsc(q.said ? "" : "yours to write"))
+      + '" aria-label="' + attrEsc(ciEsc("Question " + (i + 1))) + '"'
+      + ' data-chg="callSetQuestion$self" data-a="' + i + '"></label>'
+      + (q.why
+          ? '<p style="margin:-4px 0 10px;font-size:11px;color:var(--bw-muted);line-height:1.5">'
+            + ciEsc(q.why) + '</p>'
+          : '');
+  }).join("");
+
+  return '<div style="margin-top:var(--bw-4)">'
+    + '<label class="bw-field" style="margin:0 0 10px;max-width:46ch">What is this call for?'
+    + '<select class="bwin" aria-label="What this call is for" data-chg="callSetGoal$self">'
+    + '<option value="">not chosen</option>' + goals + '</select></label>'
+    + callListHTML("What the case holds", sheet.context)
+    + questions
+    + callListHTML("What the plan says", sheet.constraints)
+    + (sheet.unresolved.length
+        ? '<div class="eyebrow" style="margin:0 0 6px">Still unanswered</div>'
+          + '<ul style="margin:0 0 10px;padding-left:18px;font-size:12.5px;line-height:1.7;'
+          + 'color:var(--bw-body)">'
+          + sheet.unresolved.map(function(u){ return '<li>' + ciEsc(u) + '</li>'; }).join("")
+          + '</ul>'
+        : '')
+    + '<p style="margin:0;font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
+    + ciEsc(B.callReadiness(sheet)) + '</p></div>';
+}
+
+/** One titled list of sentences, each with where it came from. */
+function callListHTML(title, rows){
+  if (!rows || !rows.length) return "";
+  return '<div class="eyebrow" style="margin:0 0 6px">' + ciEsc(title) + '</div>'
+    + '<ul style="margin:0 0 12px;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+    + rows.map(function(r){
+        return '<li>' + ciEsc(r.said)
+          + '<span style="color:var(--bw-subtle);font-size:11px"> — ' + ciEsc(r.from) + '</span></li>';
+      }).join("")
+    + '</ul>';
+}
+
+/* -------------------------------------------------------------- during */
+
+/** Somewhere to write while it is happening. */
+function callDuringHTML(){
+  var B = window.BW;
+  var mic = callSpeech().read();
+
+  var written = _callNotes.length
+    ? '<ul style="margin:0 0 10px;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+      + _callNotes.map(function(n){
+          return '<li>' + ciEsc(n.said)
+            + '<span style="color:var(--bw-subtle);font-size:11px"> — '
+            + ciEsc(n.source === B.NOTE_SOURCE.DICTATED ? "dictated" : "typed") + '</span></li>';
+        }).join("")
+      + '</ul>'
+    : '<p style="margin:0 0 10px;font-size:12px;color:var(--bw-muted)">Nothing written yet.</p>';
+
+  return '<div style="margin-top:var(--bw-4)">'
+    + written
+    + '<label class="bw-field" style="margin:0">A line of notes'
+    + '<input class="bwin" id="call-note" placeholder="They will send the breakdown by 2026-10-12"'
+    + ' aria-label="A line of notes" data-key="callNoteKey$event"></label>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">'
+    + '<button class="bw-act bw-act-primary" style="margin:0" data-do="callAddNote">Add it</button>'
+    + '<span class="bw-status ' + (mic.listening ? "bw-status--live" : "bw-status--derived") + '">'
+    + ciEsc(mic.listening ? "microphone on" : "microphone off") + '</span>'
+    + '</div>'
+    + '<p style="margin:8px 0 0;font-size:11.5px;color:var(--bw-muted);line-height:1.6;max-width:62ch">'
+    + ciEsc(mic.said) + (mic.why ? " " + ciEsc(mic.why) : "") + '</p>'
+    + '<div id="call-note-msg" style="margin-top:6px;font-size:12px;color:var(--bw-warning)"></div>'
+    + '</div>';
+}
+
+/**
+ * The dictation machine, made once.
+ *
+ * No recogniser is handed to it, which is what makes it unavailable — see
+ * `src/services/speech.mjs` for why this build does not switch it on. Built
+ * here rather than at mount so that the page still renders if the module is
+ * missing entirely.
+ */
+function callSpeech(){
+  var B = window.BW;
+  if (!_callSpeech) _callSpeech = B.dictation({});
+  return _callSpeech;
+}
+
+/* --------------------------------------------------------------- after */
+
+/** What was said, what it commits anybody to, and the draft that follows. */
+function callAfterHTML(){
+  var B = window.BW;
+
+  if (_callItems === null) {
+    return '<div style="margin-top:var(--bw-4)">'
+      + '<p style="margin:0 0 8px;font-size:12.5px;color:var(--bw-body);line-height:1.6;max-width:62ch">'
+      + ciEsc("Reading the notes proposes what was agreed. Every line it proposes is a reading "
+              + "until you say otherwise, and a line it cannot read produces nothing rather "
+              + "than a guess.") + '</p>'
+      + '<button class="bw-act bw-act-primary" style="margin:0" data-do="callReadNotes">'
+      + 'Read my notes</button></div>';
+  }
+
+  var rows = _callItems.map(callItemHTML).join("");
+  var draft = B.followUp(_callSheet || B.prepareCall({}), _callItems, { title: caseBriefTitle() });
+
+  return '<div style="margin-top:var(--bw-4)">'
+    + (rows
+        ? '<ul style="list-style:none;margin:0 0 12px;padding:0">' + rows + '</ul>'
+        : '<p style="margin:0 0 12px;font-size:12.5px;color:var(--bw-muted)">'
+          + ciEsc("Nothing in the notes commits anybody to anything.") + '</p>')
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
+    + '<button class="bw-act bw-act-primary" style="margin:0" data-do="callCopyFollowUp">'
+    + 'Copy the follow-up</button>'
+    + '<button class="bw-act bw-act-secondary" style="margin:0" data-do="callSave">'
+    + 'Save these notes</button>'
+    + '<span style="font-size:11.5px;color:var(--bw-muted);line-height:1.6;max-width:46ch">'
+    + ciEsc(B.followUpReadiness(draft)) + '</span></div>'
+    + '<p style="margin:8px 0 0;font-size:11.5px;color:var(--bw-muted);line-height:1.6;max-width:62ch">'
+    + ciEsc("Until you press save, these notes are only on this screen — leaving the page loses "
+            + "them. Saving keeps them in this browser and sends them nowhere.") + '</p>'
+    + '<div id="call-msg" style="margin-top:6px;font-size:12px;color:var(--bw-muted)"></div>'
+    + '</div>';
+}
+
+/** One proposed commitment, and the four things a person can say about it. */
+function callItemHTML(item, i){
+  var B = window.BW;
+  var decided = item.disposition !== B.REVIEW_DISPOSITION.PROPOSED;
+
+  var state = decided
+    ? '<span class="bw-status ' + (item.disposition === B.REVIEW_DISPOSITION.REJECTED
+        ? "bw-status--assumed" : "bw-status--evidenced") + '">'
+      + ciEsc(item.disposition) + '</span>'
+    : '<span class="bw-status bw-status--derived">proposed</span>';
+
+  var missing = item.needs
+    ? '<div style="font-size:11.5px;color:var(--bw-warning);margin-top:3px">'
+      + ciEsc("Needs " + item.needs + ".") + (item.needsWhy ? " " + ciEsc(item.needsWhy) : "")
+      + '</div>'
+    : "";
+
+  var controls = decided ? "" :
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-top:6px">'
+    + '<label class="bw-field" style="margin:0">What was agreed'
+    + '<input class="bwin" id="call-what-' + i + '" value="' + attrEsc(ciEsc(item.what))
+    + '" aria-label="What was agreed"></label>'
+    + '<label class="bw-field" style="margin:0">By when'
+    + '<input class="bwin" id="call-date-' + i + '" value="' + attrEsc(ciEsc(item.date || ""))
+    + '" placeholder="2026-10-12" aria-label="By when"></label>'
+    + '<button class="bw-act bw-act-primary" style="margin:0" data-do="callConfirm" data-a="' + i
+    + '">That is right</button>'
+    + '<button class="bw-act bw-act-secondary" style="margin:0" data-do="callUnknown" data-a="' + i
+    + '">When is not settled</button>'
+    + '<button class="bw-act bw-act-secondary" style="margin:0" data-do="callReject" data-a="' + i
+    + '">Nobody agreed that</button></div>';
+
+  return '<li style="border:1px solid var(--bw-line);border-radius:var(--bw-r-1);padding:10px;'
+    + 'margin-bottom:8px;background:var(--bw-raised)">'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' + state
+    + '<b style="color:var(--bw-text);font-size:12.5px">'
+    + ciEsc((item.owner === B.CALL_OWNER.US ? "We will " : "They will ") + item.what)
+    + (item.date ? ciEsc(" by " + item.date) : "") + '</b></div>'
+    + missing
+    + '<div style="color:var(--bw-subtle);font-size:11px;margin-top:3px">'
+    + ciEsc('From your note: "' + item.evidence.quote + '"') + '</div>'
+    + controls + '</li>';
+}
+
+/* ---- what a person can do ---- */
+
+/**
+ * Open one of the three, or close the one that is open.
+ *
+ * The sheet is prepared on the first open rather than on every render: it
+ * carries what somebody typed into it, and rebuilding it under them would
+ * throw away the questions they wrote.
+ */
+function callOpen(screen){
+  var B = window.BW;
+  if (!B || !B.prepareCall) return;
+
+  if (!_callSheet) {
+    _callSheet = B.prepareCall({
+      bridge: _defResult,
+      negotiation: caseNegotiationPlan(),
+      unresolved: callUnresolved()
+    });
+  }
+  _callScreen = (_callScreen === screen) ? null : screen;
+  caseRender();
+}
+
+/**
+ * What the case is waiting on, as questions to ask.
+ *
+ * The assumptions the provenance layer found, each of which already knows what
+ * would settle it — so the question is the figure and the reason is the thing
+ * to ask for. The evidence section's claims were the obvious source and are
+ * the wrong one: they are statements about what has been given, and a sheet
+ * that puts "Steel bar was given as a driver" in a question box is the filler
+ * this screen exists not to produce.
+ */
+function callUnresolved(){
+  var B = window.BW;
+  if (!B || !B.assumptionsToVerify || !_defResult) return [];
+  try {
+    return B.assumptionsToVerify(_defResult).map(function(a){
+      return { said: "What settles " + a.figure + "?", why: a.settledBy };
+    });
+  } catch (e) { return []; }
+}
+
+function callSetGoal(el){
+  var B = window.BW;
+  if (!_callSheet || !el) return;
+  if (!el.value) return;
+  _callSheet = B.withCallGoal(_callSheet, el.value);
+  caseRender();
+}
+
+function callSetQuestion(el, index){
+  var B = window.BW;
+  if (!_callSheet || !el) return;
+  _callSheet = B.withCallQuestion(_callSheet, index, el.value);
+  caseRender();
+}
+
+/** Enter in the note box does what the button does. */
+function callNoteKey(e){
+  if (e && e.key === "Enter") callAddNote();
+}
+
+/**
+ * Write a line down.
+ *
+ * Refused lines say why where the box is. An empty note is the ordinary
+ * accident — pressing the button twice — and a page that silently does
+ * nothing teaches people it is broken.
+ */
+function callAddNote(){
+  var B = window.BW;
+  var box = document.getElementById("call-note");
+  var msg = document.getElementById("call-note-msg");
+  if (!B || !box) return;
+
+  try {
+    _callNotes = _callNotes.concat([B.callNote({ text: box.value })]);
+  } catch (e) {
+    if (msg) msg.textContent = String((e && e.message) || e);
+    return;
+  }
+  box.value = "";
+  /* The readings are stale the moment a note is added, and a list that no
+     longer matches the notes it was read from is worse than no list. */
+  _callItems = null;
+  caseRender();
+}
+
+/** Read the notes for what they commit anybody to. */
+function callReadNotes(){
+  var B = window.BW;
+  if (!B || !B.commitments) return;
+  _callItems = B.commitments(_callNotes);
+  caseRender();
+}
+
+/** Who is deciding. The same wording the case view uses for a confirmation. */
+var CALL_BY = "this browser";
+
+function callDecide(index, decide){
+  var i = Number(index);
+  if (!_callItems || !_callItems[i]) return;
+  var msg = document.getElementById("call-msg");
+  try {
+    var next = decide(_callItems[i]);
+    _callItems = _callItems.map(function(item, at){ return at === i ? next : item; });
+  } catch (e) {
+    if (msg) msg.textContent = String((e && e.message) || e);
+    return;
+  }
+  caseRender();
+}
+
+/**
+ * "That is right" — with whatever is in the two boxes.
+ *
+ * A row whose words or date have been edited is a correction rather than a
+ * confirmation, and it is recorded as one: the distinction is the whole
+ * reason the revision list exists.
+ */
+function callConfirm(index){
+  var B = window.BW;
+  var i = Number(index);
+  if (!_callItems || !_callItems[i]) return;
+
+  var what = String(scVal("call-what-" + i) || "").trim();
+  var date = String(scVal("call-date-" + i) || "").trim();
+  var item = _callItems[i];
+  var edited = what !== item.what || date !== String(item.date || "");
+
+  callDecide(i, function(x){
+    return edited
+      ? B.correctCommitment(x, { what: what, date: date || null }, CALL_BY)
+      : B.confirmCommitment(x, CALL_BY);
+  });
+}
+
+function callUnknown(index){
+  var B = window.BW;
+  callDecide(index, function(x){ return B.commitmentUnknown(x, CALL_BY); });
+}
+
+function callReject(index){
+  var B = window.BW;
+  callDecide(index, function(x){ return B.rejectCommitment(x, CALL_BY); });
+}
+
+/** The draft, on the clipboard. Nothing sends it. */
+function callCopyFollowUp(){
+  var B = window.BW;
+  var msg = document.getElementById("call-msg");
+  if (!B || !B.followUp || !_callItems) return;
+
+  var draft = B.followUp(_callSheet || B.prepareCall({}), _callItems, { title: caseBriefTitle() });
+  var done = function(said){ if (msg) msg.textContent = said; };
+
+  try {
+    return navigator.clipboard.writeText(draft.text).then(function(){
+      done("Copied. It is a draft of what you heard, and nothing has been sent.");
+    }, function(){ done("The clipboard refused. Select the text and copy it by hand."); });
+  } catch (e) {
+    done("The clipboard is not available in this browser.");
+    return Promise.resolve();
+  }
+}
+
+/**
+ * Keep them.
+ *
+ * The only path from this screen to storage, and it runs when somebody presses
+ * the button and at no other moment. What is stored is every note and the
+ * commitments somebody decided about; a reading nobody looked at is dropped,
+ * and the message says how many.
+ */
+function callSave(){
+  var B = window.BW;
+  var msg = document.getElementById("call-msg");
+  var done = function(said){ if (msg) msg.textContent = said; };
+  if (!B || !B.saveCall) return;
+
+  if (!_callId) _callId = B.newCallId();
+  var r = B.saveCall({
+    id: _callId,
+    title: caseBriefTitle(),
+    goal: _callSheet ? _callSheet.goal : null,
+    at: _callSheet ? _callSheet.at : null,
+    notes: _callNotes,
+    commitments: _callItems || []
+  });
+
+  if (!r.ok) { _callId = null; done(r.error); return; }
+  done("Saved in this browser. " + r.kept + " commitment" + (r.kept === 1 ? "" : "s")
+     + " kept" + (r.dropped ? ", " + r.dropped + " left out because nobody has checked "
+                              + (r.dropped === 1 ? "it" : "them") : "")
+     + ". Nothing was sent anywhere.");
+}
+
+/** Put the call down with the case it was about. */
+function callClear(){
+  _callSheet = null;
+  _callNotes = [];
+  _callItems = null;
+  _callScreen = null;
+  _callId = null;
+  _callSpeech = null;
 }
 
 /* ------------------------------------------------- where this sits in the chain
@@ -9310,6 +9767,19 @@ registerActions({
   /* The what-ifs. Typing into a field records it and redraws nothing; the
      figures arrive when somebody asks for them, which is also the only moment
      a missing input can be reported as a question. */
+  /* The call. Opening a screen, writing a line, and the four things somebody
+     can say about what a note proposes was agreed. */
+  callOpen: function (screen) { callOpen(screen); },
+  callSetGoal$self: function () { callSetGoal(this); },
+  callSetQuestion$self: function (index) { callSetQuestion(this, index); },
+  callAddNote: function () { callAddNote(); },
+  callNoteKey$event: function (_a, _b, ev) { callNoteKey(ev); },
+  callReadNotes: function () { callReadNotes(); },
+  callConfirm: function (index) { callConfirm(index); },
+  callUnknown: function (index) { callUnknown(index); },
+  callReject: function (index) { callReject(index); },
+  callCopyFollowUp: function () { callCopyFollowUp(); },
+  callSave: function () { callSave(); },
   whatIfOpen: function (kind) { whatIfOpen(kind); },
   whatIfSet$self: function (field) { whatIfSet(this, field); },
   whatIfWork: function () { whatIfWork(); },

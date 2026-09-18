@@ -50,9 +50,13 @@ describe("the stores the review lists are the stores that exist", () => {
     return [...found].sort();
   };
 
-  test("there are six, and the review names each one", () => {
+  test("there are seven, and the review names each one", () => {
+    /* Seven since the call store. The count is deliberate rather than derived:
+       a new store is a new thing kept on somebody's machine, and it should not
+       be possible to add one without this failing and somebody writing down
+       what it holds. */
     const keys = keysInCode();
-    assert.equal(keys.length, 6, `found ${keys.length} stores: ${keys.join(", ")}`);
+    assert.equal(keys.length, 7, `found ${keys.length} stores: ${keys.join(", ")}`);
     for (const key of keys) {
       assert.ok(security.includes(`\`${key}\``), `${key} is not in the data-handling section`);
     }

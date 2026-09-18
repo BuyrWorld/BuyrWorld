@@ -112,9 +112,9 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 69 |
-| Test files | 0 | 112 |
-| Tests | 0 | 3,295, all passing |
+| Modules under `src/` | 0 | 72 |
+| Test files | 0 | 116 |
+| Tests | 0 | 3,407, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
 
@@ -609,6 +609,40 @@ rather than a picture with an accessible list beside it. `specs/06` asks for
 drift, and the one nobody looks at is the one that rots. The tick beside a
 question is the case view's own tick, against the same assumption id, so the
 two places cannot disagree about what has been checked.
+
+Phase 4 is the call. `src/case/call.mjs` is the sheet somebody takes in,
+the notes they write while it is happening, and what those notes propose was
+agreed. Everything on the sheet is derived from the case — the questions come
+from the negotiation ladder and from the assumptions the provenance layer
+found, each of which already knows what would settle it — and a question it
+cannot derive is left as an empty slot rather than filled with "ask about
+their cost base", which is what makes a sheet look finished when it is not.
+
+Commitments are read out of notes by written rule. A line that commits nobody
+to anything produces nothing at all: a reader that finds an action in every
+line is one people stop reading. An unknown date stays unknown — "next week"
+is not a date and neither is "12 October" in a year nobody wrote down, and
+`12/10/2026` is refused outright because it is two different days depending
+on where you are. A commitment missing its date cannot be confirmed; it can be
+corrected into one, or marked unknown, which is a decision and is recorded as
+one.
+
+Nothing in that module writes anywhere, and it imports nothing that can. That
+is how *"notes retained only by explicit save"* is kept: not by remembering not
+to save, but by having nowhere to save to. `src/services/call-store.mjs` is the
+one place a note can be written, it runs when somebody presses the button, and
+it drops every commitment nobody has looked at rather than storing a rule's
+guess as a record.
+
+`src/services/speech.mjs` is dictation, which is off. The browser has a
+recogniser and it is two lines to start; on the common implementation the
+audio is sent to the vendor to be transcribed, and this site tells people it
+sends nothing anywhere. So what is built is everything except the decision — a
+visible state machine with start, pause and stop, a recogniser supplied from
+outside rather than reached for, and an unavailable state that says *why*
+instead of greying a button out. The module never reads a global, which is
+what makes "it cannot start a microphone the page did not hand it" a fact
+rather than an intention.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

@@ -55,6 +55,26 @@
            sourceConflicts, stateOf as reviewStateOf, methodSaid,
            METHOD as REVIEW_METHOD, DISPOSITION as REVIEW_DISPOSITION,
            history as reviewHistory, reviveItems } from "./src/intake/review.mjs";
+  /* The call: what to take in, what was written down, and what it commits
+     anybody to. Renamed on the way in because "prepare", "note" and
+     "readiness" are words several modules here already use. */
+  import { prepare as prepareCall, withGoal as withCallGoal,
+           withQuestion as withCallQuestion, readiness as callReadiness,
+           note as callNote, commitments, dateIn as dateInNote,
+           confirmCommitment, correctCommitment, commitmentUnknown, rejectCommitment,
+           agreed as agreedCommitments, outstanding as outstandingCommitments,
+           followUp, followUpReadiness,
+           GOAL as CALL_GOAL, GOAL_SAID as CALL_GOAL_SAID, GOALS as CALL_GOALS,
+           OWNER as CALL_OWNER, PHASE as CALL_PHASE, NOTE_SOURCE }
+    from "./src/case/call.mjs";
+  /* Dictation, which is off: nothing is handed a recogniser here, and the
+     adapter says why rather than greying a button out. */
+  import { dictation, browserRecogniser, recogniserExists,
+           STATE as SPEECH_STATE, SAID as SPEECH_SAID,
+           WHY_UNAVAILABLE as SPEECH_WHY } from "./src/services/speech.mjs";
+  /* The one place a call note can be written, and only when somebody asks. */
+  import { saveCall, loadCalls, loadCall, deleteCall, newCallId,
+           storeStatus as callStoreStatus } from "./src/services/call-store.mjs";
   /* Supplier -> transport -> production -> customer, as this case knows them.
      Its generic names are prefixed on the way in: STAGE, STATE and WEIGHT are
      words several modules could reasonably want. */
@@ -169,6 +189,14 @@
                 mapExposure, costShock, shareFrom, parseAmount,
                 learningCorpus, whatWorks, captureGaps, linkOutcome,
                 classify, nextActions,
+                prepareCall, withCallGoal, withCallQuestion, callReadiness,
+                callNote, commitments, dateInNote,
+                confirmCommitment, correctCommitment, commitmentUnknown, rejectCommitment,
+                agreedCommitments, outstandingCommitments, followUp, followUpReadiness,
+                CALL_GOAL, CALL_GOAL_SAID, CALL_GOALS, CALL_OWNER, CALL_PHASE, NOTE_SOURCE,
+                dictation, browserRecogniser, recogniserExists,
+                SPEECH_STATE, SPEECH_SAID, SPEECH_WHY,
+                saveCall, loadCalls, loadCall, deleteCall, newCallId, callStoreStatus,
                 scene, SCENE_STAGE, SCENE_STAGE_TITLE, SCENE_ORDER, SCENE_STATE,
                 SCENE_WEIGHT, SCENE_WOULD_FILL,
                 whatIf, adoptScenario, scenarioStillAbout, scenarioQuestionsFor,

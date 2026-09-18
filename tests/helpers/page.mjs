@@ -78,3 +78,46 @@ export function fnSource(name, source = pageSource()) {
   const end = plain < 0 ? asyncNext : asyncNext < 0 ? plain : Math.min(plain, asyncNext);
   return source.slice(start, end < 0 ? source.length : end);
 }
+
+/**
+ * Every function the case view draws itself with, and the state they share.
+ *
+ * Four test files build the case view in a `vm` context, and each one used to
+ * carry its own list of function names. Three times in two days a new block on
+ * the case — the what-ifs, the chain, the call — turned every other file's
+ * twenty-nine passing tests into twenty-nine ReferenceErrors, because the
+ * renderer called something that file had never heard of.
+ *
+ * So the list lives here, beside the thing that extracts it. A file that wants
+ * the case view gets all of it; what each one leaves out of its `window.BW` is
+ * still its own business, and leaving a module out is how those files check
+ * that a block stays silent without it.
+ */
+export function caseViewSource(app = pageSource()) {
+  const fns = [
+    "caseClear", "caseLabelFor", "caseNarrative", "caseRender",
+    "caseControlsHTML", "caseSectionHTML", "caseClaimHTML", "caseIsAssumption",
+    "caseFigureText", "caseFootHTML", "caseSetRole", "caseSetDepth", "caseConfirm",
+    "caseBriefHTML", "caseBriefTitle", "caseCopyBrief",
+    "caseSpecialistsHTML", "caseNegotiationPlan",
+    "caseSceneHTML", "caseSceneAttentionHTML", "caseSceneStageHTML", "caseSceneQuestionHTML",
+    "whatIfBase", "whatIfHTML", "whatIfPanelHTML", "whatIfWorkedHTML", "whatIfAxesHTML",
+    "whatIfAdoptHTML", "whatIfAdoptedHTML", "whatIfOpen", "whatIfSet", "whatIfWork",
+    "whatIfAdopt", "whatIfClear",
+    "callHTML", "callBeforeHTML", "callListHTML", "callDuringHTML", "callSpeech",
+    "callAfterHTML", "callItemHTML", "callOpen", "callUnresolved", "callSetGoal",
+    "callSetQuestion", "callNoteKey", "callAddNote", "callReadNotes", "callDecide",
+    "callConfirm", "callUnknown", "callReject", "callCopyFollowUp", "callSave", "callClear",
+  ];
+
+  return [
+    "var _caseRole=null; var _caseDepth=null;",
+    "var _caseConfirmed=Object.create(null);",
+    "var _whatIfKind=null; var _whatIfInputs=Object.create(null);",
+    "var _whatIfWorked=Object.create(null); var _whatIfAdopted=[];",
+    "var _callSheet=null; var _callNotes=[]; var _callItems=null;",
+    "var _callScreen=null; var _callId=null; var _callSpeech=null;",
+    'var CALL_BY = "this browser";',
+    ...fns.map((name) => fnSource(name, app)),
+  ].join("\n");
+}

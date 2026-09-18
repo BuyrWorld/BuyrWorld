@@ -20,7 +20,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-import { fnSource } from "../helpers/page.mjs";
+import { caseViewSource } from "../helpers/page.mjs";
 import { costBridge } from "../../src/calc/cost-bridge.mjs";
 import { ratioFromPercent, moneyFromDecimal, moneyToDecimalString } from "../../src/calc/exact.mjs";
 import { assumptionsToVerify } from "../../src/calc/provenance.mjs";
@@ -96,31 +96,7 @@ function page() {
     _defResult: null,
   };
   vm.createContext(box);
-  new vm.Script([
-    "var _caseRole=null; var _caseDepth=null;",
-    "var _caseConfirmed=Object.create(null);",
-    "var _whatIfKind=null; var _whatIfInputs=Object.create(null);",
-    "var _whatIfWorked=Object.create(null); var _whatIfAdopted=[];",
-    fnSource("caseClear", app), fnSource("caseLabelFor", app),
-    fnSource("caseNarrative", app), fnSource("caseRender", app),
-    fnSource("caseControlsHTML", app), fnSource("caseSectionHTML", app),
-    fnSource("caseClaimHTML", app), fnSource("caseIsAssumption", app),
-    fnSource("caseFigureText", app), fnSource("caseFootHTML", app),
-    fnSource("caseSetRole", app), fnSource("caseSetDepth", app),
-    fnSource("caseConfirm", app), fnSource("caseBriefHTML", app),
-    fnSource("caseBriefTitle", app), fnSource("caseCopyBrief", app),
-    fnSource("caseSpecialistsHTML", app), fnSource("caseNegotiationPlan", app),
-    /* The case view draws the chain too, and the scene module is deliberately
-       absent from the BW above: this file also holds that the chain stays
-       silent without it. `supply-scene-wiring.test.mjs` exercises it. */
-    fnSource("caseSceneHTML", app),
-    fnSource("whatIfBase", app), fnSource("whatIfHTML", app),
-    fnSource("whatIfPanelHTML", app), fnSource("whatIfWorkedHTML", app),
-    fnSource("whatIfAxesHTML", app), fnSource("whatIfAdoptHTML", app),
-    fnSource("whatIfAdoptedHTML", app), fnSource("whatIfOpen", app),
-    fnSource("whatIfSet", app), fnSource("whatIfWork", app),
-    fnSource("whatIfAdopt", app), fnSource("whatIfClear", app),
-  ].join("\n")).runInContext(box);
+  new vm.Script(caseViewSource(app)).runInContext(box);
 
   const run = (src) => vm.runInContext(src, box);
 

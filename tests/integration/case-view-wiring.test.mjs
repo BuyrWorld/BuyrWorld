@@ -18,7 +18,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-import { fnSource, pageSource } from "../helpers/page.mjs";
+import { caseViewSource, fnSource, pageSource } from "../helpers/page.mjs";
 import { costBridge } from "../../src/calc/cost-bridge.mjs";
 import { ratioFromPercent, moneyFromDecimal } from "../../src/calc/exact.mjs";
 import { assumptionsToVerify } from "../../src/calc/provenance.mjs";
@@ -78,28 +78,7 @@ function page() {
     _defResult: null,
   };
   vm.createContext(box);
-  new vm.Script([
-    "var _caseRole=null; var _caseDepth=null;",
-    fnSource("caseClear", app), fnSource("caseLabelFor", app),
-    fnSource("caseNarrative", app), fnSource("caseRender", app),
-    fnSource("caseControlsHTML", app), fnSource("caseSectionHTML", app),
-    fnSource("caseClaimHTML", app), fnSource("caseIsAssumption", app),
-    fnSource("caseFigureText", app), fnSource("caseFootHTML", app),
-    fnSource("caseSetRole", app), fnSource("caseSetDepth", app),
-    fnSource("caseConfirm", app), fnSource("caseBriefHTML", app),
-    fnSource("caseBriefTitle", app), fnSource("caseCopyBrief", app),
-    fnSource("caseSpecialistsHTML", app), fnSource("caseNegotiationPlan", app),
-    /* The case view draws the what-if block too. The scenarios module is
-       deliberately absent from the BW above, so this file also checks that the
-       block stays silent without it rather than taking the case down with it —
-       `whatif-wiring.test.mjs` and `supply-scene-wiring.test.mjs` are where
-       each is exercised with its module. */
-    fnSource("whatIfHTML", app), fnSource("whatIfBase", app), fnSource("whatIfClear", app),
-    fnSource("caseSceneHTML", app),
-    "var _whatIfKind=null; var _whatIfInputs=Object.create(null);",
-    "var _whatIfWorked=Object.create(null); var _whatIfAdopted=[];",
-    "var _caseConfirmed=Object.create(null);",
-  ].join("\n")).runInContext(box);
+  new vm.Script(caseViewSource(app)).runInContext(box);
 
   return {
     box, els, copied,
