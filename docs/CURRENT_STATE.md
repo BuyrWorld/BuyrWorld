@@ -113,8 +113,8 @@ Every figure below came from the working tree on the date above.
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
 | Modules under `src/` | 0 | 68 |
-| Test files | 0 | 109 |
-| Tests | 0 | 1,931, all passing |
+| Test files | 0 | 110 |
+| Tests | 0 | 3,254, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
 
@@ -555,6 +555,25 @@ show what can be shown, and a comparison with three of four columns invites
 somebody to read the three. Nothing is scored or totalled: a composite would
 let a cost saving outvote a missed build date, which is a judgement nobody
 asked this to make.
+
+It is on the page now, at the foot of the case: three named options, the
+module's own questions as the form's labels, and — once they are all
+answered — the four axes in the module's own sentences. The page performs no
+arithmetic of its own, which is checked by comparing what it renders against
+what the module returns, character for character.
+
+The plan a scenario is an alternative to is built from the calculation on
+screen rather than stored beside it, and its revision is the figures
+themselves. Recalculate at a different price and every scenario explored
+against the old ones says so, refuses to be adopted, and marks the ones
+already adopted rather than deleting them. Adopting records who, when and
+against what; it does not move a figure, order anything or tell a supplier.
+The page says so where the button is, because a button called *Adopt* that
+silently did nothing would be worse than either.
+
+Typing into a field records it and redraws nothing — a redraw per keystroke
+takes the caret out of the box — so the figures, and the questions, arrive
+when somebody asks for them.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

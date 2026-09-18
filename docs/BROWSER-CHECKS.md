@@ -186,6 +186,39 @@ them passing in its own environment; that is its evidence, not mine.
 - [ ] Run it twice with the same output name. It must refuse rather than
       overwrite.
 
+## 9 · The three what-ifs — 15 minutes
+
+`specs/06`: *"'What if?' creates a scenario copy with an explicit badge …
+Missing inputs produce questions, not estimated facts disguised as answers."*
+The arithmetic and the wiring both have tests; what they cannot see is
+whether the block is legible, reachable and obviously not the plan.
+
+Open **Tools → Supplier Claim Review**, calculate an increase, and scroll to
+*What if we did it differently?* at the foot of the case.
+
+- [ ] Open **Split the delivery**. Five boxes, each labelled with a question
+      rather than a field name. Nothing below them.
+- [ ] Press **Work it out** with the boxes empty. Questions appear, no
+      figures — and the badge reads *WHAT IF — NOT THE PLAN* in a chip that
+      carries its word, not only its colour.
+- [ ] Answer four of the five. Still no figures. This is the one to look at
+      hardest: a partial comparison is exactly what must not appear.
+- [ ] Answer the fifth. Four axes, no total across them.
+- [ ] Switch to **Expedite it** and back. What you typed is still there.
+- [ ] Type a quantity in words. The refusal names the field; the case around
+      it is untouched.
+- [ ] Press **Adopt this option** with the name box empty. It says it needs
+      one, where you are looking.
+- [ ] Adopt it with a role. It appears under *Options taken*, and every
+      figure in the calculation above is exactly as it was.
+- [ ] Change the unit price and calculate again. The scenario says the plan
+      has moved, adopting is refused, and the option already taken is marked
+      rather than deleted.
+- [ ] At 390px: the boxes stack, the buttons wrap, nothing scrolls sideways.
+- [ ] By keyboard alone: tab to a scenario button, open it with Enter, reach
+      **Work it out** and **Adopt this option**. The three buttons announce
+      their pressed state.
+
 ---
 
 ## What executing the code has already settled

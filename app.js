@@ -1344,6 +1344,10 @@ var _caseConfirmed = Object.create(null);
 /** Put the case view down when the calculation is cleared or replaced. */
 function caseClear(){
   _caseConfirmed = Object.create(null);
+  /* The scenarios go with it. They are alternatives to a particular plan, and
+     a plan that is gone has no alternatives — leaving them would offer a
+     comparison against figures no longer on the screen. */
+  whatIfClear();
   var host = document.getElementById("case-view");
   if (host) host.innerHTML = "";
 }
@@ -1394,6 +1398,7 @@ function caseRender(){
     + caseControlsHTML(view)
     + view.sections.map(caseSectionHTML).join("")
     + caseFootHTML(view)
+    + whatIfHTML()
     + caseSpecialistsHTML()
     + caseBriefHTML()
     + '</div>';
@@ -1649,6 +1654,305 @@ function caseConfirm(id){
   if (!id) return;
   _caseConfirmed[id] = { by: "this browser", at: new Date().toISOString() };
   caseRender();
+}
+
+/* ------------------------------------------------- what if we did it differently?
+
+   `src/calc/scenarios.mjs` is the arithmetic; this is the only place a person
+   meets it. Three rules from the module survive the journey onto the screen,
+   and they are the reason this code is shaped the way it is:
+
+     - A scenario is a copy. Nothing here writes to the calculation above.
+       Adopting one records a decision; it does not apply it.
+     - Missing inputs produce questions. While one is outstanding the panel
+       shows no figures at all — not the three of four columns that happen to
+       be answerable, because somebody in a hurry reads the three.
+     - The money is exact, and it is exact because none of it is worked out
+       here. Every sentence below comes from the module.
+*/
+
+/** Which of the three is open. Null is the ordinary state: none of them. */
+var _whatIfKind = null;
+
+/** What has been typed into each, by kind and then by field. */
+var _whatIfInputs = Object.create(null);
+
+/** What came back: `{ scenario }`, or `{ error }` when an input was refused. */
+var _whatIfWorked = Object.create(null);
+
+/** The decisions somebody recorded, in the order they recorded them. */
+var _whatIfAdopted = [];
+
+/**
+ * The plan a scenario is an alternative to.
+ *
+ * Built from the calculation on screen rather than stored beside it, so it
+ * cannot drift from it. The revision is the figures themselves: change the
+ * price or the volume and every scenario explored against the old ones says
+ * so, which is what `stillAbout` is for.
+ */
+function whatIfBase(){
+  var B = window.BW;
+  if (!B || !B.whatIf || !_defResult) return null;
+  var unit = _defResult.unitPrice && _defResult.unitPrice.baseline;
+  if (!unit || typeof unit.minor !== "bigint") return null;
+
+  return {
+    id: "the claim on this screen",
+    revision: B.moneyToDecimalString(unit) + " " + unit.currency
+            + " x " + _defResult.annualVolume,
+    unitPrice: unit,
+    quantity: _defResult.annualVolume
+  };
+}
+
+/** The whole block, or nothing when there is no plan to be an alternative to. */
+function whatIfHTML(){
+  var B = window.BW;
+  var base = whatIfBase();
+  if (!base || !B.SCENARIO_TITLE) return "";
+
+  var kinds = [B.SCENARIO.SPLIT, B.SCENARIO.EXPEDITE, B.SCENARIO.ALTERNATIVE];
+  var tabs = kinds.map(function(kind){
+    var open = kind === _whatIfKind;
+    return '<button class="bw-act ' + (open ? "bw-act-primary" : "bw-act-secondary")
+      + '" style="margin:0" aria-pressed="' + (open ? "true" : "false")
+      + '" data-do="whatIfOpen" data-a="' + attrEsc(ciEsc(kind)) + '">'
+      + ciEsc(B.SCENARIO_TITLE[kind]) + '</button>';
+  }).join("");
+
+  return '<div style="border-top:1px solid var(--bw-line);padding-top:var(--bw-4);margin-top:var(--bw-4)">'
+    + '<div class="eyebrow" style="margin:0 0 6px">What if we did it differently?</div>'
+    + '<p style="margin:0 0 10px;font-size:11.5px;color:var(--bw-muted);line-height:1.6;max-width:62ch">'
+    + ciEsc("Three alternatives, worked out against the plan as it stands — "
+            + base.revision + ". Looking at one changes nothing above, "
+            + "contacts nobody and commits to nothing.") + '</p>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">' + tabs + '</div>'
+    + (_whatIfKind ? whatIfPanelHTML(base, _whatIfKind) : "")
+    + whatIfAdoptedHTML();
+}
+
+/** The open scenario: what it needs, and what it has to say once it has it. */
+function whatIfPanelHTML(base, kind){
+  var B = window.BW;
+  var typed = _whatIfInputs[kind] || Object.create(null);
+
+  var fields = B.SCENARIO_NEEDS[kind].map(function(need){
+    var field = need[0], question = need[1];
+    /* attrEsc(ciEsc(…)), not attrEsc alone: attrEsc escapes the quote and
+       leaves raw angle brackets sitting in the attribute, which is how a
+       typed value becomes markup the moment anything moves it. */
+    return '<label class="bw-field" style="margin:0">' + ciEsc(question)
+      + '<input class="bwin" value="'
+      + attrEsc(ciEsc(String(typed[field] == null ? "" : typed[field])))
+      + '" aria-label="' + attrEsc(ciEsc(question)) + '"'
+      + ' data-inp="whatIfSet$self" data-a="' + attrEsc(ciEsc(field)) + '"></label>';
+  }).join("");
+
+  return '<div style="margin-top:var(--bw-4)">'
+    + '<div class="bw-fields">' + fields + '</div>'
+    + '<button class="bw-act bw-act-secondary" style="margin-top:10px" data-do="whatIfWork">'
+    + 'Work it out</button>'
+    + whatIfWorkedHTML(base, kind)
+    + '</div>';
+}
+
+/**
+ * What came back.
+ *
+ * A refused input is reported where the answer would have been, in the words
+ * the module refused it in — those name the field and what was wrong with it,
+ * which a sentence rewritten here would lose.
+ */
+function whatIfWorkedHTML(base, kind){
+  var worked = _whatIfWorked[kind];
+  if (!worked) return "";
+
+  if (worked.error) {
+    return '<p style="margin:10px 0 0;font-size:12px;color:var(--bw-warning);line-height:1.6">'
+      + ciEsc(worked.error) + '</p>';
+  }
+
+  var s = worked.scenario;
+  var head = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'
+    + '<span class="bw-status bw-status--derived">' + ciEsc(s.badge) + '</span>'
+    + '<span style="font-size:11.5px;color:var(--bw-muted)">'
+    + ciEsc("explored against " + s.basedOn.planId + ", " + s.basedOn.revision)
+    + '</span></div>';
+
+  if (!s.ready) {
+    return '<div style="margin-top:12px">' + head
+      + '<p style="margin:0 0 6px;font-size:12.5px;color:var(--bw-body);line-height:1.6">'
+      + ciEsc(s.said) + '</p>'
+      + '<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+      + s.questions.map(function(q){ return '<li>' + ciEsc(q.question) + '</li>'; }).join("")
+      + '</ul></div>';
+  }
+
+  return '<div style="margin-top:12px">' + head
+    + whatIfAxesHTML(s.compared)
+    + whatIfAdoptHTML(base, s) + '</div>';
+}
+
+/**
+ * Cost, timing, service and what is unresolved.
+ *
+ * Four axes and no fifth line adding them up. A composite would let a cost
+ * saving outvote a missed build date, which is a judgement the module
+ * deliberately refuses to make and not one to make on its behalf here.
+ */
+function whatIfAxesHTML(compared){
+  var axis = function(title, said){
+    return '<div style="margin-bottom:8px"><div class="eyebrow" style="margin:0 0 3px">'
+      + ciEsc(title) + '</div>'
+      + '<div style="font-size:12.5px;color:var(--bw-body);line-height:1.6">'
+      + ciEsc(said) + '</div></div>';
+  };
+
+  return axis("Cost", compared.cost.said)
+    + axis("Timing", compared.timing.said)
+    + axis("Service", compared.service.said)
+    + '<div style="margin-bottom:8px"><div class="eyebrow" style="margin:0 0 3px">Still unresolved</div>'
+    + '<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+    + compared.unresolved.map(function(x){ return '<li>' + ciEsc(x) + '</li>'; }).join("")
+    + '</ul></div>';
+}
+
+/**
+ * Taking one.
+ *
+ * A name is required because the module requires one, and the module requires
+ * one because a scenario adopted by nobody is a decision nobody made. The
+ * sentence beside the button says what adopting does and, more usefully, what
+ * it does not: the figures above do not move, and nothing is sent anywhere.
+ */
+function whatIfAdoptHTML(base, s){
+  var B = window.BW;
+  if (!B.scenarioStillAbout(s, base)) {
+    return '<p style="margin:10px 0 0;font-size:12px;color:var(--bw-warning);line-height:1.6">'
+      + ciEsc("The figures above have changed since this was worked out, so it describes a "
+              + "plan that no longer exists. Work it out again before adopting it.") + '</p>';
+  }
+
+  return '<div style="border-top:1px solid var(--bw-line);padding-top:10px;margin-top:10px">'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">'
+    + '<label class="bw-field" style="margin:0">Who is adopting this?'
+    + '<input class="bwin" id="whatif-by" placeholder="a role, not a name"'
+    + ' aria-label="Who is adopting this scenario"></label>'
+    + '<button class="bw-act bw-act-primary" style="margin:0" data-do="whatIfAdopt">'
+    + 'Adopt this option</button></div>'
+    + '<p style="margin:6px 0 0;font-size:11.5px;color:var(--bw-muted);line-height:1.6;max-width:62ch">'
+    + ciEsc("Adopting records the decision and what it was taken against. It does not change "
+            + "the figures above, order anything or tell the supplier — putting it into effect "
+            + "is a separate act, done deliberately, by a person.") + '</p>'
+    + '<div id="whatif-adopt-msg" style="margin-top:6px;font-size:12px;color:var(--bw-warning)"></div>'
+    + '</div>';
+}
+
+/** The decisions recorded here, and whether each still describes the plan. */
+function whatIfAdoptedHTML(){
+  var B = window.BW;
+  var base = whatIfBase();
+  if (!_whatIfAdopted.length) return "";
+
+  var rows = _whatIfAdopted.map(function(s){
+    var moved = !B.scenarioStillAbout(s, base);
+    return '<li>'
+      + ciEsc(s.title + " — adopted by " + s.adopted.by + " on " + s.adopted.at
+              + ", against " + s.adopted.from.revision + ".")
+      + (moved
+          ? ' <span style="color:var(--bw-warning)">'
+            + ciEsc("The plan has moved since.") + '</span>'
+          : '')
+      + '</li>';
+  }).join("");
+
+  return '<div style="margin-top:var(--bw-4)">'
+    + '<div class="eyebrow" style="margin:0 0 6px">Options taken</div>'
+    + '<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+    + rows + '</ul>'
+    + '<p style="margin:6px 0 0;font-size:11.5px;color:var(--bw-muted);line-height:1.6">'
+    + ciEsc("Recorded here, and nowhere else. The plan above is unchanged.") + '</p>'
+    + '</div>';
+}
+
+/* ---- the four things a person can do to it ---- */
+
+/** Open one, or close the one that is open. */
+function whatIfOpen(kind){
+  _whatIfKind = (_whatIfKind === kind) ? null : kind;
+  caseRender();
+}
+
+/**
+ * Remember what was typed, without redrawing.
+ *
+ * Redrawing on every keystroke would take the caret out of the box somebody is
+ * typing in. The figures appear when they ask for them.
+ */
+function whatIfSet(el, field){
+  if (!el || !field || !_whatIfKind) return;
+  var into = _whatIfInputs[_whatIfKind]
+    || (_whatIfInputs[_whatIfKind] = Object.create(null));
+  into[field] = el.value;
+}
+
+/** Ask the module. Anything it refuses is reported rather than thrown at the page. */
+function whatIfWork(){
+  var B = window.BW;
+  var base = whatIfBase();
+  var kind = _whatIfKind;
+  if (!B || !B.whatIf || !kind || !base) return;
+
+  try {
+    _whatIfWorked[kind] = { scenario: B.whatIf(kind, {
+      base: base, inputs: _whatIfInputs[kind] || {}
+    }) };
+  } catch (e) {
+    _whatIfWorked[kind] = { error: String((e && e.message) || e) };
+  }
+  caseRender();
+}
+
+/**
+ * Record that somebody took one.
+ *
+ * Three ways this stops, and each says so where the person is looking rather
+ * than quietly doing nothing: no name, a scenario still waiting on inputs, and
+ * a plan that has moved since the scenario was worked out.
+ */
+function whatIfAdopt(){
+  var B = window.BW;
+  var kind = _whatIfKind;
+  var worked = kind ? _whatIfWorked[kind] : null;
+  var s = worked && worked.scenario;
+  var base = whatIfBase();
+  var msg = document.getElementById("whatif-adopt-msg");
+  var said = function(text){ if (msg) msg.textContent = text; };
+  if (!B || !B.adoptScenario || !s || !base) return;
+
+  if (!B.scenarioStillAbout(s, base)) {
+    said("The figures above have changed since this was worked out. Work it out again first.");
+    return;
+  }
+
+  try {
+    _whatIfAdopted = _whatIfAdopted.concat([
+      B.adoptScenario(s, String(scVal("whatif-by") || "").trim())
+    ]);
+  } catch (e) {
+    said(String((e && e.message) || e));
+    return;
+  }
+  caseRender();
+}
+
+/** Put the scenarios down with the case they were about. */
+function whatIfClear(){
+  _whatIfKind = null;
+  _whatIfInputs = Object.create(null);
+  _whatIfWorked = Object.create(null);
+  _whatIfAdopted = [];
 }
 
 // The negotiation plan. Everything here is computed by src/calc/negotiation.mjs
@@ -8877,6 +9181,13 @@ registerActions({
   caseSetDepth$self: function () { caseSetDepth(this); },
   caseConfirm: function (id) { caseConfirm(id); },
   caseCopyBrief: function () { caseCopyBrief(); },
+  /* The what-ifs. Typing into a field records it and redraws nothing; the
+     figures arrive when somebody asks for them, which is also the only moment
+     a missing input can be reported as a question. */
+  whatIfOpen: function (kind) { whatIfOpen(kind); },
+  whatIfSet$self: function (field) { whatIfSet(this, field); },
+  whatIfWork: function () { whatIfWork(); },
+  whatIfAdopt: function () { whatIfAdopt(); },
   intakeDescribe: function () { intakeDescribe(); },
   intakeKey$event: function (_a, _b, ev) { intakeKey(ev); },
   intakeResume: function (id) { intakeResume(id); },

@@ -55,6 +55,12 @@
            sourceConflicts, stateOf as reviewStateOf, methodSaid,
            METHOD as REVIEW_METHOD, DISPOSITION as REVIEW_DISPOSITION,
            history as reviewHistory, reviveItems } from "./src/intake/review.mjs";
+  /* The three what-ifs. `questionsFor` is renamed on the way in because
+     sourcing.mjs already exports one, and two different questions under one
+     name on window.BW is a bug waiting for whichever import lands second. */
+  import { whatIf, adopt as adoptScenario, stillAbout as scenarioStillAbout,
+           questionsFor as scenarioQuestionsFor, SCENARIO, SCENARIO_TITLE,
+           NEEDS as SCENARIO_NEEDS } from "./src/calc/scenarios.mjs";
   import { alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL } from "./src/calc/batna.mjs";
   import { comparablePart, compare, findComparable, priceGap, ATTRIBUTES } from "./src/calc/comparable.mjs";
   import { scanOpportunities, SEVERITY } from "./src/calc/radar.mjs";
@@ -157,6 +163,8 @@
                 mapExposure, costShock, shareFrom, parseAmount,
                 learningCorpus, whatWorks, captureGaps, linkOutcome,
                 classify, nextActions,
+                whatIf, adoptScenario, scenarioStillAbout, scenarioQuestionsFor,
+                SCENARIO, SCENARIO_TITLE, SCENARIO_NEEDS,
                 alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL,
                 comparablePart, compare, findComparable, priceGap, ATTRIBUTES,
                 scanOpportunities, SEVERITY,
