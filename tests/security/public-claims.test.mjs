@@ -164,3 +164,47 @@ describe("nothing is labelled as a solid model it is not", () => {
     }
   });
 });
+
+/* ------------------------------------------------------------- the README */
+
+describe("the README says the same things the product does", () => {
+  /* It is the first thing a stranger reads, on a public repository, about a
+     product whose whole discipline is not overstating itself. Everything in it
+     that can be checked, is. */
+  const readme = readFileSync("README.md", "utf8");
+
+  test("it does not claim the browser pass has happened", () => {
+    assert.match(readme, /never been opened in a browser/);
+  });
+
+  test("it says the data is synthetic, in the same words the site does", () => {
+    assert.match(readme, /synthetic/i);
+    assert.equal(/real (customer|supplier) (data|results)/i.test(readme), false);
+  });
+
+  test("it makes no accuracy claim about reading documents", () => {
+    assert.match(readme, /not accurate at reading documents, and does not claim to be/);
+  });
+
+  test("it does not say there is a CAD export", () => {
+    assert.equal(/\b(step|native cad) (export|file) (is )?(available|supported)\b/i.test(readme), false);
+  });
+
+  test("the test count it states is the one the checks run", () => {
+    const stated = (readme.match(/([\d,]+) tests, \d+ checks/) || [])[1];
+    const handover = (readFileSync("docs/OWNER_HANDOVER.md", "utf8")
+      .match(/([\d,]+) tests across/) || [])[1];
+    assert.equal(stated, handover, "the README and the handover disagree about the test count");
+  });
+
+  test("every document it points at is there", () => {
+    for (const m of readme.matchAll(/\]\((docs\/[A-Z-]+\.md|[A-Z-]+\.md)\)/g)) {
+      assert.doesNotThrow(() => readFileSync(m[1]),
+        `the README links to ${m[1]}, which is not there`);
+    }
+  });
+
+  test("and it does not offer a licence the repository has not granted", () => {
+    assert.match(readme, /No licence is granted/);
+  });
+});
