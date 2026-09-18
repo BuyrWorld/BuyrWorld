@@ -77,6 +77,12 @@ for oversights. Adopting an option records the decision and does not apply it
 to the plan — applying it needs a plan somebody can edit, which this tool
 does not yet have. And the chain reads the case; nothing writes back to it.
 
+**Running it, and what it needs**: `docs/OPERATING.md` — the local run, both
+API contracts with their limits and refusals, the environment variables by
+name, retention, and what would have to change for each unavailable thing to
+work. Its library table, its endpoint limits and its model ids are checked
+against the code.
+
 **What is actually evidenced**: `docs/EVIDENCE.md` — every claim this product
 makes about itself, what backs it, and the longer list of what does not. Its
 figures are checked against the tree, and the sentences somebody would be glad

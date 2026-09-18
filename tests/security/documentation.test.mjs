@@ -456,3 +456,56 @@ describe("the evidence log's figures are the tree's figures", () => {
     assert.match(evidence, /NOT RUN/);
   });
 });
+
+/* --------------------------------------------------- the operating document */
+
+describe("the operating document describes the product that exists", () => {
+  const operating = readFileSync("docs/OPERATING.md", "utf8");
+
+  test("every library it names is one the page actually loads, at that version", () => {
+    /* The first draft of that table said "jsPDF, SheetJS, Chart.js and
+       TradingView". Two of those were wrong and two more were missing. Prose
+       about dependencies is exactly the kind that rots, so it is derived-ish:
+       written by hand and checked here. */
+    const loaded = [...readFileSync("app.js", "utf8")
+      .matchAll(/cdnjs\.cloudflare\.com\/ajax\/libs\/([a-z.-]+)\/([\d.]+)\//g)]
+      .map((m) => ({ name: m[1], version: m[2] }));
+
+    assert.ok(loaded.length >= 5, `only ${loaded.length} CDN libraries found`);
+    for (const { name, version } of loaded) {
+      assert.ok(operating.includes(name), `${name} is loaded and not in the table`);
+      assert.ok(operating.includes(version), `${name} is pinned to ${version}, which is not stated`);
+    }
+  });
+
+  test("it names no library the page does not load", () => {
+    const app = readFileSync("app.js", "utf8");
+    const table = operating.slice(operating.indexOf("| Library |"),
+      operating.indexOf("That is the only third-party code"));
+    for (const m of table.matchAll(/^\| `([a-z.-]+)`/gm)) {
+      assert.ok(app.includes(`/${m[1]}/`), `the table names ${m[1]}, which app.js does not load`);
+    }
+  });
+
+  test("the endpoint limits it states are the ones in the functions", () => {
+    const doc = readFileSync("api/read-document.mjs", "utf8");
+    const chat = readFileSync("api/chat.js", "utf8");
+
+    const perWindow = (src) => Number((src.match(/MAX_PER_WINDOW = (\d+)/) || [])[1]);
+    assert.ok(operating.includes(`${perWindow(chat)} requests per minute`),
+      `chat allows ${perWindow(chat)} per minute and the document does not say so`);
+    assert.ok(operating.includes(`${perWindow(doc)} requests per minute`),
+      `the reader allows ${perWindow(doc)} per minute and the document does not say so`);
+
+    for (const [src, name] of [[chat, "chat"], [doc, "read-document"]]) {
+      const model = (src.match(/const MODEL = "([^"]+)"/) || [])[1];
+      assert.ok(operating.includes(model), `${name} runs ${model}, which the document does not name`);
+    }
+  });
+
+  test("and it still says the Upstash purge is outstanding", () => {
+    /* The one line in it that somebody has to act on. */
+    assert.match(operating, /purge-prompt-logs\.mjs --confirm/);
+    assert.match(operating, /outstanding work only the owner can do/);
+  });
+});

@@ -101,7 +101,7 @@ decision pack → outcome. Should Cost Expert runs end to end too: a drawing or
 certificate read, a material plan costed, a certificate checked, a decision
 recorded, and that decision becoming one lot in a producer's record.
 
-**The checks.** 3,573 tests across 124 files, 21 ProcureBench evaluation cases,
+**The checks.** 3,577 tests across 124 files, 21 ProcureBench evaluation cases,
 18 extraction cases, and seven verification steps, all run automatically on every
 push.
 
@@ -208,6 +208,7 @@ broken.
 node scripts/verify.mjs          # everything: tests, ProcureBench, content, syntax, structure
                                  # to undo a deploy, see docs/ROLLBACK.md
                                  # what is and is not evidenced: docs/EVIDENCE.md
+                                 # keys, endpoints, retention: docs/OPERATING.md
 node scripts/eval.mjs            # ProcureBench on its own
 node scripts/eval.mjs --verbose  # with every assertion listed
 node fixtures/synthetic-claim-001.mjs   # a worked case printed to the terminal
@@ -258,7 +259,7 @@ Node, so a version-specific break shows up there rather than in production.
 - Any savings figure, because none has been measured against a real supplier.
 - That ProcureBench passing means the analysis is correct. It means the
   arithmetic matches 21 cases somebody wrote. That is a floor, not a proof, and
-  the same goes for 3,573 tests: they say the code does what it was written to
+  the same goes for 3,577 tests: they say the code does what it was written to
   do, not that it was the right thing to write.
 - That anyone uses it.
 - That the demonstration data is real. It is synthetic and labelled so.

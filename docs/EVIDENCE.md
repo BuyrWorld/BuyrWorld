@@ -27,7 +27,7 @@ rather than misleading a reader.
 | Practice cannot alter a live case | `src/case/practice.mjs` imports nothing at all. |
 | A part model survives being written and read | Write, read, write — identical byte for byte, including a dimension no float could hold. |
 | Nothing is offered under a name it is not | `public-claims.test.mjs` reads every filename the product writes out and fails on a solid-model extension. |
-| 3,573 tests across 124 files, seven checks | `node scripts/verify.mjs`, on every push, Node 22 and 24. |
+| 3,577 tests across 124 files, seven checks | `node scripts/verify.mjs`, on every push, Node 22 and 24. |
 
 ## Not evidenced, and why
 
