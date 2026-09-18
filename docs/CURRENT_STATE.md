@@ -113,10 +113,10 @@ Every figure below came from the working tree on the date above.
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
 | Modules under `src/` | 0 | 76 |
-| Test files | 0 | 123 |
-| Tests | 0 | 3,548, all passing |
+| Test files | 0 | 124 |
+| Tests | 0 | 3,569, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
-| Verification steps | 0 | 6, all passing |
+| Verification steps | 0 | 7, all passing |
 
 ## The calculation layer — `src/calc/`
 
@@ -678,6 +678,21 @@ rules, so a corrupt file is refused in the same words somebody typing it would
 see. Ids and the revision survive, because a requirement points at `hole-2`
 and a rebuilt model would give that name to something else. The review package
 writes this format now, and a test opens the file the package actually ships.
+
+**Measured, at last.** `scripts/eval-drawings.mjs` is the report `specs/03`
+asks for by name — precision, recall, abstention and coverage by field and by
+format, with every critical misread listed separately and a single one failing
+the run whatever the percentages say. A wrong dimension is not the same kind of
+event as a wrong part number, and one accuracy figure covering both hides the
+one that scraps parts.
+
+It runs in `scripts/verify.mjs` as the seventh check, and it ends by saying what it does
+not establish: these are synthetic fixtures with recorded replies, `specs/03`
+says those test routing and evaluator behaviour only, and the production gate
+stays blocked until there are held-out real drawings at several quality levels.
+The wrong answers that prove the scorer works live in its test rather than in
+the fixture directory, because a report that can only ever say 100% is one
+nobody should believe the day it says something else.
 
 `src/studio/from-drawing.mjs` closes Phase 5's first clause from the other
 end: the three dimensions somebody confirmed off the drawing fill the Part

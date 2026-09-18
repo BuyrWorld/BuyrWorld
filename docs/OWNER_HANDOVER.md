@@ -101,8 +101,8 @@ decision pack → outcome. Should Cost Expert runs end to end too: a drawing or
 certificate read, a material plan costed, a certificate checked, a decision
 recorded, and that decision becoming one lot in a producer's record.
 
-**The checks.** 3,548 tests across 123 files, 21 ProcureBench evaluation cases,
-18 extraction cases, and six verification steps, all run automatically on every
+**The checks.** 3,569 tests across 124 files, 21 ProcureBench evaluation cases,
+18 extraction cases, and seven verification steps, all run automatically on every
 push.
 
 **Preserved from before:** the Spend Analyser, Quote Comparator, Contract
@@ -212,7 +212,7 @@ node scripts/eval.mjs --verbose  # with every assertion listed
 node fixtures/synthetic-claim-001.mjs   # a worked case printed to the terminal
 ```
 
-`verify.mjs` runs six checks and exits non-zero if any fails. Run it before any
+`verify.mjs` runs seven checks and exits non-zero if any fails. Run it before any
 deploy. GitHub Actions runs the same script on every push, on two versions of
 Node, so a version-specific break shows up there rather than in production.
 
@@ -257,7 +257,7 @@ Node, so a version-specific break shows up there rather than in production.
 - Any savings figure, because none has been measured against a real supplier.
 - That ProcureBench passing means the analysis is correct. It means the
   arithmetic matches 21 cases somebody wrote. That is a floor, not a proof, and
-  the same goes for 3,548 tests: they say the code does what it was written to
+  the same goes for 3,569 tests: they say the code does what it was written to
   do, not that it was the right thing to write.
 - That anyone uses it.
 - That the demonstration data is real. It is synthetic and labelled so.

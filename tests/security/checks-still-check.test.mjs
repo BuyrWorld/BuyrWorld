@@ -48,6 +48,12 @@ const SCRIPTS = [
     why: "no ungrounded value is accepted when no value is proposed",
   },
   {
+    file: "scripts/eval-drawings.mjs",
+    what: "drawing-reading accuracy",
+    floor: /if \(overall\.proposed === 0\)[\s\S]{0,300}process\.exit\(1\)/,
+    why: "a hundred per cent of nothing proposed is not a hundred per cent",
+  },
+  {
     file: "scripts/verify-html.mjs",
     what: "page integrity",
     floor: /blocks === 0[\s\S]{0,400}goTargets\.length < 5/,

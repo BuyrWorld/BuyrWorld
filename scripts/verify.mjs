@@ -50,6 +50,14 @@ const steps = [
     args: ["scripts/eval-extraction.mjs"],
   },
   {
+    /* specs/03 asks for precision, recall, abstention and coverage by field
+       and format, with every critical misread listed. It runs here so a
+       reading that stops matching its answer key stops a deploy. */
+    name: "Drawing reading — accuracy by field and format",
+    cmd: process.execPath,
+    args: ["scripts/eval-drawings.mjs"],
+  },
+  {
     name: "Prohibited content (commercial + personal)",
     cmd: process.execPath,
     args: ["scripts/verify-content.mjs"],
