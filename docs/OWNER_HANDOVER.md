@@ -206,6 +206,7 @@ broken.
 
 ```
 node scripts/verify.mjs          # everything: tests, ProcureBench, content, syntax, structure
+                                 # to undo a deploy, see docs/ROLLBACK.md
 node scripts/eval.mjs            # ProcureBench on its own
 node scripts/eval.mjs --verbose  # with every assertion listed
 node fixtures/synthetic-claim-001.mjs   # a worked case printed to the terminal

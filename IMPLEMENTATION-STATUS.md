@@ -77,6 +77,11 @@ for oversights. Adopting an option records the decision and does not apply it
 to the plan — applying it needs a plan somebody can edit, which this tool
 does not yet have. And the chain reads the case; nothing writes back to it.
 
+**Deploying and undoing it**: `docs/ROLLBACK.md`. Pushing to `main` deploys
+production, and until now nothing said how to put it back. It also says what a
+rollback cannot reach — what is already in somebody's browser — which is the
+part worth reading before it is needed.
+
 Then one real case end to end, which would teach more than the next feature.
 
 ## Decisions
