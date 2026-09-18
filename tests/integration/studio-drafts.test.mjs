@@ -121,7 +121,8 @@ function studio({ values = {}, unknown = {} } = {}) {
     /* Drawn by the real code on reopen; this harness is about the record, not
        the picture. */
     "function scRenderBuilder(){} function scAiStatus(){}",
-    fnSource("scClearSession", app),
+    fnSource("scClearSession", app), fnSource("toCostClear", app),
+    "var _toCost=null; var _toCostTaken=null; var _toCostAllowances=Object.create(null);",
   ].join("\n"), sandbox);
 
   return {

@@ -35,6 +35,8 @@
 | Notes kept only when somebody saves them | built | `src/services/call-store.mjs` |
 | Dictation | built, deliberately switched off | `src/services/speech.mjs` |
 | Practice against a rule-driven supplier | built | `src/case/practice.mjs` |
+| **v5 Phase 5** — a model written and read back exactly | built | `src/studio/model-io.mjs` |
+| The part carried into the costing form, deliberately | built | `src/studio/to-cost.mjs` |
 
 ## What does not exist
 
@@ -45,23 +47,29 @@
 | A configured AI provider | Instructions are read by written rule — the path that must keep working after one arrives. |
 | Working dictation | The machinery is built and tested; no recogniser is handed to it. The browser's own sends audio to the vendor, and this site says it sends nothing anywhere. Switching it on is a decision about that. |
 | A configured extraction service | `src/intake/extract-document.mjs` reads by rule, offline, and proposes unconfirmed candidates. |
-| Model-to-cost linkage | Deliberate. Using model mass as purchased stock mass would skip the allowances a buyer is answerable for. |
+| Model-to-cost linkage, automatic | Still deliberate, and now built as the explicit transfer the audit asked for: allowances are typed, the blank is worked out, and a person carries it over with their name against it. Purchased mass never crosses — that follows from the layout and the stock actually bought. |
 | Any browser verification | See below. |
 | Any real case | The corpus is zero. Every engine has only met synthetic fixtures. |
 
 ## What to do next
 
-**`docs/BROWSER-CHECKS.md`** — 84 checks in the order worth doing them, each
+**`docs/BROWSER-CHECKS.md`** — 95 checks in the order worth doing them, each
 mapped to the pack acceptance line it closes. **Nothing here has been opened
 in a browser**, and v5 Phases 1 to 4 have added a reader, a case view, three
 what-ifs, a chain, three call screens and a practice room since that list was
 written. Sections 9, 10 and 11 cover them. Section 11 is the one to do first,
 and to do at 390px: a call happens on a phone.
 
-Then **v5 Phase 5** — engineering depth, in `specs/02`: confirmed dimensions
-and requirements connected to bounded 3D editing, the review package and
-scenario revision. Its gate is an exact geometry roundtrip and technical-review
-provenance, and never relabelling an SVG or a mesh as STEP.
+**v5 Phase 5 is built** — the exact roundtrip and the reviewed model-to-cost
+transfer — so what is left of the roadmap is the cross-phase work it always
+said would be: actual screenshots, an evidence log, and the browser pass above.
+
+The two things Phase 5 deliberately did not do. There is still no CAD kernel,
+so `model.step` remains listed as unavailable with the reason, and
+`tests/security/public-claims.test.mjs` now fails if anything is written out
+under a name an engineer would open as a solid. And the transfer carries the
+blank, never the purchase quantity: how many are bought is the layout's answer,
+and joining those two would be the silent linkage the audit warned about.
 
 Two things Phase 3 deliberately stopped short of, so they are not mistaken
 for oversights. Adopting an option records the decision and does not apply it

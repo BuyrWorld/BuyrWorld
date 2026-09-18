@@ -35,6 +35,10 @@
  */
 
 import { schedule, labelOfKind, serialiseRequirements } from "./requirements.mjs";
+/* The model goes into the package in the format that can be read back exactly.
+   Until this, the package wrote its own: correct, and never read by anything,
+   which meant nobody had checked that what it wrote could be opened. */
+import { writeModel, FORMAT as MODEL_FORMAT } from "./model-io.mjs";
 import { toDxf, checkDxf } from "./dxf-export.mjs";
 
 /** The words that go on every artifact. Never softened, never parameterised. */
@@ -349,7 +353,10 @@ export async function buildPackage(snap) {
       schema: "buyrworld-part-review/1",
       ...header(snap),
       geometryUnits: "um",
-      model: snap.model,
+      modelFormat: MODEL_FORMAT,
+      /* Written by model-io, so `readModel` opens it and returns the same
+         part — exact integers, ids and revision included. */
+      model: JSON.parse(writeModel(snap.model)),
       material: snap.material,
       requirementSchedule: JSON.parse(scheduleJson(snap)),
       displayRows: snap.schedule.rows,

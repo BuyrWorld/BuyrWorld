@@ -122,3 +122,45 @@ describe("the public pages do not overstate what this is", () => {
     assert.match(home, /Synthetic<\/b> data only/);
   });
 });
+
+/* ------------------------------------------------- what it calls a CAD file */
+
+describe("nothing is labelled as a solid model it is not", () => {
+  /* `specs/02`'s Phase 5 gate ends: *"never relabel an SVG or mesh as
+     STEP/native CAD."* The temptation is specific and cheap — the part view is
+     already an SVG and the DXF is already geometry, and either could be handed
+     over under a name an engineer would open expecting a solid. What stops it
+     is that no such filename exists anywhere in what the product writes out. */
+
+  const produced = [markup, app, readFileSync("mount.mjs", "utf8")].join("\n")
+    + readdirSync("src/studio")
+      .map((f) => readFileSync(join("src/studio", f), "utf8")).join("\n");
+
+  test("no artifact is written out under a solid-model name", () => {
+    /* `files["…"] = …` is how the package names what it ships, so that shape
+       is what is searched for. `model.step` appears in FORMATS as an entry
+       saying it does not exist, which is a description rather than an offer. */
+    const written = [...produced.matchAll(/files\[\s*"([^"]+)"\s*\]\s*=/g)].map((m) => m[1]);
+    for (const name of written) {
+      assert.equal(/\.(step|stp|iges|igs|sldprt|x_t|prt)$/i.test(name), false,
+        `${name} is written out under a name an engineer would open as a solid`);
+    }
+    assert.ok(written.length >= 3, "no written artifacts were found, so this checked nothing");
+  });
+
+  test("the formats it cannot produce are listed as unavailable, with reasons", async () => {
+    const { FORMATS } = await import("../../src/studio/review-export.mjs");
+    assert.equal(FORMATS["model.step"].available, false);
+    assert.ok(FORMATS["model.step"].why.length > 80,
+      "an unavailable format needs a reason somebody can act on");
+  });
+
+  test("and nothing in the product says the SVG or the DXF is one", () => {
+    for (const claim of [
+      /(svg|dxf|preview)[^.]{0,40}\b(is|as)\s+(a\s+)?(step|solid model|native cad)\b/i,
+      /\b(step|native cad)\s+(file\s+)?(export|download)\s+(is\s+)?(available|ready|supported)\b/i,
+    ]) {
+      assert.equal(claim.test(produced), false, `something claims ${claim}`);
+    }
+  });
+});

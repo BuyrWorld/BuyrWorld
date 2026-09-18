@@ -67,6 +67,13 @@
            GOAL as CALL_GOAL, GOAL_SAID as CALL_GOAL_SAID, GOALS as CALL_GOALS,
            OWNER as CALL_OWNER, PHASE as CALL_PHASE, NOTE_SOURCE }
     from "./src/case/call.mjs";
+  /* The part model as a file, read back exactly — the Phase 5 gate's first
+     half — and the deliberate transfer from the part to the costing form. */
+  import { writeModel, readModel, roundtrips as modelRoundtrips,
+           FORMAT as MODEL_FORMAT } from "./src/studio/model-io.mjs";
+  import { propose as proposeBlank, accept as acceptBlank,
+           stillAbout as blankStillAbout, ALLOWANCES as BLANK_ALLOWANCES }
+    from "./src/studio/to-cost.mjs";
   /* Practice, which cannot touch anything real. Prefixed on the way in
      because start, say and feedback are words with other owners here. */
   import { start as practiceStart, say as practiceSay, finish as practiceDone,
@@ -202,6 +209,8 @@
                 confirmCommitment, correctCommitment, commitmentUnknown, rejectCommitment,
                 agreedCommitments, outstandingCommitments, followUp, followUpReadiness,
                 CALL_GOAL, CALL_GOAL_SAID, CALL_GOALS, CALL_OWNER, CALL_PHASE, NOTE_SOURCE,
+                writeModel, readModel, modelRoundtrips, MODEL_FORMAT,
+                proposeBlank, acceptBlank, blankStillAbout, BLANK_ALLOWANCES,
                 practiceStart, practiceSay, practiceDone, practiceFeedback,
                 importForPractice, PRACTICE_LABEL, PRACTICE_GOAL,
                 PRACTICE_DIFFICULTY, PRACTICE_DIFFICULTY_SAID,

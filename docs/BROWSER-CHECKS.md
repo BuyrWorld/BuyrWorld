@@ -288,6 +288,35 @@ again on the desktop.
 - [ ] With a screen reader on the After screen: each commitment reads as its
       own item, and the words it came from are read with it.
 
+## 12 · Carrying the part into the plan — 15 minutes
+
+The audit's second remaining item, built. Under the Part Builder, at *Carry
+this part into the plan*.
+
+- [ ] Before a block exists, the panel asks for the allowances and says the
+      part is not the blank. It does not show a blank.
+- [ ] Build a 100 × 60 × 10 block. Type 2, 2 and 1, then **Work out the
+      blank**: 104 × 64 × 11, and what cutting removes.
+- [ ] Fill in only two of the three allowances first. Nothing is worked out,
+      and the reason says zero is a decision rather than a default.
+- [ ] With no density entered, the weight line says why it is withheld. Enter
+      one and it appears — and says it is not the purchased weight.
+- [ ] **Put this in the costing form** with the name box empty: refused where
+      you are looking.
+- [ ] With a name: blank 104 / 64 / 11 appear in *Blank*, and the
+      finished-part boxes fill too, because this part is a plain rectangle.
+- [ ] Add a hole and work it out again. The net volume line says it is a
+      bracket. Carry it over: the blank crosses, the finished-part boxes do
+      **not**, and the message says why.
+- [ ] Change the block width and look at the panel. It says the part has moved
+      and offers no button until you work it out again.
+- [ ] Nothing about purchase quantity, kerf or minimum order is ever filled in
+      by this. Check each field before and after.
+- [ ] **Prepare review package**, download `part-model.json`, and open it: it
+      says `buyrworld-part-model/1` and every dimension is an integer in
+      quotation marks.
+- [ ] At 390px the three allowance boxes stack and the buttons wrap.
+
 ---
 
 ## What executing the code has already settled

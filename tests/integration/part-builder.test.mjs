@@ -65,6 +65,11 @@ function studio({ values = {}, reqs = [] } = {}) {
     fnSource("scRemoveFeature", app), fnSource("scUndoModel", app), fnSource("scRedoModel", app),
     fnSource("scDetachedCount", app), fnSource("scFeatureIds", app),
     fnSource("scModelSvg", app), fnSource("scRenderBuilder", app),
+    /* The builder draws the blank panel too. The transfer module is left
+       out of the BW below, so this file also holds that the panel stays
+       silent without it — `to-cost-wiring.test.mjs` exercises it. */
+    fnSource("toCostRender", app), fnSource("toCostClear", app),
+    "var _toCost=null; var _toCostTaken=null; var _toCostAllowances=Object.create(null);",
     fnSource("scMm3", app), fnSource("scG", app),
     /* The requirements renderer, so the feature list it now receives is the
        one this builder produces. */

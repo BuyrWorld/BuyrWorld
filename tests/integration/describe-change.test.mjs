@@ -75,6 +75,11 @@ function studio({ reqs = [], bw = {} } = {}) {
     fnSource("scRenderPreview", app), fnSource("scAcceptChange", app),
     fnSource("scDiscardChange", app), fnSource("scFeatureIds", app),
     fnSource("scRenderBuilder", app), fnSource("scModelSvg", app),
+    /* The builder draws the blank panel too. The transfer module is left
+       out of the BW below, so this file also holds that the panel stays
+       silent without it — `to-cost-wiring.test.mjs` exercises it. */
+    fnSource("toCostRender", app), fnSource("toCostClear", app),
+    "var _toCost=null; var _toCostTaken=null; var _toCostAllowances=Object.create(null);",
     fnSource("scMm3", app), fnSource("scG", app), fnSource("scRenderRequirements", app),
     /* The builder's own start, so a part exists to change. */
     fnSource("scSetBlock", app),

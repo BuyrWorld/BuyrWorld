@@ -4353,6 +4353,10 @@ function scClearSession(){
   /* The last calculated plan and cost. bcSave reads it, so leaving it behind
      lets the previous part's calculation be saved as this one's estimate. */
   _scLast=null;
+  /* The blank worked out from the part, and the record of carrying it over.
+     A proposal is about one part; leaving it would offer the previous part's
+     blank against this one's model. */
+  toCostClear();
   /* The last document read and the preview of it. Both outlived a new case
      before this: the previous part's extracted values were still offered for
      confirmation, and the previous drawing was still on screen. */
@@ -5104,6 +5108,220 @@ function scModelSvg(model){
 }
 
 /** The builder: the view, the features, and what the part weighs. */
+/* ------------------------------------------- carrying the part into the plan
+
+   `src/studio/to-cost.mjs` works out the blank; this is where somebody decides
+   to use it. Two things about the screen follow from the audit finding it
+   answers — *"Do not silently use model mass as purchased stock mass"*.
+
+   Nothing happens on its own. The allowances are typed, the blank is worked
+   out when asked for, and the figures reach the costing form only when
+   somebody presses a button with their name against it. A transfer that
+   happened as a side effect of drawing a hole would be exactly the silent
+   linkage that was warned about.
+
+   And what crosses is the blank. The finished-part boxes are filled only when
+   the part really is a plain rectangle, which is what the form's own note asks
+   for; the moment there is a hole or a pocket in it they are left alone and
+   the screen says why.
+*/
+
+/** What was typed into the three allowance boxes, as millimetre strings. */
+var _toCostAllowances = Object.create(null);
+
+/** The last proposal, or null. */
+var _toCost = null;
+
+/** What was carried over, once somebody did. */
+var _toCostTaken = null;
+
+/** The whole panel. */
+function toCostRender(){
+  var host = document.getElementById("tocost");
+  var B = window.BW;
+  if (!host) return;
+  if (!B || !B.proposeBlank) { host.innerHTML = ""; return; }
+
+  host.innerHTML =
+    '<div class="eyebrow" style="margin:var(--bw-4) 0 6px">Carry this part into the plan</div>'
+    + '<p style="color:var(--bw-muted);font-size:11.5px;margin:0 0 10px;line-height:1.6">'
+    + ciEsc("The part is not the blank: it was cut from something larger, and how much larger "
+            + "is a decision about machining and holding rather than a number this can work "
+            + "out. Nothing crosses into the costing form until you send it.") + '</p>'
+    + toCostFieldsHTML()
+    + '<button class="bw-act bw-act-secondary bw-act--sm" style="margin-top:8px"'
+    + ' data-do="toCostWork">Work out the blank</button>'
+    + toCostProposalHTML()
+    + '<div id="tocost-msg" style="margin-top:6px;font-size:12px;color:var(--bw-muted)"></div>';
+}
+
+/** One box per allowance, labelled with the question the module asks. */
+function toCostFieldsHTML(){
+  var B = window.BW;
+  return '<div class="bw-fields">' + Object.keys(B.BLANK_ALLOWANCES).map(function(name){
+    return '<label class="bw-field" style="margin:0">' + ciEsc(B.BLANK_ALLOWANCES[name])
+      + '<input class="bwin" inputmode="decimal" placeholder="mm"'
+      + ' value="' + attrEsc(ciEsc(_toCostAllowances[name] || ""))
+      + '" aria-label="' + attrEsc(ciEsc(B.BLANK_ALLOWANCES[name])) + '"'
+      + ' data-inp="toCostSet$self" data-a="' + attrEsc(ciEsc(name)) + '"></label>';
+  }).join("") + '</div>';
+}
+
+/** What came back, or what it is still waiting for. */
+function toCostProposalHTML(){
+  var B = window.BW;
+  if (!_toCost) return toCostTakenHTML();
+
+  if (!_toCost.ok) {
+    return '<p style="margin:10px 0 0;font-size:12px;color:var(--bw-warning);line-height:1.6">'
+      + ciEsc(_toCost.said) + '</p>' + toCostTakenHTML();
+  }
+
+  var mass = _toCost.mass.known
+    ? '<li>' + ciEsc("One blank weighs " + B.formatMass(_toCost.mass.blankUg, "kg", 3)
+        + " kg, from " + _toCost.mass.source + ". " + _toCost.mass.note) + '</li>'
+    : '<li>' + ciEsc(_toCost.mass.why) + '</li>';
+
+  var stale = !B.blankStillAbout(_toCost, { model: _scModel, density: scDensityOrNull() });
+
+  return '<div style="margin-top:12px">'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'
+    + '<span class="bw-status bw-status--derived">'
+    + ciEsc("blank, from model revision " + _toCost.revision) + '</span></div>'
+    + '<ul style="margin:0 0 8px;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+    + '<li>' + ciEsc("The blank is " + mm(_toCost.blank.widthUm) + " × "
+        + mm(_toCost.blank.lengthUm) + " × " + mm(_toCost.blank.thicknessUm) + " mm.") + '</li>'
+    + _toCost.says.map(function(s){ return '<li>' + ciEsc(s) + '</li>'; }).join("")
+    + mass
+    + (_toCost.forPlan.partVolumeWithheld
+        ? '<li style="color:var(--bw-warning)">'
+          + ciEsc(_toCost.forPlan.partVolumeWithheld) + '</li>'
+        : '')
+    + '</ul>'
+    + (stale
+        ? '<p style="margin:0;font-size:12px;color:var(--bw-warning);line-height:1.6">'
+          + ciEsc("The part has changed since this was worked out. Work it out again before "
+                  + "carrying it over.") + '</p>'
+        : '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">'
+          + '<label class="bw-field" style="margin:0">Who is carrying this over?'
+          + '<input class="bwin" id="tocost-by" placeholder="a role, not a name"'
+          + ' aria-label="Who is carrying this into the plan"></label>'
+          + '<button class="bw-act bw-act-primary bw-act--sm" style="margin:0"'
+          + ' data-do="toCostTake">Put this in the costing form</button></div>')
+    + '</div>' + toCostTakenHTML();
+}
+
+/** What was carried over, and against which revision. */
+function toCostTakenHTML(){
+  if (!_toCostTaken) return "";
+  return '<p style="margin:10px 0 0;font-size:11.5px;color:var(--bw-subtle);line-height:1.6">'
+    + ciEsc("Carried over by " + _toCostTaken.by + " on " + _toCostTaken.at
+            + ", from model revision " + _toCostTaken.fromRevision + ".") + '</p>';
+}
+
+/** Micrometres as millimetres, for a sentence. */
+function mm(um){
+  var whole = um / 1000n;
+  var frac = String(um % 1000n).padStart(3, "0").replace(/0+$/, "");
+  return frac ? String(whole) + "." + frac : String(whole);
+}
+
+/** The density on the form, where all three parts of it are there. */
+function scDensityOrNull(){
+  var B = window.BW;
+  if (!B || !B.scDensity) return null;
+  var v = scVal("sc-dv"), u = scVal("sc-du"), s = scVal("sc-ds");
+  if (!v || !u || !s) return null;
+  try { return B.scDensity(v, u, s); } catch (e) { return null; }
+}
+
+/* ---- what a person can do ---- */
+
+/** Remember an allowance without redrawing under the caret. */
+function toCostSet(el, name){
+  if (!el || !name) return;
+  _toCostAllowances[name] = String(el.value);
+}
+
+/** Ask for the blank. */
+function toCostWork(){
+  var B = window.BW;
+  if (!B || !B.proposeBlank) return;
+
+  var allowances = Object.create(null);
+  for (var name in B.BLANK_ALLOWANCES) {
+    var um = scUmFrom(_toCostAllowances[name]);
+    if (um !== null) allowances[name] = um;
+  }
+
+  _toCost = B.proposeBlank({
+    model: _scModel,
+    density: scDensityOrNull(),
+    allowances: allowances
+  });
+  toCostRender();
+}
+
+/** Millimetres typed into micrometres, or null where it is not a number. */
+function scUmFrom(text){
+  var t = String(text == null ? "" : text).trim();
+  if (t === "" || !/^\d+(\.\d{1,3})?$/.test(t)) return null;
+  var parts = t.split(".");
+  return BigInt(parts[0]) * 1000n + BigInt((parts[1] || "").padEnd(3, "0"));
+}
+
+/**
+ * Put it in the form.
+ *
+ * The blank always. The finished-part boxes only where the part is a plain
+ * rectangle — the form's own note says to leave them empty otherwise, because
+ * "a net mass computed from a shape the part does not have is worse than no
+ * net mass", and a hole or a pocket is exactly that shape.
+ */
+function toCostTake(){
+  var B = window.BW;
+  var msg = document.getElementById("tocost-msg");
+  var done = function(said){ if (msg) msg.textContent = said; };
+  if (!B || !B.acceptBlank || !_toCost) return;
+
+  var record;
+  try {
+    record = B.acceptBlank(_toCost, String(scVal("tocost-by") || "").trim(),
+      { model: _scModel, density: scDensityOrNull() });
+  } catch (e) {
+    done(String((e && e.message) || e));
+    return;
+  }
+
+  defSet("sc-bw", mm(record.blankWidthUm));
+  defSet("sc-bl", mm(record.blankLengthUm));
+  defSet("sc-bt", mm(_toCost.blank.thicknessUm));
+
+  var plain = _scModel && _scModel.features.length === 0;
+  if (plain) {
+    defSet("sc-pw", mm(_scModel.widthUm));
+    defSet("sc-pl", mm(_scModel.lengthUm));
+    defSet("sc-pt", mm(_scModel.thicknessUm));
+  }
+
+  _toCostTaken = record;
+  toCostRender();
+  done("The blank is in the form. " + (plain
+    ? "The finished-part boxes are filled too, because this part is a plain rectangle."
+    : "The finished-part boxes are left alone: this part has features, and a net mass "
+      + "computed from a rectangle it is not would be worse than none.")
+    + " The purchase quantity still comes from the layout and the stock you buy.");
+}
+
+/** Put the transfer down with the scenario it was about. */
+function toCostClear(){
+  _toCost = null;
+  _toCostTaken = null;
+  _toCostAllowances = Object.create(null);
+  var host = document.getElementById("tocost");
+  if (host) host.innerHTML = "";
+}
+
 function scRenderBuilder(){
   var host=document.getElementById("pb-out");
   if(!host) return;
@@ -5115,6 +5333,7 @@ function scRenderBuilder(){
       +'No model yet. You do not need one &mdash; requirements, quantities and costs all work '
       +'without it. Build one when a shape would help somebody understand the part.</p>';
     scRenderRequirements();
+    toCostRender();
     return;
   }
 
@@ -9995,6 +10214,10 @@ registerActions({
   callSave: function () { callSave(); },
   /* Practice. Every one of these acts on a synthetic session and none of them
      can reach the case: see src/case/practice.mjs, which imports nothing. */
+  /* The blank, and carrying it into the costing form. */
+  toCostSet$self: function (name) { toCostSet(this, name); },
+  toCostWork: function () { toCostWork(); },
+  toCostTake: function () { toCostTake(); },
   practiceStart: function () { practiceStart(); },
   practiceStartFromCase: function () { practiceStartFromCase(); },
   practiceSaid$self: function () { practiceSaid(this); },

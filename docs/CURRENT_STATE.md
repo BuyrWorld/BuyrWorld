@@ -112,9 +112,9 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 73 |
-| Test files | 0 | 118 |
-| Tests | 0 | 3,459, all passing |
+| Modules under `src/` | 0 | 75 |
+| Test files | 0 | 121 |
+| Tests | 0 | 3,532, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
 
@@ -662,6 +662,41 @@ The supplier's name, the part, the documents and every figure stay behind.
 Feedback names what happened and one thing to try next. There is no score, and
 the field is present and null rather than absent, because `specs/07` asks for
 no arbitrary competency score and an absent field is an invitation to add one.
+
+Phase 5 is the part, connected to the money — carefully, and only when
+somebody says so.
+
+`src/studio/model-io.mjs` is the model as a file, and the file back as the
+model. The package had written `part-model.json` for a fortnight and nothing
+had ever read one, which meant its exactness was a property of the writer
+rather than of a pair. Reading is the careful half: a dimension comes back as
+an integer number of micrometres or the file does not open. Not rounded, not
+coerced — "100.5" is not a micrometre count, and neither is a JSON number,
+because 1e5 and 100000.4-rounded-by-whoever-wrote-it are indistinguishable by
+the time they arrive. What comes back is checked against `geometry.mjs`'s own
+rules, so a corrupt file is refused in the same words somebody typing it would
+see. Ids and the revision survive, because a requirement points at `hole-2`
+and a rebuilt model would give that name to something else. The review package
+writes this format now, and a test opens the file the package actually ships.
+
+`src/studio/to-cost.mjs` is the transfer the September audit asked for: *"Do
+not silently use model mass as purchased stock mass. A future explicit,
+reviewed transfer should explain stock allowances, removed volume and material
+evidence."*
+
+The part is not the blank. It was cut from something larger, and how much
+larger is a decision about machining and holding rather than a number that can
+be derived, so the three allowances are asked for and a missing one withholds
+everything — a blank the same size as the part is an allowance of nothing,
+which is the single assumption that makes every downstream figure quietly too
+low. What crosses into the costing form is the blank's dimensions; purchased
+mass is not offered at all, and the field is present and null so that nobody
+fills it in later by accident. A part whose volume is a bracket hands over no
+single figure for it, and the form's finished-part boxes are filled only when
+the part really is a plain rectangle, which is what the form's own note asks
+for. The transfer is stamped with the geometry and the material it was made
+from: change either and it refuses to be carried over, in `staleness.mjs`'s
+words.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply
