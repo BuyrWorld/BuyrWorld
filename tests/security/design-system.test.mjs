@@ -51,6 +51,28 @@ describe("the token layer", () => {
       assert.match(css, new RegExp(`--${old}\\s*:`), `--${old} was removed`);
     }
   });
+
+  test("every token the code asks for is one that exists", () => {
+    /* A var() naming nothing does not fall back — it makes the whole
+       declaration invalid and the browser drops it, with no error anywhere.
+       Seven names were being used this way across forty-nine declarations:
+       --bw-line, --bw-line-strong, --bw-panel, --bw-raised, --bw-lime,
+       --bw-r-1 and --bw-r-2. Borders that never drew and radii that stayed
+       square, in code that read as though it had styled them.
+       Markup and script are included deliberately: most of this page's
+       styling is written in inline style attributes built by app.js. */
+    const sources = html + readFileSync("app.js", "utf8")
+      + readFileSync("studio-enhancements.css", "utf8");
+    const defined = new Set(
+      [...sources.matchAll(/(--[a-z0-9-]+)\s*:/gi)].map((m) => m[1]));
+    const used = new Set(
+      [...sources.matchAll(/var\(\s*(--[a-z0-9-]+)\s*[,)]/gi)].map((m) => m[1]));
+
+    const undefinedTokens = [...used].filter((name) => !defined.has(name));
+    assert.deepEqual(undefinedTokens, [],
+      `these are used and never defined, so every declaration using them is `
+      + `silently dropped:\n  ${undefinedTokens.join("\n  ")}`);
+  });
 });
 
 describe("the primitives", () => {

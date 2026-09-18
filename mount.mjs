@@ -55,6 +55,12 @@
            sourceConflicts, stateOf as reviewStateOf, methodSaid,
            METHOD as REVIEW_METHOD, DISPOSITION as REVIEW_DISPOSITION,
            history as reviewHistory, reviveItems } from "./src/intake/review.mjs";
+  /* Supplier -> transport -> production -> customer, as this case knows them.
+     Its generic names are prefixed on the way in: STAGE, STATE and WEIGHT are
+     words several modules could reasonably want. */
+  import { scene, STAGE as SCENE_STAGE, STAGE_TITLE as SCENE_STAGE_TITLE,
+           ORDER as SCENE_ORDER, STATE as SCENE_STATE, WEIGHT as SCENE_WEIGHT,
+           WOULD_FILL as SCENE_WOULD_FILL } from "./src/case/supply-scene.mjs";
   /* The three what-ifs. `questionsFor` is renamed on the way in because
      sourcing.mjs already exports one, and two different questions under one
      name on window.BW is a bug waiting for whichever import lands second. */
@@ -163,6 +169,8 @@
                 mapExposure, costShock, shareFrom, parseAmount,
                 learningCorpus, whatWorks, captureGaps, linkOutcome,
                 classify, nextActions,
+                scene, SCENE_STAGE, SCENE_STAGE_TITLE, SCENE_ORDER, SCENE_STATE,
+                SCENE_WEIGHT, SCENE_WOULD_FILL,
                 whatIf, adoptScenario, scenarioStillAbout, scenarioQuestionsFor,
                 SCENARIO, SCENARIO_TITLE, SCENARIO_NEEDS,
                 alternative, assessBatna, fact, KNOWN, READINESS, STRENGTH, MATERIAL,

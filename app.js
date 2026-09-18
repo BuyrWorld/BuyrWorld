@@ -1398,6 +1398,7 @@ function caseRender(){
     + caseControlsHTML(view)
     + view.sections.map(caseSectionHTML).join("")
     + caseFootHTML(view)
+    + caseSceneHTML()
     + whatIfHTML()
     + caseSpecialistsHTML()
     + caseBriefHTML()
@@ -1654,6 +1655,131 @@ function caseConfirm(id){
   if (!id) return;
   _caseConfirmed[id] = { by: "this browser", at: new Date().toISOString() };
   caseRender();
+}
+
+/* ------------------------------------------------- where this sits in the chain
+
+   `src/case/supply-scene.mjs` decides what each of the four stages knows; this
+   draws it. Two things about the drawing are deliberate.
+
+   It is an ordered list, not a picture with hotspots. `specs/06` asks for
+   *"an accessible list of the same information"*, and the usual way to
+   satisfy that is a diagram plus a hidden list saying the same thing — two
+   renderings to keep in step, one of which nobody looks at. A list of four
+   boxes with arrows between them is the diagram, reaches a screen reader and
+   a keyboard by construction, and cannot drift from itself.
+
+   And no figure appears in it. The case above withholds every money and
+   percentage figure until the assumptions under it are confirmed; a chain
+   diagram quietly showing the same numbers would be a second door into what
+   that withholding had just closed.
+*/
+
+/** The scene, or nothing when there is no case to draw one from. */
+function caseSceneHTML(){
+  var B = window.BW;
+  if (!B || !B.scene || !_defResult) return "";
+
+  var s;
+  try {
+    s = B.scene({
+      bridge: _defResult,
+      supplier: String(scVal("def-supplier") || "").trim() || null,
+      adopted: _whatIfAdopted,
+      assumptions: B.assumptionsToVerify ? B.assumptionsToVerify(_defResult) : []
+    });
+  } catch (e) { return ""; }
+
+  return '<div style="border-top:1px solid var(--bw-line);padding-top:var(--bw-4);margin-top:var(--bw-4)">'
+    + '<div class="eyebrow" style="margin:0 0 6px">Where this sits in the chain</div>'
+    + '<p style="margin:0 0 10px;font-size:11.5px;color:var(--bw-muted);line-height:1.6;max-width:62ch">'
+    + ciEsc("Each stage says only what this case holds. A stage with nothing in it says that, "
+            + "and what would fill it — the figures stay in the sections above.") + '</p>'
+    + caseSceneAttentionHTML(s.attention)
+    + '<ol style="list-style:none;margin:0;padding:0;display:flex;gap:10px;flex-wrap:wrap;'
+    + 'align-items:stretch">'
+    + s.stages.map(caseSceneStageHTML).join("")
+    + '</ol></div>';
+}
+
+/** Which stage to look at, or the sentence saying why none is named. */
+function caseSceneAttentionHTML(attention){
+  var B = window.BW;
+  if (!attention) return "";
+
+  var lead = attention.stage
+    ? '<span class="bw-status bw-status--derived">'
+      + ciEsc("Look at " + (B.SCENE_STAGE_TITLE[attention.stage] || attention.stage).toLowerCase())
+      + '</span> '
+    : "";
+
+  return '<p style="margin:0 0 10px;font-size:12.5px;color:var(--bw-body);line-height:1.6;max-width:62ch">'
+    + lead + ciEsc(attention.why) + '</p>';
+}
+
+/** One stage: what it knows, where that came from, and what it is waiting on. */
+function caseSceneStageHTML(stage, i){
+  var B = window.BW;
+  /* Inside the <li>, because a <span> sitting directly in an <ol> is not
+     markup the parser keeps where it was put. */
+  var arrow = i === 0 ? ""
+    : '<span aria-hidden="true" style="color:var(--bw-subtle);align-self:center">&rarr;</span>';
+
+  var empty = stage.state === B.SCENE_STATE.NOTHING_KNOWN;
+
+  var known = stage.known.map(function(k){
+    return '<li style="margin-bottom:4px">' + ciEsc(k.said)
+      + '<div style="color:var(--bw-subtle);font-size:11px">' + ciEsc("from " + k.from)
+      + '</div></li>';
+  }).join("");
+
+  var questions = stage.questions.map(caseSceneQuestionHTML).join("");
+
+  return '<li style="flex:1 1 210px;min-width:0;display:flex;gap:8px;align-items:stretch">'
+    + arrow
+    + '<div style="flex:1 1 auto;min-width:0;border:1px solid var(--bw-line);'
+    + 'border-radius:var(--bw-r-1);padding:10px;background:var(--bw-raised)">'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'
+    + '<b style="color:var(--bw-text);font-size:12.5px">' + ciEsc(stage.title) + '</b>'
+    + (empty
+        ? '<span class="bw-status bw-status--derived">nothing known</span>'
+        : '<span class="bw-status bw-status--evidenced">from this case</span>')
+    + '</div>'
+    + (known
+        ? '<ul style="margin:0 0 6px;padding-left:16px;font-size:12px;line-height:1.6;'
+          + 'color:var(--bw-body)">' + known + '</ul>'
+        : '')
+    + (questions
+        ? '<ul style="margin:0;padding-left:16px;font-size:11.5px;line-height:1.6;'
+          + 'color:var(--bw-muted)">' + questions + '</ul>'
+        : '')
+    + '</div></li>';
+}
+
+/**
+ * One question, and the tick where there is one to offer.
+ *
+ * `specs/06` asks a hotspot to link to the editable confirmed assumption. It
+ * is the same tick the case view offers, running the same action against the
+ * same id — not a second control that confirms the same thing separately,
+ * which is how two places end up disagreeing about what has been checked.
+ */
+function caseSceneQuestionHTML(q){
+  var B = window.BW;
+  var material = q.weight === B.SCENE_WEIGHT.MATERIAL;
+
+  var tick = "";
+  if (q.assumption) {
+    tick = _caseConfirmed[q.assumption]
+      ? '<span style="color:var(--bw-subtle);margin-left:6px">confirmed</span>'
+      : '<button class="bw-act bw-act-secondary"'
+        + ' style="padding:1px 7px;font-size:10.5px;margin-left:6px"'
+        + ' data-do="caseConfirm" data-a="' + attrEsc(ciEsc(q.assumption))
+        + '">I have checked this</button>';
+  }
+
+  return '<li' + (material ? ' style="color:var(--bw-warning)"' : '') + '>'
+    + ciEsc(q.said) + tick + '</li>';
 }
 
 /* ------------------------------------------------- what if we did it differently?

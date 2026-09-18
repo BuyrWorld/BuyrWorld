@@ -219,6 +219,32 @@ Open **Tools → Supplier Claim Review**, calculate an increase, and scroll to
       **Work it out** and **Adopt this option**. The three buttons announce
       their pressed state.
 
+## 10 · The chain — 10 minutes
+
+`specs/06`: *"populated from the case rather than decorative pseudo-data …
+Provide an accessible list of the same information."* The module refuses to
+invent and the wiring is tested; what neither can see is whether four boxes
+and three arrows read as a chain on a screen.
+
+Above the what-ifs, at *Where this sits in the chain*:
+
+- [ ] Four boxes, left to right, with arrows between them. Supplier and
+      production carry something; transport and customer say *nothing known*
+      and what would fill them.
+- [ ] No number appears anywhere in the four boxes. Not after confirming
+      every assumption either — check it twice, before and after.
+- [ ] The line above names one stage to look at, or says why it names none.
+- [ ] **I have checked this** beside an unsourced driver ticks the same
+      assumption as the one in *Evidence and missing information* above: tick
+      it in one place and the other says *confirmed*.
+- [ ] Adopt a split delivery in the what-ifs. Transport and customer fill in,
+      each naming the option and who adopted it.
+- [ ] Work out a what-if and do **not** adopt it. The chain does not move.
+- [ ] At 390px the four boxes stack and the arrows do not strand themselves
+      on their own lines.
+- [ ] With a screen reader: it is one list of four items in order. The arrows
+      are not announced.
+
 ---
 
 ## What executing the code has already settled

@@ -112,9 +112,9 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 68 |
-| Test files | 0 | 110 |
-| Tests | 0 | 3,254, all passing |
+| Modules under `src/` | 0 | 69 |
+| Test files | 0 | 112 |
+| Tests | 0 | 3,295, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
 
@@ -574,6 +574,41 @@ silently did nothing would be worse than either.
 Typing into a field records it and redraws nothing — a redraw per keystroke
 takes the caret out of the box — so the figures, and the questions, arrive
 when somebody asks for them.
+
+`src/case/supply-scene.mjs` is the other half of Phase 3: supplier,
+transport, production, customer, as this case actually knows them. A supply
+chain diagram is the easiest thing in this product to fake — four boxes,
+three arrows, an amber dot on the one that looks interesting — and it would
+look like insight while knowing nothing, which is why `specs/06` says
+*populated from the case rather than decorative pseudo-data* and why this
+module is mostly a set of refusals.
+
+A stage says only what the case holds. A price-increase claim knows a great
+deal about a supplier and, usually, nothing whatever about transport, so
+transport says that and names what would fill it. No figures appear anywhere
+in it: the case above withholds every money and percentage figure until the
+assumptions under it are confirmed, and a chain quietly showing the same
+numbers would be a second door into what that withholding had just closed.
+
+A bottleneck is named only when the case names one, and only from questions
+the figures themselves raise — a driver claimed against no source, or a part
+of the unit cost covered by no driver at all. An open question like whether
+the annual quantity is a commitment does not nominate a stage; without that
+distinction production would be the bottleneck of every case ever opened,
+which is a decoration rather than a finding. Where two stages carry something
+material, it says which two and declines to choose.
+
+An adopted what-if is a fact about the case and populates transport and
+customer. An unadopted one never reaches it: a scenario badged *NOT THE PLAN*
+appearing in the plan's own diagram is exactly the disguise `scenarios.mjs`
+refuses to wear, and there is a test that holds it out.
+
+On the page it is an ordered list of four boxes with arrows between them,
+rather than a picture with an accessible list beside it. `specs/06` asks for
+"an accessible list of the same information"; two renderings of one thing
+drift, and the one nobody looks at is the one that rots. The tick beside a
+question is the case view's own tick, against the same assumption id, so the
+two places cannot disagree about what has been checked.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

@@ -92,8 +92,10 @@ function page() {
     /* The case view draws the what-if block too. The scenarios module is
        deliberately absent from the BW above, so this file also checks that the
        block stays silent without it rather than taking the case down with it —
-       `whatif-wiring.test.mjs` is where it is exercised with the module. */
+       `whatif-wiring.test.mjs` and `supply-scene-wiring.test.mjs` are where
+       each is exercised with its module. */
     fnSource("whatIfHTML", app), fnSource("whatIfBase", app), fnSource("whatIfClear", app),
+    fnSource("caseSceneHTML", app),
     "var _whatIfKind=null; var _whatIfInputs=Object.create(null);",
     "var _whatIfWorked=Object.create(null); var _whatIfAdopted=[];",
     "var _caseConfirmed=Object.create(null);",

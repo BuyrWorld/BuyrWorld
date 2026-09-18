@@ -80,6 +80,20 @@
   --bw-t-page:30px; --bw-t-panel:16px; --bw-t-metric:28px;
   --bw-t-body:13.5px; --bw-t-meta:11.5px;
 
+  /* ---- names the code already uses, which were never defined. Forty-nine
+       declarations referenced these seven; a var() with no value makes the
+       whole declaration invalid, so every one of them was silently dropped —
+       borders that never drew, radii that stayed square. They are aliases of
+       the tokens they were plainly meant to be, so the styles that were
+       written appear, and nothing that was working changes. ---- */
+  --bw-line:var(--bw-border);
+  --bw-line-strong:var(--bw-border-strong);
+  --bw-panel:var(--bw-surface);
+  --bw-raised:var(--bw-surface-2);
+  --bw-lime:var(--bw-accent);
+  --bw-r-1:var(--bw-r-sm);
+  --bw-r-2:var(--bw-r);
+
   /* ---- the original seven, now aliases. Every existing inline style that
        says var(--lime) or var(--panel) keeps working and moves with the new
        palette. Nothing had to be rewritten to adopt this. ---- */

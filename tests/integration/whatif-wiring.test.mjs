@@ -110,6 +110,10 @@ function page() {
     fnSource("caseConfirm", app), fnSource("caseBriefHTML", app),
     fnSource("caseBriefTitle", app), fnSource("caseCopyBrief", app),
     fnSource("caseSpecialistsHTML", app), fnSource("caseNegotiationPlan", app),
+    /* The case view draws the chain too, and the scene module is deliberately
+       absent from the BW above: this file also holds that the chain stays
+       silent without it. `supply-scene-wiring.test.mjs` exercises it. */
+    fnSource("caseSceneHTML", app),
     fnSource("whatIfBase", app), fnSource("whatIfHTML", app),
     fnSource("whatIfPanelHTML", app), fnSource("whatIfWorkedHTML", app),
     fnSource("whatIfAxesHTML", app), fnSource("whatIfAdoptHTML", app),
