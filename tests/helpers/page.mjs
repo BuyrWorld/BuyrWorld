@@ -108,6 +108,9 @@ export function caseViewSource(app = pageSource()) {
     "callAfterHTML", "callItemHTML", "callOpen", "callUnresolved", "callSetGoal",
     "callSetQuestion", "callNoteKey", "callAddNote", "callReadNotes", "callDecide",
     "callConfirm", "callUnknown", "callReject", "callCopyFollowUp", "callSave", "callClear",
+    "practiceHTML", "practiceSetupHTML", "practiceSessionHTML", "practiceMovesHTML",
+    "practiceFeedbackHTML", "practiceStart", "practiceStartFromCase", "practiceBegin",
+    "practiceSaid", "practiceSay", "practiceFinish", "practiceAgain", "practiceClear",
   ];
 
   return [
@@ -117,6 +120,7 @@ export function caseViewSource(app = pageSource()) {
     "var _whatIfWorked=Object.create(null); var _whatIfAdopted=[];",
     "var _callSheet=null; var _callNotes=[]; var _callItems=null;",
     "var _callScreen=null; var _callId=null; var _callSpeech=null;",
+    'var _practice=null; var _practiceSaid="";',
     'var CALL_BY = "this browser";',
     ...fns.map((name) => fnSource(name, app)),
   ].join("\n");

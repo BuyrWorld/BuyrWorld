@@ -112,9 +112,9 @@ Every figure below came from the working tree on the date above.
 |---|---|---|
 | `index.html` | 522,447 bytes | 641,283 bytes |
 | Tracked files | 18 | 141 |
-| Modules under `src/` | 0 | 72 |
-| Test files | 0 | 116 |
-| Tests | 0 | 3,407, all passing |
+| Modules under `src/` | 0 | 73 |
+| Test files | 0 | 118 |
+| Tests | 0 | 3,459, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 6, all passing |
 
@@ -643,6 +643,25 @@ outside rather than reached for, and an unavailable state that says *why*
 instead of greying a button out. The module never reads a global, which is
 what makes "it cannot start a microphone the page did not hand it" a fact
 rather than an intention.
+
+`src/case/practice.mjs` is the other half of Phase 4, and the whole of it is
+built around one sentence in the gate: *practice cannot send or alter live
+data*. It imports nothing — not a store, not a case module, nothing — so there
+is no path out of it. A session says it is synthetic in its own data, carries
+the label "Practice — does not change your live case" as a field rather than a
+caller's styling, and its id begins PRACTICE- so that a surface reading only
+the id already knows.
+
+The supplier is a table of replies, not a model. Difficulty changes how hard
+they are to move, not how honest they are: a partner who lies more at higher
+difficulty would be teaching a lesson nobody asked for. Practising on the real
+case is a separate button, and what crosses is the shape of the argument —
+how many drivers, how many evidenced, whether part of the cost is unexplained.
+The supplier's name, the part, the documents and every figure stay behind.
+
+Feedback names what happened and one thing to try next. There is no score, and
+the field is present and null rather than absent, because `specs/07` asks for
+no arbitrary competency score and an absent field is an invitation to add one.
 
 `src/services/ai/propose-edit.mjs` is the provider-backed twin of the rule
 reader. It asks a model and then refuses most of what comes back: the reply

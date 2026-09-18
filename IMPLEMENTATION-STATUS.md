@@ -30,6 +30,11 @@
 | **v5 Phase 3** — three what-ifs, in exact money | built | `src/calc/scenarios.mjs` |
 | The what-ifs on the page, adopted with a name against them | built | `app.js` |
 | The chain, as the case knows it | built | `src/case/supply-scene.mjs` |
+| **v5 Phase 4** — before, during and after a call | built | `src/case/call.mjs` |
+| Commitments read out of notes, by rule | built | `src/case/call.mjs` |
+| Notes kept only when somebody saves them | built | `src/services/call-store.mjs` |
+| Dictation | built, deliberately switched off | `src/services/speech.mjs` |
+| Practice against a rule-driven supplier | built | `src/case/practice.mjs` |
 
 ## What does not exist
 
@@ -38,6 +43,7 @@
 | A solid-model or drawing export | No geometry kernel. The package names both as absent, with reasons, and is never marked complete. |
 | Curves, fillets, chamfers, freeform | The builder is rectangular blocks, through-holes and rectangular pockets, and says so. |
 | A configured AI provider | Instructions are read by written rule — the path that must keep working after one arrives. |
+| Working dictation | The machinery is built and tested; no recogniser is handed to it. The browser's own sends audio to the vendor, and this site says it sends nothing anywhere. Switching it on is a decision about that. |
 | A configured extraction service | `src/intake/extract-document.mjs` reads by rule, offline, and proposes unconfirmed candidates. |
 | Model-to-cost linkage | Deliberate. Using model mass as purchased stock mass would skip the allowances a buyer is answerable for. |
 | Any browser verification | See below. |
@@ -45,16 +51,17 @@
 
 ## What to do next
 
-**`docs/BROWSER-CHECKS.md`** — 68 checks in the order worth doing them, each
+**`docs/BROWSER-CHECKS.md`** — 84 checks in the order worth doing them, each
 mapped to the pack acceptance line it closes. **Nothing here has been opened
-in a browser**, and v5 Phases 1 to 3 have added a reader, a case view, three
-what-ifs and a chain since that list was written. Sections 9 and 10 cover the
-last two. About three hours.
+in a browser**, and v5 Phases 1 to 4 have added a reader, a case view, three
+what-ifs, a chain, three call screens and a practice room since that list was
+written. Sections 9, 10 and 11 cover them. Section 11 is the one to do first,
+and to do at 390px: a call happens on a phone.
 
-Then **v5 Phase 4** — practice and pocket, in `specs/07`: responsive
-before/during/after call screens, user-initiated transcription, editable
-action extraction and isolated negotiation practice. Its gate is that
-practice cannot send or alter live data.
+Then **v5 Phase 5** — engineering depth, in `specs/02`: confirmed dimensions
+and requirements connected to bounded 3D editing, the review package and
+scenario revision. Its gate is an exact geometry roundtrip and technical-review
+provenance, and never relabelling an SVG or a mesh as STEP.
 
 Two things Phase 3 deliberately stopped short of, so they are not mistaken
 for oversights. Adopting an option records the decision and does not apply it

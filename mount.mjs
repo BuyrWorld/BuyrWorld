@@ -67,6 +67,14 @@
            GOAL as CALL_GOAL, GOAL_SAID as CALL_GOAL_SAID, GOALS as CALL_GOALS,
            OWNER as CALL_OWNER, PHASE as CALL_PHASE, NOTE_SOURCE }
     from "./src/case/call.mjs";
+  /* Practice, which cannot touch anything real. Prefixed on the way in
+     because start, say and feedback are words with other owners here. */
+  import { start as practiceStart, say as practiceSay, finish as practiceDone,
+           feedback as practiceFeedback, importCase as importForPractice,
+           LABEL as PRACTICE_LABEL, GOAL as PRACTICE_GOAL,
+           DIFFICULTY as PRACTICE_DIFFICULTY, DIFFICULTY_SAID as PRACTICE_DIFFICULTY_SAID,
+           MOVE as PRACTICE_MOVE, MOVE_SAID as PRACTICE_MOVE_SAID }
+    from "./src/case/practice.mjs";
   /* Dictation, which is off: nothing is handed a recogniser here, and the
      adapter says why rather than greying a button out. */
   import { dictation, browserRecogniser, recogniserExists,
@@ -194,6 +202,10 @@
                 confirmCommitment, correctCommitment, commitmentUnknown, rejectCommitment,
                 agreedCommitments, outstandingCommitments, followUp, followUpReadiness,
                 CALL_GOAL, CALL_GOAL_SAID, CALL_GOALS, CALL_OWNER, CALL_PHASE, NOTE_SOURCE,
+                practiceStart, practiceSay, practiceDone, practiceFeedback,
+                importForPractice, PRACTICE_LABEL, PRACTICE_GOAL,
+                PRACTICE_DIFFICULTY, PRACTICE_DIFFICULTY_SAID,
+                PRACTICE_MOVE, PRACTICE_MOVE_SAID,
                 dictation, browserRecogniser, recogniserExists,
                 SPEECH_STATE, SPEECH_SAID, SPEECH_WHY,
                 saveCall, loadCalls, loadCall, deleteCall, newCallId, callStoreStatus,

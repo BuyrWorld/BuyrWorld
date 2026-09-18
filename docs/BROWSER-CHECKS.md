@@ -245,6 +245,49 @@ Above the what-ifs, at *Where this sits in the chain*:
 - [ ] With a screen reader: it is one list of four items in order. The arrows
       are not announced.
 
+## 11 · The call, and practice — 25 minutes
+
+`specs/07` and the Phase 4 gate. The retention rule and the refusals are
+tested; what a browser settles is whether the three screens are usable on a
+phone, which is where a call actually happens.
+
+At the foot of the case, at *The call*. **Do this one at 390px first**, then
+again on the desktop.
+
+- [ ] **Before**: choose a goal, and the three question boxes fill with
+      questions rather than statements. Rewrite one — it says *yours* and
+      survives every later redraw.
+- [ ] **During**: type a line, press Enter. It appears, the box clears, and
+      the caret is still in the box. Do it five times quickly; nothing is lost.
+- [ ] The microphone chip says *off*, and the sentence beside it says the
+      build does not switch dictation on and why. No greyed-out button with no
+      explanation.
+- [ ] **After**: *Read my notes*. A line that commits nobody to anything is
+      not in the list. One with no date says what it needs.
+- [ ] Confirm one without touching the boxes; confirm another after editing
+      its date. The first says confirmed, the second corrected.
+- [ ] Try to confirm one with no date. The refusal appears where you are
+      looking, not in a console.
+- [ ] *Copy the follow-up*, paste it somewhere. Only checked commitments are
+      under *What we agreed*.
+- [ ] Close the tab without saving, reopen: the notes are gone. That is the
+      promise, not a bug.
+- [ ] Now save, reload, and look in devtools at `bw.calls.v1`: the notes are
+      there, and the commitments nobody checked are not.
+- [ ] **Practice**: start a session. The label *Practice — does not change
+      your live case* is visible without scrolling.
+- [ ] Play four or five moves. The supplier's replies differ by difficulty.
+- [ ] *Finish and look at it*: what happened, one thing to try next, and no
+      number anywhere.
+- [ ] *Practise on this case*: the opening line describes the argument. The
+      supplier's name and every figure are absent — check by searching the
+      page text for the supplier name.
+- [ ] Go back to **After**. Nothing from the practice is in the notes.
+- [ ] By keyboard alone: reach all four tabs, the note box, every move button
+      and *Finish*. The tab buttons announce their pressed state.
+- [ ] With a screen reader on the After screen: each commitment reads as its
+      own item, and the words it came from are read with it.
+
 ---
 
 ## What executing the code has already settled

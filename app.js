@@ -1662,6 +1662,216 @@ function caseConfirm(id){
   caseRender();
 }
 
+/* ------------------------------------------------------------- practice
+
+   The fourth tab on the call block, and the one that is not real. Everything
+   drawn here carries the label from `src/case/practice.mjs`, because a
+   transcript that looks like a case is the failure mode: somebody scrolls
+   back a week later and reads what a table of canned replies said as though a
+   supplier had said it.
+
+   Practising on the case in front of you is an explicit act with its own
+   button, and what crosses over is the shape of the argument — how many
+   drivers, how many evidenced, whether part of the cost is unexplained. The
+   supplier's name, the part, the documents and every figure stay where they
+   are.
+*/
+
+/** The session, once somebody starts one. */
+var _practice = null;
+
+/** What was typed alongside the last move, kept so a redraw does not lose it. */
+var _practiceSaid = "";
+
+/** The practice tab. */
+function practiceHTML(){
+  var B = window.BW;
+  if (!B || !B.practiceStart) return "";
+
+  return '<div style="margin-top:var(--bw-4)">'
+    + (_practice ? practiceSessionHTML() : practiceSetupHTML())
+    + '</div>';
+}
+
+/** Choosing what to practise, and on what. */
+function practiceSetupHTML(){
+  var B = window.BW;
+
+  var goals = Object.keys(B.PRACTICE_GOAL).map(function(k){
+    var g = B.PRACTICE_GOAL[k];
+    return '<option value="' + attrEsc(ciEsc(g)) + '">'
+      + ciEsc(B.CALL_GOAL_SAID[g] || g) + '</option>';
+  }).join("");
+
+  var levels = Object.keys(B.PRACTICE_DIFFICULTY).map(function(k){
+    var d = B.PRACTICE_DIFFICULTY[k];
+    return '<option value="' + attrEsc(ciEsc(d)) + '"'
+      + (d === B.PRACTICE_DIFFICULTY.STEADY ? ' selected' : '') + '>'
+      + ciEsc(d.charAt(0).toUpperCase() + d.slice(1) + " — " + B.PRACTICE_DIFFICULTY_SAID[d])
+      + '</option>';
+  }).join("");
+
+  return '<p style="margin:0 0 10px;font-size:12.5px;color:var(--bw-body);line-height:1.6;max-width:62ch">'
+    + ciEsc("A supplier played by written rule, not by a model: the replies are a table, and "
+            + "the difficulty changes how hard they are to move rather than how honest they "
+            + "are. Nothing you do here reaches your case.") + '</p>'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">'
+    + '<label class="bw-field" style="margin:0">What are you practising?'
+    + '<select class="bwin" id="practice-goal" aria-label="What to practise">'
+    + goals + '</select></label>'
+    + '<label class="bw-field" style="margin:0">How hard'
+    + '<select class="bwin" id="practice-difficulty" aria-label="How hard the supplier is">'
+    + levels + '</select></label>'
+    + '<button class="bw-act bw-act-primary" style="margin:0" data-do="practiceStart">'
+    + 'Start</button>'
+    + '<button class="bw-act bw-act-secondary" style="margin:0" data-do="practiceStartFromCase">'
+    + 'Practise on this case</button></div>'
+    + '<p style="margin:8px 0 0;font-size:11.5px;color:var(--bw-muted);line-height:1.6;max-width:62ch">'
+    + ciEsc("Practising on this case copies how many drivers there are, how many carry "
+            + "evidence, and whether part of the cost is unexplained. The supplier, the part, "
+            + "the documents and every figure stay where they are.") + '</p>';
+}
+
+/** The session itself: what was said, what to do next, and how it went. */
+function practiceSessionHTML(){
+  var B = window.BW;
+  var s = _practice;
+
+  var transcript = s.turns.map(function(t){
+    return '<li style="margin-bottom:8px">'
+      + '<div style="color:var(--bw-text);font-size:12.5px">'
+      + ciEsc(B.PRACTICE_MOVE_SAID[t.move]) + (t.said ? ciEsc(' — "' + t.said + '"') : '')
+      + '</div>'
+      + '<div style="color:var(--bw-body);font-size:12.5px;padding-left:12px;'
+      + 'border-left:2px solid var(--bw-line);margin-top:3px">'
+      + ciEsc("They said: " + t.reply) + '</div></li>';
+  }).join("");
+
+  var moves = Object.keys(B.PRACTICE_MOVE).map(function(k){
+    var m = B.PRACTICE_MOVE[k];
+    return '<button class="bw-act bw-act-secondary" style="margin:0" data-do="practiceSay"'
+      + ' data-a="' + attrEsc(ciEsc(m)) + '">' + ciEsc(B.PRACTICE_MOVE_SAID[m]) + '</button>';
+  }).join("");
+
+  return '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">'
+    + '<span class="bw-status bw-status--assumed">' + ciEsc(s.label) + '</span></div>'
+    + '<p style="margin:0 0 10px;font-size:12.5px;color:var(--bw-body);line-height:1.6;max-width:62ch">'
+    + ciEsc(s.opening) + '</p>'
+    + (transcript
+        ? '<ul style="list-style:none;margin:0 0 12px;padding:0">' + transcript + '</ul>'
+        : '')
+    + (s.over ? practiceFeedbackHTML() : practiceMovesHTML(moves));
+}
+
+/** The six things to try, and somewhere to say it in your own words. */
+function practiceMovesHTML(moves){
+  return '<label class="bw-field" style="margin:0 0 8px;max-width:52ch">'
+    + 'In your own words (optional)'
+    + '<input class="bwin" id="practice-said" value="' + attrEsc(ciEsc(_practiceSaid))
+    + '" placeholder="Which index, and from when?" aria-label="What you would say"'
+    + ' data-inp="practiceSaid$self"></label>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">' + moves + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+    + '<button class="bw-act bw-act-primary" style="margin:0" data-do="practiceFinish">'
+    + 'Finish and look at it</button>'
+    + '<button class="bw-act bw-act-text" style="margin:0" data-do="practiceAgain">'
+    + 'Start again</button></div>';
+}
+
+/**
+ * What was observed, and one thing to try next.
+ *
+ * No score, and the module does not have one to render — `specs/07` asks for
+ * exactly that, and the way to keep it is for there to be no number anywhere
+ * in the data this draws from.
+ */
+function practiceFeedbackHTML(){
+  var B = window.BW;
+  var f = B.practiceFeedback(_practice);
+
+  return '<div style="border-top:1px solid var(--bw-line);padding-top:10px;margin-top:10px">'
+    + '<div class="eyebrow" style="margin:0 0 6px">What happened</div>'
+    + (f.observed.length
+        ? '<ul style="margin:0 0 10px;padding-left:18px;font-size:12.5px;line-height:1.7;'
+          + 'color:var(--bw-body)">'
+          + f.observed.map(function(o){ return '<li>' + ciEsc(o) + '</li>'; }).join("")
+          + '</ul>'
+        : '')
+    + '<p style="margin:0 0 10px;font-size:12.5px;color:var(--bw-text);line-height:1.6;max-width:62ch">'
+    + ciEsc(f.next) + '</p>'
+    + '<button class="bw-act bw-act-secondary" style="margin:0" data-do="practiceAgain">'
+    + 'Again</button></div>';
+}
+
+/* ---- what a person can do ---- */
+
+/** Begin, on nothing in particular. */
+function practiceStart(){
+  practiceBegin(null);
+}
+
+/**
+ * Begin, on the case in front of you.
+ *
+ * `specs/07`: *"Import a real case only through explicit choice and remove
+ * unnecessary sensitive details."* This is the explicit choice; the removing
+ * is `importCase`, which copies counts and leaves every name and figure
+ * behind.
+ */
+function practiceStartFromCase(){
+  var B = window.BW;
+  practiceBegin(_defResult ? B.importForPractice(_defResult) : null);
+}
+
+function practiceBegin(from){
+  var B = window.BW;
+  if (!B || !B.practiceStart) return;
+  try {
+    _practice = B.practiceStart({
+      goal: String(scVal("practice-goal") || B.PRACTICE_GOAL.EVIDENCE),
+      difficulty: String(scVal("practice-difficulty") || B.PRACTICE_DIFFICULTY.STEADY),
+      from: from
+    });
+  } catch (e) { return; }
+  _practiceSaid = "";
+  caseRender();
+}
+
+/** Keep what was typed, without redrawing under the caret. */
+function practiceSaid(el){
+  _practiceSaid = el ? String(el.value) : "";
+}
+
+/** Make a move. */
+function practiceSay(move){
+  var B = window.BW;
+  if (!_practice || !B || !B.practiceSay) return;
+  try {
+    _practice = B.practiceSay(_practice, move, _practiceSaid || null);
+  } catch (e) { return; }
+  _practiceSaid = "";
+  caseRender();
+}
+
+function practiceFinish(){
+  var B = window.BW;
+  if (!_practice) return;
+  _practice = B.practiceDone(_practice);
+  caseRender();
+}
+
+function practiceAgain(){
+  _practice = null;
+  _practiceSaid = "";
+  caseRender();
+}
+
+/** Put the practice down with the case it was beside. */
+function practiceClear(){
+  _practice = null;
+  _practiceSaid = "";
+}
+
 /* ------------------------------------------------- before, during and after a call
 
    `src/case/call.mjs` is the model; this is the three screens. One block with
@@ -1698,7 +1908,8 @@ function callHTML(){
   var B = window.BW;
   if (!B || !B.prepareCall || !_defResult) return "";
 
-  var tabs = [["before", "Before"], ["during", "During"], ["after", "After"]]
+  var tabs = [["before", "Before"], ["during", "During"], ["after", "After"],
+              ["practice", "Practice"]]
     .map(function(pair){
       var open = pair[0] === _callScreen;
       return '<button class="bw-act ' + (open ? "bw-act-primary" : "bw-act-secondary")
@@ -1717,6 +1928,7 @@ function callHTML(){
     + (_callScreen === "before" ? callBeforeHTML() : "")
     + (_callScreen === "during" ? callDuringHTML() : "")
     + (_callScreen === "after" ? callAfterHTML() : "")
+    + (_callScreen === "practice" ? practiceHTML() : "")
     + '</div>';
 }
 
@@ -2106,6 +2318,7 @@ function callSave(){
 
 /** Put the call down with the case it was about. */
 function callClear(){
+  practiceClear();
   _callSheet = null;
   _callNotes = [];
   _callItems = null;
@@ -9780,6 +9993,14 @@ registerActions({
   callReject: function (index) { callReject(index); },
   callCopyFollowUp: function () { callCopyFollowUp(); },
   callSave: function () { callSave(); },
+  /* Practice. Every one of these acts on a synthetic session and none of them
+     can reach the case: see src/case/practice.mjs, which imports nothing. */
+  practiceStart: function () { practiceStart(); },
+  practiceStartFromCase: function () { practiceStartFromCase(); },
+  practiceSaid$self: function () { practiceSaid(this); },
+  practiceSay: function (move) { practiceSay(move); },
+  practiceFinish: function () { practiceFinish(); },
+  practiceAgain: function () { practiceAgain(); },
   whatIfOpen: function (kind) { whatIfOpen(kind); },
   whatIfSet$self: function (field) { whatIfSet(this, field); },
   whatIfWork: function () { whatIfWork(); },

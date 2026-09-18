@@ -28,7 +28,7 @@ rendering — and `mount.mjs` loads the calculation engine. They were one inline
 block until the page dropped `unsafe-inline` from its security policy, which
 needed the code out of the markup.
 
-**The source.** 72 modules under `src/`. Calculation modules remain
+**The source.** 73 modules under `src/`. Calculation modules remain
 independent of the browser; the new Studio renderer includes a DOM adapter.
 
 *The arithmetic itself:*
@@ -101,7 +101,7 @@ decision pack → outcome. Should Cost Expert runs end to end too: a drawing or
 certificate read, a material plan costed, a certificate checked, a decision
 recorded, and that decision becoming one lot in a producer's record.
 
-**The checks.** 3,407 tests across 116 files, 21 ProcureBench evaluation cases,
+**The checks.** 3,459 tests across 118 files, 21 ProcureBench evaluation cases,
 18 extraction cases, and six verification steps, all run automatically on every
 push.
 
@@ -256,7 +256,7 @@ Node, so a version-specific break shows up there rather than in production.
 - Any savings figure, because none has been measured against a real supplier.
 - That ProcureBench passing means the analysis is correct. It means the
   arithmetic matches 21 cases somebody wrote. That is a floor, not a proof, and
-  the same goes for 3,407 tests: they say the code does what it was written to
+  the same goes for 3,459 tests: they say the code does what it was written to
   do, not that it was the right thing to write.
 - That anyone uses it.
 - That the demonstration data is real. It is synthetic and labelled so.
