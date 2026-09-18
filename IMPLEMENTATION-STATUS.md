@@ -77,6 +77,11 @@ for oversights. Adopting an option records the decision and does not apply it
 to the plan — applying it needs a plan somebody can edit, which this tool
 does not yet have. And the chain reads the case; nothing writes back to it.
 
+**What is actually evidenced**: `docs/EVIDENCE.md` — every claim this product
+makes about itself, what backs it, and the longer list of what does not. Its
+figures are checked against the tree, and the sentences somebody would be glad
+to delete are held there by a test.
+
 **Deploying and undoing it**: `docs/ROLLBACK.md`. Pushing to `main` deploys
 production, and until now nothing said how to put it back. It also says what a
 rollback cannot reach — what is already in somebody's browser — which is the

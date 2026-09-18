@@ -402,3 +402,57 @@ describe("the status document does not contradict itself", () => {
       "a 'next slice' heading at the end is where staleness collects");
   });
 });
+
+/* ------------------------------------------------------- the evidence log */
+
+describe("the evidence log's figures are the tree's figures", () => {
+  /* `docs/EVIDENCE.md` is the one document whose whole job is to be believed
+     about what is and is not established. A stale number in it is worse than a
+     stale number anywhere else, so every figure it states is checked here. */
+  const evidence = readFileSync("docs/EVIDENCE.md", "utf8");
+
+  const stated = (pattern) => {
+    const m = evidence.match(pattern);
+    assert.ok(m, `the evidence log no longer states ${pattern}`);
+    return Number(m[1].replace(/,/g, ""));
+  };
+
+  test("the module count", () => {
+    assert.equal(stated(/([\d,]+) modules under `src\/`/), modules().length);
+  });
+
+  test("the test and file counts, and the number of checks", () => {
+    const files = (function count(dir, n = 0) {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        n = e.isDirectory() ? count(join(dir, e.name), n)
+          : (e.name.endsWith(".test.mjs") ? n + 1 : n);
+      }
+      return n;
+    })("tests");
+
+    assert.equal(stated(/([\d,]+) tests across/), Number(
+      (readFileSync("docs/OWNER_HANDOVER.md", "utf8").match(/([\d,]+) tests across/) || [])[1]
+        .replace(/,/g, "")),
+      "the evidence log and the handover disagree about how many tests there are");
+    assert.equal(stated(/across ([\d,]+) files/), files);
+
+    const script = readFileSync("scripts/verify.mjs", "utf8");
+    assert.equal(stated(/files, ([a-z]+) checks/) || 0, 0,
+      "the check count is written as a word; this only checks it is not a digit");
+    assert.ok(evidence.includes(`${numberWord((script.match(/^\s*name: /gm) || []).length)} checks`),
+      "the evidence log does not state the number of checks the script runs");
+  });
+
+  test("the browser-check count matches the list", () => {
+    const checks = (readFileSync("docs/BROWSER-CHECKS.md", "utf8").match(/- \[ \]/g) || []).length;
+    assert.equal(stated(/is ([\d,]+) checks in the order/), checks);
+  });
+
+  test("and it still says the things that must not quietly improve", () => {
+    /* Each of these is a sentence somebody would be glad to delete. */
+    assert.match(evidence, /has ever been opened in one/);
+    assert.match(evidence, /BLOCKED/);
+    assert.match(evidence, /No real case has been run end to end/);
+    assert.match(evidence, /NOT RUN/);
+  });
+});
