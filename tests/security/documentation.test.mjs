@@ -349,17 +349,22 @@ describe("the status document does not contradict itself", () => {
      describe features as not built before later sections mark them done."
      Two lines apart it said C4 was unstarted and C4 was done.
 
-     It grew as a diary and was read as a description. Current state now sits
-     at the top in one table, and the diary lives underneath, labelled. These
-     checks keep those two facts about the document true. */
+     The first fix put current state at the top and left the diary underneath,
+     labelled. That relied on the ordering, and ordering is a weak guarantee:
+     somebody searching the file still lands in the middle of a sentence from
+     three weeks ago and reads it as now. The diary is `docs/HISTORY.md` now,
+     where every line of it is history by construction. These checks keep both
+     documents honest about which they are. */
   const status = readFileSync("IMPLEMENTATION-STATUS.md", "utf8");
-  const historyAt = status.indexOf("## How it was built");
+  const history = readFileSync("docs/HISTORY.md", "utf8");
 
-  test("current state comes before the history, not after it", () => {
-    const current = status.indexOf("## What exists now");
-    assert.ok(current > 0, "there is no current-state section");
-    assert.ok(historyAt > current,
-      "the history must sit below what is current, or a reader meets it first");
+  test("the status document holds no diary at all", () => {
+    assert.ok(status.indexOf("## What exists now") > 0, "there is no current-state section");
+    /* Dated entries are what a diary is made of. One in here means the
+       consolidation has started to come undone. */
+    assert.equal(/^### \d{1,2} (January|February|March|April|May|June|July|August|September|October|November|December)/m
+      .test(status), false, "a dated entry is back in the status document");
+    assert.match(status, /docs\/HISTORY\.md/, "and it no longer says where the record went");
   });
 
   test("the first line says where to look", () => {
@@ -379,21 +384,24 @@ describe("the status document does not contradict itself", () => {
     }
   });
 
-  test("nothing outside the history claims a built thing is unbuilt", () => {
-    /* The exact failure. A present-tense "not started" above the history is a
-       description; below it, it is a dated record and says so. */
-    const current = status.slice(0, historyAt);
-    assert.equal(/\bnot started\b|\bremains unstarted\b|\bis specified, not built\b/i.test(current), false,
-      "a section above the history claims something is unbuilt");
+  test("nothing in it claims a built thing is unbuilt", () => {
+    /* The exact failure, and now the whole document is held to it rather than
+       only the part above a heading. */
+    assert.equal(/\bnot started\b|\bremains unstarted\b|\bis specified, not built\b/i.test(status), false,
+      "the status document claims something is unbuilt");
   });
 
-  test("the history says its entries are as-at the day they were written", () => {
-    const preamble = status.slice(historyAt, historyAt + 900);
-    assert.match(preamble, /as-at the moment it was written/);
+  test("and it says why it was moved, so nobody moves it back", () => {
+    assert.match(history, /consolidate that history in a separate documentation pass/);
+  });
+
+  test("the history says, before anything else, that it is history", () => {
+    const preamble = history.slice(0, 1200);
+    assert.match(preamble, /Nothing below has been edited to agree with today/);
     /* Whitespace collapsed first: the sentence wraps mid-phrase, so a literal
        space in the pattern meets a newline in the file and never matches. */
     assert.match(preamble.replace(/\s+/g, " "),
-      /the table above is the only description of now/);
+      /IMPLEMENTATION-STATUS\.md` is the only description of now/);
   });
 
   test("it points at the browser handover rather than describing it", () => {
