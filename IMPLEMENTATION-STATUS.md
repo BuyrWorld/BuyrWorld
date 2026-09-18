@@ -1,4 +1,4 @@
-# Implementation status — BuyrWorld Claude Pack v4
+# Implementation status — BuyrWorld, packs v4 and v5
 
 **Where this stands is the table below. Everything after it is history.**
 
@@ -19,6 +19,17 @@
 | Instructions read by rule, no model | built | `src/studio/read-instruction.mjs` |
 | Rotatable preview, feature selection | built, unseen in a browser | `src/render/` |
 | Offline review dossier | built, unrun here | `scripts/build_part_review.py` |
+| **v5 Phase 1** — read a picture of a drawing | built, no provider configured | `src/intake/` |
+| A drawing viewer, and a queue somebody reviews | built | `src/intake/viewer.mjs`, `src/intake/review.mjs` |
+| Scanned and mixed PDFs, page by page | built, unrun against a provider | `src/intake/vision-read.mjs` |
+| **v5 Phase 2** — the same figures, said as a case | built | `src/case/narrative.mjs` |
+| Role and depth, which never hide a material risk | built | `src/case/projection.mjs` |
+| Specialists, consulted only where the case holds enough | built | `src/case/specialists.mjs` |
+| A draft brief for a manager | built | `src/case/brief.mjs` |
+| A task-led way in, and what changed since last time | built | `src/case/intake.mjs`, `src/case/briefing.mjs` |
+| **v5 Phase 3** — three what-ifs, in exact money | built | `src/calc/scenarios.mjs` |
+| The what-ifs on the page, adopted with a name against them | built | `app.js` |
+| The chain, as the case knows it | built | `src/case/supply-scene.mjs` |
 
 ## What does not exist
 
@@ -34,10 +45,21 @@
 
 ## What to do next
 
-**`docs/BROWSER-CHECKS.md`** — 44 checks in the order worth doing them, each
-mapped to the pack acceptance line it closes. Nothing here has been opened in
-a browser, and the 16 September update roughly doubled the surface that needs
-it. About two hours.
+**`docs/BROWSER-CHECKS.md`** — 68 checks in the order worth doing them, each
+mapped to the pack acceptance line it closes. **Nothing here has been opened
+in a browser**, and v5 Phases 1 to 3 have added a reader, a case view, three
+what-ifs and a chain since that list was written. Sections 9 and 10 cover the
+last two. About three hours.
+
+Then **v5 Phase 4** — practice and pocket, in `specs/07`: responsive
+before/during/after call screens, user-initiated transcription, editable
+action extraction and isolated negotiation practice. Its gate is that
+practice cannot send or alter live data.
+
+Two things Phase 3 deliberately stopped short of, so they are not mistaken
+for oversights. Adopting an option records the decision and does not apply it
+to the plan — applying it needs a plan somebody can edit, which this tool
+does not yet have. And the chain reads the case; nothing writes back to it.
 
 Then one real case end to end, which would teach more than the next feature.
 
