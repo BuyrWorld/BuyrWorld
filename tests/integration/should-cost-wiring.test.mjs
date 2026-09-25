@@ -88,7 +88,11 @@ function run(fields = {}, { stages, checked = false, costs = {}, amortise = fals
      the engine just returned — deliberately, so that what it says cannot
      drift from the tables under it — plus two page-level variables it guards
      for with `typeof`, which resolve to nothing here and must. */
-  const src = ["scVal", "scInt", "scErr", "scRun", "scRow", "scVerdictHTML", "scPlanHTML",
+  /* scBuildPlan is where the form is read and the engine is called. It was
+     scRun's body until the comparison needed the same reading with one thing
+     varied; one implementation, so a comparison cannot differ from the plan
+     it claims to be a comparison of. */
+  const src = ["scVal", "scInt", "scErr", "scBuildPlan", "scRun", "scRow", "scVerdictHTML", "scPlanHTML",
                "scLayoutHTML", "scCostEntries", "scCostHTML", "scAssumptionsHTML", "bcSaveHTML",
                "scUnknownFields", "scUnknownAdviceHTML", "scGapCardHTML",
                "scStillAvailable"].map(fnSource).join("\n")
@@ -499,5 +503,140 @@ describe("a field the person cannot answer", () => {
     const html = run({});
     assert.equal(/Waiting on/.test(html), false);
     assert.match(html, /Stock to buy|blanks/i);
+  });
+});
+
+/* ------------------------------------------------ comparing an alternative */
+
+/** Build a plan with one thing varied, using the page's own scBuildPlan. */
+function planWith(over, { fields = {}, checked = false } = {}) {
+  const values = {
+    "sc-qty": "1000", "sc-unit": "mm", "sc-grade": "Fictional grade FG-300",
+    "sc-bw": "200", "sc-bl": "100", "sc-bt": "5",
+    "sc-dv": "7.85", "sc-du": "g/cm3", "sc-ds": "Synthetic datasheet",
+    "sc-form": "sheet", "sc-s1": "2000", "sc-s2": "1000",
+    "sc-kerf": "3", "sc-edge": "10", "sc-pack": "1", "sc-moq": "0", "sc-cont": "0",
+    "sc-pw": "", "sc-pl": "", "sc-pt": "", "sc-cur": "GBP",
+    ...fields,
+  };
+  const boxes = { "sc-rot": { checked } };
+  const sandbox = {
+    document: {
+      getElementById: (id) =>
+        (id in boxes ? boxes[id] : (id in values ? { value: values[id] } : null)),
+    },
+    window: {
+      BW: {
+        pc: ratioFromPercent, scLength, scDensity, boxVolume,
+        scStage, sheetLayout, barLayout, planMaterial,
+      },
+    },
+    console,
+    _scStages: [["Laser cut", "98", "0", "input"], ["Form", "95", "4", "input"]],
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(["scVal", "scInt", "scBuildPlan"].map(fnSource).join("\n"), sandbox);
+  sandbox.__over = over;
+  return vm.runInContext("scBuildPlan(__over)", sandbox);
+}
+
+describe("comparing a supported alternative", () => {
+  /* pageSource() inlines app.js into the page, so `html` is the whole
+     application and there is no separate copy to read. */
+  const variations = html.slice(html.indexOf("var SC_VARIATIONS="),
+                                html.indexOf("function scVariationById"));
+
+  test("the variations are a closed list", () => {
+    const ids = [...variations.matchAll(/id:"([a-z]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(ids.sort(), ["rotation", "stock"]);
+  });
+
+  test("quantity is not offered, because the cost inputs are amounts", () => {
+    /* The trap this exists to avoid. The cost elements are totals for the
+       plan as entered, not rates, so re-running with a different quantity
+       would report the same money against a different number of parts — a
+       per-part figure that looks calculated and is wrong. */
+    assert.doesNotMatch(variations, /goodParts|quantity/i,
+      "a quantity variation was added, which the entered amounts cannot support");
+    assert.match(fnSource("scCompareOpen"), /Cost is not compared/);
+  });
+
+  test("scBuildPlan honours only the variations that are reported", () => {
+    const src = fnSource("scBuildPlan");
+    const keys = [...src.matchAll(/\bo\.([A-Za-z]+)/g)].map((m) => m[1]);
+    assert.deepEqual([...new Set(keys)].sort(), ["rotation", "stockLength", "stockWidth"],
+      "scBuildPlan reads an override the comparison does not name on screen");
+  });
+
+  test("rotation actually changes the layout, and the engine says so", () => {
+    /* A 450x250 blank on a 2000x1000 sheet is a case where turning it genuinely
+       helps: 12 per sheet becomes 14. The default 200x100 is not — it nests the
+       same either way — which is worth knowing, because a comparison offered on
+       a part where it changes nothing should show two equal columns rather than
+       be hidden. Both figures come from the engine, not from the panel. */
+    const shape = { fields: { "sc-bw": "450", "sc-bl": "250" } };
+    const base = planWith(undefined, shape);
+    const turned = planWith({ rotation: true }, shape);
+    assert.equal(base.ok, true);
+    assert.equal(turned.ok, true);
+    assert.equal(String(base.quantities.blanksPerStockUnit), "12");
+    assert.equal(String(turned.quantities.blanksPerStockUnit), "14");
+  });
+
+  test("where turning it would not help, the comparison still runs", () => {
+    const base = planWith(undefined);
+    const turned = planWith({ rotation: true });
+    assert.equal(turned.ok, true);
+    assert.equal(String(base.quantities.blanksPerStockUnit),
+                 String(turned.quantities.blanksPerStockUnit),
+                 "the engine changed a layout that rotation cannot improve");
+  });
+
+  test("a different stock size changes what is bought", () => {
+    const base = planWith(undefined);
+    const bigger = planWith({ stockWidth: "2500", stockLength: "1250" });
+    assert.equal(bigger.ok, true);
+    assert.notEqual(String(base.quantities.stockUnitsToBuy),
+                    String(bigger.quantities.stockUnitsToBuy));
+  });
+
+  test("the blanks the route needs do not move with the stock", () => {
+    /* Changing how blanks are cut from a sheet cannot change how many the
+       route requires. If it did, the variation would be doing something the
+       panel does not report. */
+    const base = planWith(undefined);
+    const bigger = planWith({ stockWidth: "2500", stockLength: "1250" });
+    assert.equal(String(base.quantities.blanksToRelease),
+                 String(bigger.quantities.blanksToRelease));
+  });
+
+  test("an override the list does not name is ignored", () => {
+    const base = planWith(undefined);
+    const nonsense = planWith({ goodParts: 1, kerf: "999" });
+    assert.equal(String(base.quantities.stockUnitsToBuy),
+                 String(nonsense.quantities.stockUnitsToBuy),
+                 "an unnamed override changed the plan");
+  });
+
+  test("nothing is adopted, and it says so", () => {
+    assert.match(fnSource("scVariantHTML"), /Nothing has been adopted/);
+    assert.match(fnSource("scVariantHTML"), /the plan above is unchanged/);
+  });
+
+  test("a comparison needs a plan to compare against", () => {
+    assert.match(fnSource("scCompareOpen"), /Work out the material first/);
+    assert.match(fnSource("scCompareRun"), /!_scLast\.plan\)return;/);
+  });
+
+  test("the difference is a subtraction of engine integers, never a saving", () => {
+    const src = fnSource("scVariantHTML");
+    assert.match(src, /BigInt\(b\)-BigInt\(a\)/);
+    /* Comments stripped first: the function's own commentary explains why it
+       says "difference" rather than "saving", and that sentence is not
+       something the reader ever sees. What must not contain the word is the
+       markup this emits. */
+    const emitted = src.replace(/\/\*[\s\S]*?\*\//g, "");
+    assert.doesNotMatch(emitted, /\bsaving/i, "a difference was described as a saving");
+    assert.match(emitted, /Difference/, "the column is not labelled");
   });
 });

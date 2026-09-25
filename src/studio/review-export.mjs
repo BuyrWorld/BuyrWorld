@@ -384,8 +384,24 @@ function commercialNotes(c) {
     }
   }
 
+  /* Two kinds of assumption, and the difference matters to whoever is being
+     asked to check them. The engine's come from the route and the rates as
+     entered; these were stood up deliberately in place of an answer nobody
+     had, and each names what it was based on and who could settle it. */
+  if (c.statedAssumptions && c.statedAssumptions.length) {
+    out.push("### Values assumed in place of an answer", "",
+      "Nobody knew these. They were **not** filled in by this tool — someone chose",
+      "each value and recorded what they chose it on. **Every figure in this package",
+      "moves if one of them is wrong**, which is why they are the first thing worth",
+      "checking.", "",
+      "| What | Assumed | Basis given | Who could settle it |", "|---|---|---|---|",
+      ...c.statedAssumptions.map((a) =>
+        `| ${a.what} | ${a.value} | ${a.basis} | ${a.askWho ?? "not recorded"} |`),
+      "");
+  }
+
   if (c.assumptions && c.assumptions.length) {
-    out.push("### Assumptions this rests on", "",
+    out.push("### Assumptions the route and the rates carry", "",
       "| What | Value | Basis | What it affects |", "|---|---|---|---|",
       ...c.assumptions.map((a) => `| ${a.what} | ${a.value} | ${a.basis} | ${a.affects} |`),
       "");

@@ -4251,17 +4251,163 @@ function scUnknownAdviceHTML(){
     + '</div></div>';
 }
 
+/**
+ * Values standing in for answers nobody had.
+ *
+ * `id` to the basis somebody gave for assuming it. The basis is the whole
+ * point: an assumption without one is a guess with better manners, and the
+ * provenance vocabulary already distinguishes the two — scenario.mjs calls
+ * this SOURCE.ASSUMPTION and stateOf() reports it as "Assumed" wherever the
+ * value appears.
+ *
+ * Nothing writes here except a person doing it deliberately. There is no
+ * default, no suggested value and no way for this to be populated by the
+ * product having an opinion.
+ */
+var _scAssumed = {};
+
+/** Whether a field is standing on a stated assumption. */
+function scIsAssumed(id){
+  return Boolean(_scAssumed[id]) && _scSource[id]==="assumption";
+}
+
 /** The card shown under a field somebody has said they cannot answer. */
 function scGapCardHTML(id){
   var h=SC_FIELD_HELP[id];
   if(!h) return "";
+  var open=typeof _scAssumeOpen!=="undefined"&&_scAssumeOpen===id;
   return '<div class="bw-gapcard">'
     +'<p class="bw-gapcard-q">'+ciEsc(h.ask)+'</p>'
     +'<p class="bw-gapcard-l"><b>Why it matters.</b> '+ciEsc(h.why)+'</p>'
     +'<p class="bw-gapcard-l"><b>Where to look.</b> '+ciEsc(h.where)+'</p>'
     +'<p class="bw-gapcard-l"><b>What this costs you.</b> '+ciEsc(scStillAvailable(id))+'</p>'
     +'<p class="bw-gapcard-ask">Ask '+ciEsc(h.askWho)+': &ldquo;'+ciEsc(h.ask)+'&rdquo;</p>'
+    +(open?scAssumeFormHTML(id):
+      '<button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scAssumeOpen" data-a="'
+      +attrEsc(id)+'">Carry on with a stated assumption &rarr;</button>')
     +'</div>';
+}
+
+/**
+ * The form for standing something up on an assumption.
+ *
+ * Two fields, and the second is not optional. A value with no basis is what
+ * this whole screen exists to refuse, so the control that writes one refuses
+ * it too rather than accepting it and labelling it weakly.
+ */
+function scAssumeFormHTML(id){
+  var name=SC_FIELD_HELP[id]?SC_FIELD_HELP[id].name:id;
+  return '<div style="border-top:1px solid var(--bw-line);margin-top:10px;padding-top:10px">'
+    +'<p class="bw-gapcard-l"><b>An assumption is not an answer.</b> It will be labelled '
+    +'<i>Assumed</i> everywhere it appears, listed in the assumptions table, and carried into '
+    +'the review package as something to check &mdash; and the figures that rest on it are only '
+    +'as good as it is.</p>'
+    +'<div class="bw-fields" style="margin-top:8px">'
+    /* aria-label as well as the visible text. The ids are built from the
+       field name, so nothing scanning this file as text can pair the label
+       with the control — and a screen reader meeting these inside a card
+       that was just swapped in should not have to either. */
+    +'<label class="bw-field">Value to assume<input class="bwin" id="scasm-'+attrEsc(id)+'"'
+    +' inputmode="decimal" aria-label="Value to assume for '+attrEsc(name)+'"></label>'
+    +'<label class="bw-field">What are you basing that on?<input class="bwin" id="scasmb-'+attrEsc(id)+'"'
+    +' aria-label="What the assumed '+attrEsc(name)+' is based on"'
+    +' placeholder="a similar part, a previous order, a supplier’s rule of thumb"></label>'
+    +'</div>'
+    +'<p id="scasme-'+attrEsc(id)+'" role="status" aria-live="polite" style="font-size:12px;color:var(--bw-danger);margin:6px 0 0;min-height:1.2em"></p>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">'
+    +'<button type="button" class="bw-act bw-act-secondary bw-act--sm" data-do="scAssumeApply" data-a="'+attrEsc(id)+'">Use this assumption</button>'
+    +'<button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scAssumeCancel">Cancel</button>'
+    +'</div></div>';
+}
+
+/* Which field's assumption form is open. One at a time: the form is a
+   decision, not a panel. */
+var _scAssumeOpen=null;
+
+function scAssumeOpen(id){
+  if(!SC_FIELD_HELP[id])return;
+  _scAssumeOpen=id;
+  scRenderFieldStates();
+  var v=document.getElementById("scasm-"+id);
+  if(v&&typeof v.focus==="function")v.focus();
+}
+
+function scAssumeCancel(){
+  _scAssumeOpen=null;
+  scRenderFieldStates();
+}
+
+/** Record an assumption, or refuse it for the reason it is not one. */
+function scAssumeApply(id){
+  var v=document.getElementById("scasm-"+id);
+  var b=document.getElementById("scasmb-"+id);
+  var err=document.getElementById("scasme-"+id);
+  var value=v?String(v.value).trim():"";
+  var basis=b?String(b.value).trim():"";
+
+  if(value===""){ if(err)err.textContent="Enter the value you want to assume."; return; }
+  if(basis===""){
+    /* The refusal that makes the label mean something. */
+    if(err)err.textContent="Say what you are basing it on. An assumption with no basis is a guess, and this will not record one as an assumption.";
+    return;
+  }
+
+  _scAssumed[id]=basis;
+  _scSource[id]="assumption";
+  delete _scUnknown[id];
+  _scAssumeOpen=null;
+
+  var input=document.getElementById(id);
+  if(input){ input.disabled=false; input.value=value; }
+  /* Assuming is a decision about the field, so it counts as an edit and a
+     later extraction is compared against it rather than overwriting it. */
+  scTouched(id);
+  scRenderFieldStates();
+  if(typeof scRenderSummary==="function")scRenderSummary();
+}
+
+/** Take an assumption back. The field returns to being unanswered. */
+function scAssumeDrop(id){
+  delete _scAssumed[id];
+  delete _scSource[id];
+  var input=document.getElementById(id);
+  if(input)input.value="";
+  _scUnknown[id]=true;
+  scTouched(id);
+  scRenderFieldStates();
+  if(typeof scRenderSummary==="function")scRenderSummary();
+}
+
+/** What an assumed field says about itself, under the field. */
+function scAssumedCardHTML(id){
+  var h=SC_FIELD_HELP[id];
+  return '<div class="bw-gapcard" style="border-left-color:var(--bw-muted)">'
+    +'<p class="bw-gapcard-q">Assumed, not answered</p>'
+    +'<p class="bw-gapcard-l"><b>Basis.</b> '+ciEsc(_scAssumed[id])+'</p>'
+    +'<p class="bw-gapcard-l">Every figure resting on this carries the same caveat, and the '
+    +'review package asks for it to be checked.</p>'
+    +(h?'<p class="bw-gapcard-ask">Still worth asking '+ciEsc(h.askWho)+': &ldquo;'+ciEsc(h.ask)+'&rdquo;</p>':'')
+    +'<button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scAssumeDrop" data-a="'
+    +attrEsc(id)+'">Take the assumption back</button>'
+    +'</div>';
+}
+
+/** Every stated assumption, for the results and the review package. */
+function scStatedAssumptions(){
+  var out=[];
+  for(var id in _scAssumed){
+    if(!scIsAssumed(id))continue;
+    var el=document.getElementById(id);
+    out.push({
+      field:SC_FIELD_HELP[id]?SC_FIELD_HELP[id].name:id,
+      label:SC_FIELD_HELP[id]?SC_FIELD_HELP[id].name:id,
+      value:el?String(el.value).trim():"",
+      basis:_scAssumed[id],
+      ask:SC_FIELD_HELP[id]?SC_FIELD_HELP[id].ask:null,
+      askWho:SC_FIELD_HELP[id]?SC_FIELD_HELP[id].askWho:null
+    });
+  }
+  return out;
 }
 
 /** Redraw every provenance row. Cheap enough to do on any change. */
@@ -4278,7 +4424,11 @@ function scRenderFieldStates(){
       + ' aria-pressed="'+(unknown?"true":"false")+'">'
       + (unknown ? "I know this after all" : "I don&rsquo;t know") + '</button>';
     var gap=document.getElementById("scgap-"+id);
-    if(gap) gap.innerHTML = unknown ? scGapCardHTML(id) : "";
+    /* Three things a field can be showing underneath itself: the question to
+       ask when nobody knows, the basis when somebody decided to assume it,
+       and nothing at all when it simply has an answer. */
+    if(gap) gap.innerHTML = unknown ? scGapCardHTML(id)
+      : scIsAssumed(id) ? scAssumedCardHTML(id) : "";
     var input=document.getElementById(id);
     if(input){
       input.disabled=unknown;
@@ -4489,7 +4639,14 @@ function scClearSession(){
      session: left behind, somebody's own part would carry the banner saying
      its figures are fictional — or, worse, stop carrying it when it should. */
   _scExampleLoaded=null;
+  /* Assumptions belong to the part they were made about. Carried into a new
+     scenario they would be a stated basis for a value nobody stated. */
+  _scAssumed={}; _scAssumeOpen=null;
+  /* A comparison is about one plan. Left behind it would sit under the next
+     part's result claiming to be an alternative to it. */
+  _scVariant=null;
   var qOut=document.getElementById("sc-questions"); if(qOut)qOut.innerHTML="";
+  var vOut=document.getElementById("sc-variant"); if(vOut)vOut.innerHTML="";
   /* The blank worked out from the part, and the record of carrying it over.
      A proposal is about one part; leaving it would offer the previous part's
      blank against this one's model. */
@@ -5034,12 +5191,28 @@ function scCommercialBasis(){
     };
   });
 
+  /* The ones a person stood up themselves, kept apart from the ones the
+     route implies. A reviewer correcting an assumption needs to know which
+     of them somebody chose and what they chose it on. */
+  var stated=scStatedAssumptions().map(function(s){
+    return {
+      what:(B.scLabelOf?B.scLabelOf(s.field):s.field),
+      value:s.value, basis:s.basis,
+      askWho:s.askWho||null, ask:s.ask||null
+    };
+  });
+
   /* The open questions, from the same place the screen gets them, so the
      package cannot ask something different from what it showed. */
   var gaps=[];
   a.unknownIds.forEach(function(id){
     var h=SC_FIELD_HELP[id];
     if(h)gaps.push({ask:h.ask,askWho:h.askWho,why:"The buyer marked this as not known."});
+  });
+  scStatedAssumptions().forEach(function(s){
+    if(!s.ask)return;
+    gaps.push({ask:s.ask,askWho:s.askWho,
+      why:"Assumed as "+s.value+", on the basis of: "+s.basis});
   });
   a.costGaps.forEach(function(label){
     gaps.push({ask:"Can you break out "+label.toLowerCase()+" for this part, and say what it is based on?",
@@ -5087,6 +5260,7 @@ function scCommercialBasis(){
       missing:cost.missing.map(function(m){return {label:m.label,needs:m.needs};})
     }:null,
     assumptions:assumptions,
+    statedAssumptions:stated,
     /* The reviewer's words, not the model's. scUnknownFields returns the
        scenario field names — "edgeMargin" — and scenario.mjs already owns the
        mapping to what a person would call it. */
@@ -5911,6 +6085,76 @@ function scErr(m){
   return '<div class="bw-panel" style="border-color:var(--bw-danger)"><p style="color:var(--bw-danger);font-size:var(--bw-t-body);margin:0;line-height:1.6">'+ciEsc(m)+'</p></div>';
 }
 
+/**
+ * Read the form and work out the material plan.
+ *
+ * One implementation, used by the result and by the comparison. A comparison
+ * that read the form a second time of its own would be comparing two things
+ * that might not differ in the way it says they do.
+ *
+ * `over` names the one thing being varied, and only the keys below are
+ * honoured — a variation cannot quietly change something the comparison does
+ * not report. Everything else comes from the form as it stands.
+ *
+ * Throws rather than rendering. The caller owns the screen.
+ */
+function scBuildPlan(over){
+  var B=window.BW;
+  var o=over||{};
+  var u=scVal("sc-unit")||"mm";
+  var L=function(id,what){return B.scLength(scVal(id),u,what);};
+  var V=function(text,what){return B.scLength(text,u,what);};
+
+  var qty=scInt("sc-qty");
+  if(qty===null)throw new Error("Enter how many accepted parts are required. Everything else is worked out backwards from it.");
+
+  var bw=L("sc-bw","Blank width"),bl=L("sc-bl","Blank length"),bt=L("sc-bt","Blank thickness");
+  var kerf=L("sc-kerf","Saw kerf"),edge=L("sc-edge",scVal("sc-form")==="bar"?"End trim":"Edge margin");
+
+  var d=null;
+  if(scVal("sc-dv")!==""){ d=B.scDensity(scVal("sc-dv"),scVal("sc-du"),scVal("sc-ds")); }
+
+  var stages=_scStages.filter(function(a){return String(a[0]).trim()&&String(a[1]).trim();}).map(function(a,i){
+    return B.scStage({
+      id:"s"+i, name:String(a[0]).trim(),
+      yield:B.pc(String(a[1]).trim()),
+      fixedPieces:a[2]===""?0:parseInt(String(a[2]).replace(/[^0-9]/g,"")||"0",10),
+      consumes:a[3]||"input"
+    });
+  });
+
+  var layout,stockVol;
+  if(scVal("sc-form")==="bar"){
+    var barLen=o.stockWidth?V(o.stockWidth,"Bar length"):L("sc-s1","Bar length");
+    layout=B.barLayout({length:barLen},bl,{kerf:kerf,endTrim:edge});
+    stockVol=B.boxVolume(bw,barLen,bt);
+  }else{
+    var sw=o.stockWidth?V(o.stockWidth,"Stock width"):L("sc-s1","Stock width");
+    var sl=o.stockLength?V(o.stockLength,"Stock length"):L("sc-s2","Stock length");
+    var rot=document.getElementById("sc-rot");
+    layout=B.sheetLayout({width:sw,length:sl},{width:bw,length:bl},
+      {kerf:kerf,edgeMargin:edge,
+       rotationAllowed:o.rotation===undefined?Boolean(rot&&rot.checked):Boolean(o.rotation)});
+    stockVol=B.boxVolume(sw,sl,bt);
+  }
+
+  var partVol=null;
+  if(scVal("sc-pw")!==""&&scVal("sc-pl")!==""&&scVal("sc-pt")!==""){
+    partVol=B.boxVolume(L("sc-pw","Part width"),L("sc-pl","Part length"),L("sc-pt","Part thickness"));
+  }
+
+  var cont=scVal("sc-cont");
+  return B.planMaterial({
+    goodParts:qty, stages:stages, layout:layout, density:d,
+    stockVolumeUm3:stockVol,
+    blankVolumeUm3:B.boxVolume(bw,bl,bt),
+    partVolumeUm3:partVol,
+    packIncrement:scInt("sc-pack")||1,
+    minimumOrder:scInt("sc-moq")||0,
+    contingency:cont===""?0n:B.pc(cont)
+  });
+}
+
 function scRun(){
   var out=document.getElementById("sc-out");
   if(!out||!window.BW||!window.BW.planMaterial)return;
@@ -5934,57 +6178,10 @@ function scRun(){
   }
 
   var u=scVal("sc-unit")||"mm";
-  var L=function(id,what){return B.scLength(scVal(id),u,what);};
 
   var plan;
-  try{
-    var qty=scInt("sc-qty");
-    if(qty===null)throw new Error("Enter how many accepted parts are required. Everything else is worked out backwards from it.");
-
-    var bw=L("sc-bw","Blank width"),bl=L("sc-bl","Blank length"),bt=L("sc-bt","Blank thickness");
-    var kerf=L("sc-kerf","Saw kerf"),edge=L("sc-edge",scVal("sc-form")==="bar"?"End trim":"Edge margin");
-
-    var d=null;
-    if(scVal("sc-dv")!==""){ d=B.scDensity(scVal("sc-dv"),scVal("sc-du"),scVal("sc-ds")); }
-
-    var stages=_scStages.filter(function(a){return String(a[0]).trim()&&String(a[1]).trim();}).map(function(a,i){
-      return B.scStage({
-        id:"s"+i, name:String(a[0]).trim(),
-        yield:B.pc(String(a[1]).trim()),
-        fixedPieces:a[2]===""?0:parseInt(String(a[2]).replace(/[^0-9]/g,"")||"0",10),
-        consumes:a[3]||"input"
-      });
-    });
-
-    var layout,stockVol;
-    if(scVal("sc-form")==="bar"){
-      var barLen=L("sc-s1","Bar length");
-      layout=B.barLayout({length:barLen},bl,{kerf:kerf,endTrim:edge});
-      stockVol=B.boxVolume(bw,barLen,bt);
-    }else{
-      var sw=L("sc-s1","Stock width"),sl=L("sc-s2","Stock length");
-      var rot=document.getElementById("sc-rot");
-      layout=B.sheetLayout({width:sw,length:sl},{width:bw,length:bl},
-        {kerf:kerf,edgeMargin:edge,rotationAllowed:Boolean(rot&&rot.checked)});
-      stockVol=B.boxVolume(sw,sl,bt);
-    }
-
-    var partVol=null;
-    if(scVal("sc-pw")!==""&&scVal("sc-pl")!==""&&scVal("sc-pt")!==""){
-      partVol=B.boxVolume(L("sc-pw","Part width"),L("sc-pl","Part length"),L("sc-pt","Part thickness"));
-    }
-
-    var cont=scVal("sc-cont");
-    plan=B.planMaterial({
-      goodParts:qty, stages:stages, layout:layout, density:d,
-      stockVolumeUm3:stockVol,
-      blankVolumeUm3:B.boxVolume(bw,bl,bt),
-      partVolumeUm3:partVol,
-      packIncrement:scInt("sc-pack")||1,
-      minimumOrder:scInt("sc-moq")||0,
-      contingency:cont===""?0n:B.pc(cont)
-    });
-  }catch(e){ out.innerHTML=scErr(String(e.message||e)); return; }
+  try{ plan=scBuildPlan(); }
+  catch(e){ out.innerHTML=scErr(String(e.message||e)); return; }
 
   if(!plan.ok){ out.innerHTML=scErr(plan.reason); return; }
 
@@ -6048,6 +6245,16 @@ function scVerdictHTML(plan,cost){
     incomplete.push("No engineering requirements are recorded, so a review package would carry cost and no specification.");
   }
 
+  /* An assumed input is not a gap — the figures below it are real — but it is
+     the thing most likely to move them, so it is named here rather than left
+     to be found in the assumptions table. */
+  var stated = typeof scStatedAssumptions==="function" ? scStatedAssumptions() : [];
+  if(stated.length){
+    incomplete.push("Resting on "+stated.length+" assumption"+(stated.length===1?"":"s")
+      +" you stated: "+ciEsc(stated.map(function(a){return a.label;}).join(", "))
+      +". Every figure above moves if "+(stated.length===1?"it is":"they are")+" wrong.");
+  }
+
   if(plan.mass.grossPurchasedUg===null){
     next="Add the blank thickness and a density, and the purchased weight and material cost follow.";
   }else if(cost&&cost.ok&&!cost.complete){
@@ -6087,8 +6294,155 @@ function scVerdictHTML(plan,cost){
     +'<div class="bw-verdict-acts">'
     +'<button type="button" class="bw-act bw-act-secondary" data-do="scSeeWorking">See the working</button>'
     +'<button type="button" class="bw-act bw-act-secondary" data-do="scAskQuestions">Prepare questions</button>'
+    +'<button type="button" class="bw-act bw-act-secondary" data-do="scCompareOpen">Compare an alternative</button>'
     +'<button type="button" class="bw-act bw-act-secondary" data-do="scExportReview">Prepare the review package</button>'
     +'</div></div>';
+}
+
+/* ------------------------------------------- comparing a supported change
+
+   What can honestly be compared here, and what cannot.
+
+   The cost elements on this page are **amounts**, not rates: somebody typed
+   "GBP 4620.00 of raw stock" for the plan as it stands. Re-running the plan
+   with a different stock size changes how many sheets are bought, and that
+   same 4620 would then be attached to a different quantity — a per-part
+   figure that looks calculated and is not. So this compares the material
+   plan and stops there, and says why rather than leaving a reader to wonder
+   where the money went.
+
+   That also rules out comparing quantities, which is the variation somebody
+   would ask for first: with amounts rather than rates, ordering twice as
+   many would report the same total cost. Offering it would be worse than
+   not offering it.
+   ------------------------------------------------------------------------ */
+
+/** The changes this can re-run without misreporting anything. */
+var SC_VARIATIONS=[
+  {id:"rotation", label:"Allow the blank to be turned 90° on the stock",
+   note:"Only do this where grain direction, finish or a drawing note does not fix the orientation.",
+   sheetOnly:true, over:function(){ return {rotation:true}; },
+   offer:function(){
+     var rot=document.getElementById("sc-rot");
+     return scVal("sc-form")!=="bar" && !(rot&&rot.checked);
+   }},
+  {id:"stock", label:"A different stock size",
+   note:"Use a size the supplier actually holds. A size nobody stocks makes the nesting look better than it will be.",
+   sheetOnly:false, fields:true,
+   over:function(){
+     var w=document.getElementById("scv-w"),l=document.getElementById("scv-l");
+     return {stockWidth:w?String(w.value).trim():"", stockLength:l?String(l.value).trim():""};
+   },
+   offer:function(){ return true; }}
+];
+
+function scVariationById(id){
+  for(var i=0;i<SC_VARIATIONS.length;i++) if(SC_VARIATIONS[i].id===id) return SC_VARIATIONS[i];
+  return null;
+}
+
+/* Which comparison is on screen. Null is the normal state. */
+var _scVariant=null;
+
+/** Offer the supported comparisons. */
+function scCompareOpen(){
+  var host=document.getElementById("sc-variant");
+  if(!host)return;
+  if(!_scLast||!_scLast.plan){
+    host.innerHTML=scErr("Work out the material first. There is nothing to compare against yet.");
+    return;
+  }
+  var u=scVal("sc-unit")||"mm";
+  var offered=SC_VARIATIONS.filter(function(v){ return v.offer(); });
+
+  host.innerHTML='<div class="bw-panel" style="margin-top:var(--bw-4)">'
+    +'<div class="bw-panel-head"><div class="bw-panel-title">Compare a supported change</div>'
+    +'<span class="bw-status bw-status--derived">material plan only</span></div>'
+    +'<p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-4);line-height:1.6">'
+    +'Both columns are worked out by the same engine from the same inputs, with one thing changed. '
+    +'<b style="color:var(--bw-text)">Cost is not compared.</b> The amounts you entered are totals for '
+    +'the plan as it stands rather than rates, so carrying them onto a different purchase quantity '
+    +'would produce a per-part figure that looks calculated and is not.</p>'
+    +(offered.length?offered.map(function(v){
+      return '<div style="border:1px solid var(--bw-border);border-radius:var(--bw-r-sm);padding:12px 14px;margin-bottom:8px">'
+        +'<div style="color:var(--bw-text);font-size:var(--bw-t-body);margin-bottom:4px">'+ciEsc(v.label)+'</div>'
+        +'<p style="color:var(--bw-muted);font-size:11.5px;margin:0 0 8px;line-height:1.5">'+ciEsc(v.note)+'</p>'
+        +(v.fields
+          ? '<div class="bw-fields" style="margin-bottom:8px">'
+            +'<label class="bw-field">Stock width ('+ciEsc(u)+')<input class="bwin" id="scv-w" inputmode="decimal"></label>'
+            +'<label class="bw-field">Stock length ('+ciEsc(u)+')<input class="bwin" id="scv-l" inputmode="decimal"></label>'
+            +'</div>'
+          : '')
+        +'<button type="button" class="bw-act bw-act-secondary bw-act--sm" data-do="scCompareRun" data-a="'
+        +attrEsc(v.id)+'">Work this one out too</button></div>';
+    }).join(""):'<p style="color:var(--bw-muted);font-size:12.5px;margin:0;line-height:1.6">Nothing here can be varied without changing something this would then have to report differently.</p>')
+    +'<div id="scv-out"></div></div>';
+}
+
+/** Run one variation and put it beside the plan on screen. */
+function scCompareRun(id){
+  var out=document.getElementById("scv-out");
+  var v=scVariationById(id);
+  if(!out||!v||!_scLast||!_scLast.plan)return;
+
+  var over=v.over();
+  if(v.id==="stock"&&(!over.stockWidth||!over.stockLength)){
+    out.innerHTML=scErr("Enter both a width and a length for the alternative stock.");
+    return;
+  }
+
+  var alt;
+  try{ alt=scBuildPlan(over); }
+  catch(e){ out.innerHTML=scErr(String(e.message||e)); return; }
+  if(!alt.ok){ out.innerHTML=scErr(alt.reason); return; }
+
+  _scVariant={id:v.id,plan:alt,label:v.label};
+  out.innerHTML=scVariantHTML(_scLast.plan,alt,v);
+}
+
+/** Two plans, side by side, with nothing computed in the markup. */
+function scVariantHTML(base,alt,v){
+  var B=window.BW,u=scVal("sc-unit")||"mm";
+
+  /* The difference is a subtraction of two exact integers the engine
+     returned, done here because a table cannot subtract. It is reported as
+     a difference and never as a saving: what a different stock size costs
+     depends on what it is bought for, which this does not know. */
+  var delta=function(a,b){
+    var d=BigInt(b)-BigInt(a);
+    return d===0n?"no change":(d>0n?"+":"")+d.toString();
+  };
+
+  var row=function(label,a,b,note){
+    return '<tr><td>'+ciEsc(label)+'</td><td class="n">'+ciEsc(String(a))+'</td>'
+      +'<td class="n">'+ciEsc(String(b))+'</td>'
+      +'<td class="n" style="color:var(--bw-muted)">'+ciEsc(note)+'</td></tr>';
+  };
+
+  var massRow="";
+  if(base.mass.grossPurchasedUg!==null&&alt.mass.grossPurchasedUg!==null){
+    massRow=row("Gross purchased (kg)",
+      B.formatMass(base.mass.grossPurchasedUg,"kg",2),
+      B.formatMass(alt.mass.grossPurchasedUg,"kg",2),
+      delta(base.mass.grossPurchasedUg,alt.mass.grossPurchasedUg)==="no change"?"no change":"");
+  }
+
+  return '<div class="eyebrow" style="margin:var(--bw-4) 0 6px">As it stands, and with that one change</div>'
+    +'<div class="bw-table-wrap"><table class="bw-table">'
+    +'<thead><tr><th>Material plan</th><th class="n">As entered</th>'
+    +'<th class="n">'+ciEsc(v.label)+'</th><th class="n">Difference</th></tr></thead><tbody>'
+    +row("Blanks per stock unit",base.quantities.blanksPerStockUnit,alt.quantities.blanksPerStockUnit,
+        delta(base.quantities.blanksPerStockUnit,alt.quantities.blanksPerStockUnit))
+    +row("Stock units to buy",base.quantities.stockUnitsToBuy,alt.quantities.stockUnitsToBuy,
+        delta(base.quantities.stockUnitsToBuy,alt.quantities.stockUnitsToBuy))
+    +row("Utilisation",B.formatPercent(base.layout.utilisation),B.formatPercent(alt.layout.utilisation),"")
+    +massRow
+    +'</tbody></table></div>'
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.6">'
+    +'Blanks released stay at '+base.quantities.blanksToRelease+' in both columns: this changes how '
+    +'they are cut from the stock, not how many the route needs. '
+    +'<b style="color:var(--bw-text)">Nothing has been adopted</b> &mdash; the plan above is unchanged. '
+    +'To work with the alternative, change the stock fields and work it out again.</p>';
 }
 
 /** Open the calculation trail and put the reader in it. */
@@ -6207,8 +6561,26 @@ function scAssumptionsHTML(plan,cost){
     return '<tr><td>'+ciEsc(r.what)+'</td><td class="n">'+ciEsc(v)+'</td>'
       +'<td>'+ciEsc(r.basis)+'</td><td style="color:var(--bw-muted);font-size:12px">'+ciEsc(r.affects)+'</td></tr>';
   }).join("");
+  /* Values somebody stood up on an assumption rather than an answer. Kept in
+     their own block, above the engine's, because they are the ones a reader
+     can still do something about: each carries who to ask. */
+  var stated=(typeof scStatedAssumptions==="function")?scStatedAssumptions():[];
+  var statedRows=stated.map(function(a){
+    return '<tr><td>'+ciEsc(a.label)+'</td><td class="n">'+ciEsc(a.value)+'</td>'
+      +'<td>'+ciEsc(a.basis)+'</td>'
+      +'<td style="color:var(--bw-muted);font-size:12px">'
+      +(a.askWho?'ask '+ciEsc(a.askWho):'')+'</td></tr>';
+  }).join("");
+
   return '<div class="bw-panel" style="margin-top:var(--bw-4)">'
-    +'<div class="bw-panel-head"><div class="bw-panel-title">Assumptions this rests on</div></div>'
+    +'<div class="bw-panel-head"><div class="bw-panel-title">Assumptions this rests on</div>'
+    +(stated.length?'<span class="bw-status bw-status--assumed"><span class="bw-dot" style="background:var(--bw-danger)"></span>'
+      +stated.length+' stated by you</span>':'')+'</div>'
+    +(statedRows?'<div class="eyebrow" style="margin:0 0 6px">Standing in for an answer nobody had</div>'
+      +'<div class="bw-table-wrap" style="margin-bottom:var(--bw-4)"><table class="bw-table">'
+      +'<thead><tr><th>What</th><th class="n">Assumed</th><th>Basis given</th><th>To settle it</th></tr></thead>'
+      +'<tbody>'+statedRows+'</tbody></table></div>':'')
+    +(statedRows?'<div class="eyebrow" style="margin:0 0 6px">From the route and the rates</div>':'')
     +'<div class="bw-table-wrap"><table class="bw-table">'
     +'<thead><tr><th>What</th><th class="n">Value</th><th>Basis</th><th>Affects</th></tr></thead>'
     +'<tbody>'+rows+'</tbody></table></div>'
@@ -6677,10 +7049,20 @@ function scRenderSummary(){
       +ciEsc(label)+(ok?" available":" blocked")+'</span>';
   };
 
+  /* The two material risks, in both views and on every keystroke. A field
+     nobody could answer and a field somebody assumed are different problems
+     with different next steps, so they are never merged into one count. */
   var risks="";
   if(a.unknownIds.length){
-    risks='<p class="bw-verdict-sub"><b style="color:var(--bw-warning)">Unanswered on purpose:</b> '
+    risks+='<p class="bw-verdict-sub"><b style="color:var(--bw-warning)">Unanswered on purpose:</b> '
       +ciEsc(a.unknowns.join(", "))+'. Nothing has been assumed in their place.</p>';
+  }
+  var stated=scStatedAssumptions();
+  if(stated.length){
+    risks+='<p class="bw-verdict-sub"><b style="color:var(--bw-danger)">Resting on an assumption:</b> '
+      +ciEsc(stated.map(function(s){return s.label;}).join(", "))
+      +'. Labelled <i>Assumed</i> wherever '+(stated.length===1?"it appears":"they appear")
+      +', and every figure below '+(stated.length===1?"moves if it is":"moves if they are")+' wrong.</p>';
   }
 
   host.innerHTML='<div class="bw-verdict">'
@@ -6709,7 +7091,8 @@ function scShowBuilder(){
   if(typeof scRenderBuilder==="function")scRenderBuilder();
   /* In the guided view the stage is assembled per step, so revealing the
      builder has to redraw it — otherwise the panel is un-hidden somewhere
-     the current step is not showing, and the button appears to do nothing. */
+     the current step is not showing, and the button appears to do nothing.
+     In the expert view it is already in its column and needs nothing. */
   if(_scView==="guided")scRenderGuided();
   if(b&&typeof b.scrollIntoView==="function")b.scrollIntoView({block:"nearest"});
 }
@@ -6757,6 +7140,14 @@ function scAskQuestions(){
     lines.push({who:"the supplier",
       q:"Can you break out "+label.toLowerCase()+" for this part, and say what it is based on?",
       why:"Switched on with no amount, so the cost per part is withheld."});
+  });
+  /* An assumption is a question somebody stopped waiting for, not one they
+     stopped needing. It stays on the list, carrying what it stands on so the
+     person being asked can see what they are correcting. */
+  scStatedAssumptions().forEach(function(s){
+    if(!s.ask||lines.some(function(l){return l.q===s.ask;}))return;
+    lines.push({who:s.askWho||"the supplier",q:s.ask,
+      why:"Assumed as "+s.value+", on the basis of: "+s.basis});
   });
 
   if(!lines.length){
@@ -6818,10 +7209,12 @@ function scBind(){
     }
     /* The summary answers "where does this stand", so it has to follow the
        typing rather than the run — including the cost rows and the route,
-       which have no entry in SC_FIELD_HELP. */
-    if(_scView==="guided")scRenderSummary();
+       which have no entry in SC_FIELD_HELP. It is drawn in both views: an
+       unanswered field and a stated assumption are material risks, and an
+       expert is no less entitled to see them than a first-time buyer. */
+    scRenderSummary();
   });
-  page.addEventListener("change",function(){ if(_scView==="guided")scRenderSummary(); });
+  page.addEventListener("change",function(){ scRenderSummary(); });
   page.addEventListener("click",function(e){
     var m=e.target&&e.target.closest?e.target.closest("[data-sc-mode]"):null;
     if(m){ctSwitch(m.dataset.scMode);return;}
@@ -11074,6 +11467,12 @@ registerActions({
   scHideBuilder: function () { scHideBuilder(); },
   scAskQuestions: function () { scAskQuestions(); },
   scSeeWorking: function () { scSeeWorking(); },
+  scAssumeOpen: function (id) { scAssumeOpen(id); },
+  scAssumeApply: function (id) { scAssumeApply(id); },
+  scAssumeCancel: function () { scAssumeCancel(); },
+  scAssumeDrop: function (id) { scAssumeDrop(id); },
+  scCompareOpen: function () { scCompareOpen(); },
+  scCompareRun: function (id) { scCompareRun(id); },
   scDontKnow: function (id) { scDontKnow(id); },
   scSaveDraft: function () { scSaveDraft(); },
   scNewDraft: function () { scNewDraft(); },

@@ -50,6 +50,9 @@ further down the page.
 | The optional model behind an explicit action | built | `scShowBuilder` |
 | The commercial basis in the review package | built | `scCommercialBasis`, `review-export.mjs` |
 | Capability wording reconciled with what runs | built | the capability table in `index.html` |
+| An explicit assumption, refused without a basis | built | `scAssumeApply`, `_scAssumed` |
+| Comparing a supported change to the plan | built, material plan only | `SC_VARIATIONS`, `scBuildPlan` |
+| The studio's rules in their own stylesheet | built | `studio-enhancements.css` |
 
 ## What does not exist
 
@@ -61,6 +64,8 @@ further down the page.
 | Working dictation | The machinery is built and tested; no recogniser is handed to it. The browser's own sends audio to the vendor, and this site says it sends nothing anywhere. Switching it on is a decision about that. |
 | A configured extraction service | `src/intake/extract-document.mjs` reads by rule, offline, and proposes unconfirmed candidates. |
 | Model-to-cost linkage, automatic | Still deliberate, and now built as the explicit transfer the audit asked for: allowances are typed, the blank is worked out, and a person carries it over with their name against it. Purchased mass never crosses — that follows from the layout and the stock actually bought. |
+| Comparing cost between two plans | The cost elements are **amounts** for the plan as entered, not rates. Re-running with a different stock size or quantity would attach the same money to a different purchase, producing a per-part figure that looks calculated and is not. The comparison therefore covers the material plan and says so; comparing cost needs rate-based entry, which this does not have. |
+| Comparing a different order quantity | The same reason, and the sharpest case of it: with amounts rather than rates, ordering twice as many would report the same total cost. Offering it would be worse than not offering it. |
 | Any browser verification | See below. Still true after v6 Phase 1: the view switching is executed against a DOM shim in `tests/integration/should-cost-view-switch.test.mjs`, which found a real `insertBefore` fault that source-reading tests had passed over — but a shim is not a browser and says nothing about layout, focus order, touch or paint. |
 | Any real case | The corpus is zero. Every engine has only met synthetic fixtures. |
 

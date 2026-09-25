@@ -28,7 +28,7 @@ const html = pageSource();
 /* ------------------------------------------------------------- the harness */
 
 /** Run the field layer over a stub form. */
-function form({ values = {}, unknown = {} } = {}) {
+function form({ values = {}, unknown = {}, assumed = {}, source = {} } = {}) {
   const made = [];
   const els = new Map();
 
@@ -78,6 +78,9 @@ function form({ values = {}, unknown = {} } = {}) {
     console,
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
+    /* The gap card carries the field id into a data- attribute, so the
+       attribute escaper is a dependency of it as well. */
+    attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
   };
 
   vm.createContext(sandbox);
@@ -91,6 +94,10 @@ function form({ values = {}, unknown = {} } = {}) {
          without the answer. Its two helpers go in with it. */
       fnSource("scGapCardHTML", app), fnSource("scStillAvailable", app),
       fnSource("scBlocksOf", app),
+      /* A field can also be standing on a stated assumption, which reads
+         differently again from both an answer and a gap. */
+      fnSource("scIsAssumed", app), fnSource("scAssumedCardHTML", app),
+      fnSource("scAssumeFormHTML", app),
       "function scTouched(id){ if(SC_FIELD_HELP[id]) _scEdited[id]=new Date().toISOString(); }",
 
       /* The state variables go in *after* every extracted function, and that
@@ -100,10 +107,14 @@ function form({ values = {}, unknown = {} } = {}) {
          these three. Declared first, they were silently reset to empty by the
          slice, and every "I don't know" test read the field as merely Missing.
          Declared last, the fixture wins. */
-      "var _scSource={};",
+      `var _scSource=${JSON.stringify(source)};`,
       /* scDontKnow records the edit, so a later extraction cannot quietly
          overrule somebody saying they do not know. */
       "var _scEdited={};",
+      /* Stated assumptions: id to the basis somebody gave. Empty here — the
+         assumption path has its own tests below. */
+      `var _scAssumed=${JSON.stringify(assumed)};`,
+      "var _scAssumeOpen=null;",
       `var _scUnknown=${JSON.stringify(unknown)};`,
     ].join("\n"),
     sandbox);
@@ -113,7 +124,13 @@ function form({ values = {}, unknown = {} } = {}) {
     run: (code) => vm.runInContext(code, sandbox),
     input: (id) => els.get(id),
     meta: (id) => made.find((m) => m.id === `scmeta-${id}`),
+    gap: (id) => made.find((m) => m.id === `scgap-${id}`),
     label: (id) => els.get(`__label__${id}`),
+    /* Controls a browser would create by parsing a card's innerHTML. This
+       shim stores innerHTML as a string rather than parsing it, so the inputs
+       the assumption form declares are registered here instead — the same
+       ids, found the same way by getElementById. */
+    stub: (id) => { const el = element("input"); el.id = id; return el; },
   };
 }
 
@@ -278,13 +295,27 @@ describe("the calculation refuses a field nobody knows", () => {
 
   test("it checks before any arithmetic starts", () => {
     const guard = source.indexOf("scUnknownFields()");
-    /* The call, not the name. `window.BW.planMaterial` appears at the top of
-       scRun as a capability check, so searching for the bare name found that
-       and concluded the guard was too late. */
-    const call = source.indexOf("B.planMaterial({");
+    /* Reading the form and calling the engine moved into scBuildPlan, which
+       the comparison reuses. So the ordering to hold is between the guard and
+       scRun's call to *that* — and separately that scBuildPlan is where the
+       engine is actually called, so this is not checking an empty seam. */
+    const call = source.indexOf("scBuildPlan()");
     assert.notEqual(guard, -1, "scRun does not check for unknown fields");
-    assert.notEqual(call, -1, "the engine call is not where this test expects it");
+    assert.notEqual(call, -1, "scRun no longer builds a plan where this test expects it");
     assert.ok(guard < call, "the check must come before the engine is called");
+
+    assert.match(fnSource("scBuildPlan", app), /B\.planMaterial\(\{/,
+      "scBuildPlan does not call the engine, so the ordering above guards nothing");
+  });
+
+  test("every path to the engine goes through the one that is guarded", () => {
+    /* The comparison runs the engine too. It is reachable only from a result
+       that already exists, which scRun refuses to produce while a field is
+       unknown — so there is no second way past the guard. */
+    assert.match(fnSource("scCompareRun", app), /if\(!out\|\|!v\|\|!_scLast\|\|!_scLast\.plan\)return;/,
+      "a comparison can be run without a plan, which is a way round the refusal");
+    const calls = (app.match(/B\.planMaterial\(\{/g) || []).length;
+    assert.equal(calls, 1, `the engine is called from ${calls} places; only scBuildPlan should call it`);
   });
 
   test("it names them, rather than saying a value is missing", () => {
@@ -342,5 +373,132 @@ describe("annotating the form", () => {
     assert.match(bind, /scAnnotate\(\)/);
     assert.match(bind, /addEventListener\("input"/);
     assert.match(bind, /SC_FIELD_HELP\[e\.target\.id\]/);
+  });
+});
+
+/* ------------------------------------------------- standing on an assumption */
+
+/**
+ * Carrying on without an answer, deliberately.
+ *
+ * The brief allows an explicit assumption and forbids a silent one, and the
+ * distance between those is entirely in what this refuses. An assumption
+ * here is a value *and* a basis, chosen by a person, labelled everywhere it
+ * surfaces, and still on the list of things to ask about. Nothing in the
+ * product proposes one, and no code path writes `_scAssumed` except somebody
+ * pressing the button.
+ */
+describe("carrying on with a stated assumption", () => {
+  /** Run one of the assumption functions over a form. */
+  const assuming = (opts) => {
+    const f = form(opts);
+    f.run("scAnnotate();");
+    /* The three controls the assumption form declares in its own markup. */
+    for (const id of ["scasm-sc-kerf", "scasmb-sc-kerf", "scasme-sc-kerf"]) f.stub(id);
+    f.run([
+      fnSource("scIsAssumed", app), fnSource("scAssumeOpen", app),
+      fnSource("scAssumeApply", app), fnSource("scAssumeCancel", app),
+      fnSource("scAssumeDrop", app), fnSource("scStatedAssumptions", app),
+    ].join("\n"));
+    return f;
+  };
+
+  test("a gap offers the assumption route without recommending it", () => {
+    const f = assuming({ unknown: { "sc-kerf": true } });
+    const html = f.gap("sc-kerf").innerHTML;
+    assert.match(html, /Carry on with a stated assumption/);
+    /* No value is suggested anywhere in the offer. */
+    assert.doesNotMatch(html, /value="[0-9]/);
+  });
+
+  test("a value with no basis is refused, and says why", () => {
+    const f = assuming({ unknown: { "sc-kerf": true } });
+    f.run('scAssumeOpen("sc-kerf")');
+    f.run('document.getElementById("scasm-sc-kerf").value="3"');
+    f.run('document.getElementById("scasmb-sc-kerf").value=""');
+    f.run('scAssumeApply("sc-kerf")');
+
+    assert.equal(f.run("Object.keys(_scAssumed).length"), 0,
+      "an assumption with no basis was recorded");
+    assert.equal(f.run("_scUnknown['sc-kerf']"), true, "the field stopped being unknown anyway");
+    assert.match(f.run('document.getElementById("scasme-sc-kerf").textContent'),
+      /An assumption with no basis is a guess/);
+  });
+
+  test("a basis with no value is refused too", () => {
+    const f = assuming({ unknown: { "sc-kerf": true } });
+    f.run('scAssumeOpen("sc-kerf")');
+    f.run('document.getElementById("scasm-sc-kerf").value=""');
+    f.run('document.getElementById("scasmb-sc-kerf").value="a similar part"');
+    f.run('scAssumeApply("sc-kerf")');
+    assert.equal(f.run("Object.keys(_scAssumed).length"), 0);
+  });
+
+  test("both together are accepted, and the field reads Assumed", () => {
+    const f = assuming({ unknown: { "sc-kerf": true } });
+    f.run('scAssumeOpen("sc-kerf")');
+    f.run('document.getElementById("scasm-sc-kerf").value="3"');
+    f.run('document.getElementById("scasmb-sc-kerf").value="the laser on a similar part"');
+    f.run('scAssumeApply("sc-kerf")');
+
+    assert.equal(f.run('_scAssumed["sc-kerf"]'), "the laser on a similar part");
+    assert.equal(f.run('_scSource["sc-kerf"]'), "assumption");
+    assert.equal(f.run("Boolean(_scUnknown['sc-kerf'])"), false);
+    assert.equal(f.input("sc-kerf").value, "3");
+    assert.equal(f.input("sc-kerf").disabled, false, "the field is still editable");
+    /* The vocabulary scenario.mjs owns, not a new word for it. */
+    assert.equal(f.run('scFieldState("sc-kerf")'), "Assumed");
+  });
+
+  test("an assumed field keeps saying so, with its basis and who to ask", () => {
+    const f = assuming({
+      values: { "sc-kerf": "3" },
+      assumed: { "sc-kerf": "the laser on a similar part" },
+      source: { "sc-kerf": "assumption" },
+    });
+    f.run("scRenderFieldStates()");
+    const html = f.gap("sc-kerf").innerHTML;
+    assert.match(html, /Assumed, not answered/);
+    assert.match(html, /the laser on a similar part/);
+    assert.match(html, /Still worth asking/);
+    assert.match(html, /Take the assumption back/);
+  });
+
+  test("taking it back returns the field to unanswered, not to a number", () => {
+    const f = assuming({
+      values: { "sc-kerf": "3" },
+      assumed: { "sc-kerf": "a similar part" },
+      source: { "sc-kerf": "assumption" },
+    });
+    f.run('scAssumeDrop("sc-kerf")');
+    assert.equal(f.run("Object.keys(_scAssumed).length"), 0);
+    assert.equal(f.input("sc-kerf").value, "", "the assumed number was left behind");
+    assert.equal(f.run("_scUnknown['sc-kerf']"), true);
+    assert.equal(f.run('scFieldState("sc-kerf")'), "Not known yet");
+  });
+
+  test("an assumption is reported with what it stands on", () => {
+    const f = assuming({
+      values: { "sc-kerf": "3" },
+      assumed: { "sc-kerf": "a similar part" },
+      source: { "sc-kerf": "assumption" },
+    });
+    const listed = f.run("JSON.stringify(scStatedAssumptions())");
+    const rows = JSON.parse(listed);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].value, "3");
+    assert.equal(rows[0].basis, "a similar part");
+    assert.ok(rows[0].ask, "an assumption carries no question to settle it");
+  });
+
+  test("a value somebody simply typed is not an assumption", () => {
+    /* The guard that keeps the label meaningful: _scAssumed and the source
+       have to agree, so a stale entry in one cannot relabel a typed value. */
+    const f = assuming({
+      values: { "sc-kerf": "3" },
+      assumed: { "sc-kerf": "left over from before" },
+    });
+    assert.equal(f.run('scIsAssumed("sc-kerf")'), false);
+    assert.equal(f.run('scFieldState("sc-kerf")'), "User confirmed");
   });
 });

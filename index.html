@@ -394,70 +394,6 @@
 .bw-entry[aria-pressed="true"] .bw-entry-title::after{content:"✓";color:var(--bw-lime);font-size:13px}
 .bw-entry-note{font-size:12.5px;line-height:1.6;color:var(--bw-muted)}
 @media(max-width:760px){.bw-grid-2,.bw-grid-3{grid-template-columns:minmax(0,1fr)}}
-
-/* ---- Guided and expert views over one scenario ---- */
-.bw-viewswitch{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:var(--bw-4)}
-.bw-viewbtn{font:inherit;font-size:13px;font-weight:600;padding:9px 16px;cursor:pointer;
-  background:var(--bw-panel);border:1px solid var(--bw-line);border-radius:999px;color:var(--bw-muted)}
-.bw-viewbtn:hover{border-color:var(--bw-line-strong);color:var(--bw-text)}
-.bw-viewbtn:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
-.bw-viewbtn[aria-selected="true"]{background:var(--bw-raised);border-color:var(--bw-lime);color:var(--bw-text)}
-.bw-viewbtn[aria-selected="true"]::before{content:"● ";color:var(--bw-lime);font-size:10px}
-.bw-viewswitch-note{font-size:12px;color:var(--bw-muted);line-height:1.5}
-
-/* Worked examples, before any empty field. */
-.bw-examples{display:grid;gap:var(--bw-3);grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:var(--bw-5)}
-@media(max-width:760px){.bw-examples{grid-template-columns:minmax(0,1fr)}}
-.bw-example{display:flex;flex-direction:column;gap:6px;text-align:left;padding:var(--bw-4);cursor:pointer;
-  background:var(--bw-panel);border:1px solid var(--bw-line);border-radius:var(--bw-r-2);font:inherit;color:inherit}
-.bw-example:hover{border-color:var(--bw-line-strong)}
-.bw-example:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
-.bw-example-tag{display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--bw-muted)}
-.bw-example-title{font-weight:600;font-size:14.5px;color:var(--bw-text);line-height:1.4}
-.bw-example-note{font-size:12.5px;line-height:1.6;color:var(--bw-muted)}
-
-/* The guided stage: one coherent task at a time, with the summary above it. */
-.bw-guide-summary{margin-bottom:var(--bw-4)}
-.bw-guide-stage{display:flex;flex-direction:column;gap:var(--bw-4)}
-.bw-guide-stage .bw-studio-result,.bw-guide-stage .bw-studio-col{display:contents}
-.bw-guide-nav{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:var(--bw-5);
-  padding-top:var(--bw-4);border-top:1px solid var(--bw-line)}
-.bw-guide-steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:var(--bw-4);padding:0;list-style:none}
-.bw-guide-step{font-size:11.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--bw-line);
-  color:var(--bw-muted);background:var(--bw-panel);cursor:pointer;font:inherit;font-size:11.5px}
-.bw-guide-step:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
-.bw-guide-step[aria-current="step"]{border-color:var(--bw-lime);color:var(--bw-text);background:var(--bw-raised)}
-.bw-guide-step[data-done="1"]::before{content:"✓ ";color:var(--bw-success)}
-.bw-guide-ask{border-left:2px solid var(--bw-lime);padding-left:12px;margin:var(--bw-3) 0 0}
-.bw-guide-q{font-size:15px;font-weight:600;color:var(--bw-text);line-height:1.5;margin:0 0 6px}
-.bw-guide-why{font-size:12.5px;color:var(--bw-muted);line-height:1.6;margin:0}
-
-/* The verdict: what can be concluded, before any table. */
-.bw-verdict{border:1px solid var(--bw-line-strong);border-radius:var(--bw-r-2);
-  background:var(--bw-raised);padding:var(--bw-4);margin-bottom:var(--bw-4)}
-.bw-verdict-head{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--bw-muted);margin-bottom:8px}
-.bw-verdict-line{font-size:15.5px;line-height:1.55;color:var(--bw-text);margin:0 0 10px;font-weight:600}
-.bw-verdict-sub{font-size:12.5px;line-height:1.65;color:var(--bw-body);margin:0 0 6px}
-.bw-verdict-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--bw-4)}
-
-/* A missing field, said usefully. */
-.bw-gapcard{border:1px solid var(--bw-line);border-left:2px solid var(--bw-warning);
-  border-radius:var(--bw-r-sm);padding:12px 14px;margin-bottom:10px;background:var(--bw-surface-2)}
-.bw-gapcard-q{font-size:13.5px;font-weight:600;color:var(--bw-text);line-height:1.5;margin:0 0 6px}
-.bw-gapcard-l{font-size:12px;color:var(--bw-muted);line-height:1.65;margin:0 0 4px}
-.bw-gapcard-l b{color:var(--bw-text);font-weight:600}
-.bw-gapcard-ask{font-size:12.5px;color:var(--bw-body);line-height:1.6;margin:8px 0 0;
-  padding:8px 10px;background:var(--bw-panel);border-radius:var(--bw-r-sm)}
-
-/* The optional model, and the capability table. */
-.bw-modelcall{border-style:dashed}
-.bw-caps > summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--bw-text);list-style:none}
-.bw-caps > summary::-webkit-details-marker{display:none}
-.bw-caps > summary::before{content:"▸ ";color:var(--bw-lime)}
-.bw-caps[open] > summary::before{content:"▾ ";color:var(--bw-lime)}
-.bw-caps > summary:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px;border-radius:2px}
-
 /* Focus stays visible on every new control, as it does on the old ones. */
 .bw-act:focus-visible,.bw-list-row:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
 
@@ -1418,8 +1354,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
       <!-- Where guided mode assembles itself. Empty in expert mode, and the
            panels it shows are the real ones, moved here and moved back. -->
+      <!-- Outside both hosts on purpose. Where the scenario stands, what is
+           unanswered and what is only assumed are material risks, and the
+           brief requires them in both views — inside the guided host they
+           would vanish the moment an expert switched away from it. -->
+      <div id="sc-guided-summary" class="bw-guide-summary" role="region" aria-label="Where this scenario stands"></div>
+
       <div id="sc-guided" hidden>
-        <div id="sc-guided-summary" class="bw-guide-summary" role="region" aria-label="Where this scenario stands"></div>
         <div id="sc-guided-stage" class="bw-guide-stage"></div>
         <div id="sc-guided-nav" class="bw-guide-nav"></div>
 
@@ -1774,6 +1715,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           <button class="bw-act bw-act-text" data-sc-act="clear">Clear</button>
         </div>
         <div id="sc-questions" role="region" aria-label="Questions to ask"></div>
+        <div id="sc-variant" role="region" aria-label="Comparison with a supported alternative"></div>
         </div><!-- /run -->
       </div>
 

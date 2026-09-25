@@ -18,8 +18,21 @@ import { readFileSync } from "node:fs";
 import { pageSource } from "../helpers/page.mjs";
 
 const html = pageSource();
-/** The stylesheet only: the rest of the file is markup and script. */
-const css = html.slice(html.indexOf(":root{"), html.indexOf("</style>"));
+/** The page's own stylesheet: the rest of the file is markup and script. */
+const pageCss = html.slice(html.indexOf(":root{"), html.indexOf("</style>"));
+/**
+ * Every rule the browser applies, wherever it is written.
+ *
+ * The studio's rules moved into their own file to keep index.html small, and
+ * a ratchet that only reads the inline block would have quietly stopped
+ * covering them — which would make "move it to a stylesheet" the way round
+ * every rule below. The separate file was already served and already
+ * unchecked before that move; this closes both gaps at once.
+ *
+ * Token *definitions* are still asserted against the inline block alone.
+ * There is one :root, and it is there.
+ */
+const css = pageCss + "\n" + readFileSync("studio-enhancements.css", "utf8");
 
 describe("the token layer", () => {
   test("every surface, ink and semantic colour is defined", () => {
@@ -29,26 +42,26 @@ describe("the token layer", () => {
       "bw-accent", "bw-accent-ink", "bw-accent-soft",
       "bw-danger", "bw-warning", "bw-success",
     ]) {
-      assert.match(css, new RegExp(`--${name}\\s*:`), `--${name} is missing`);
+      assert.match(pageCss, new RegExp(`--${name}\\s*:`), `--${name} is missing`);
     }
   });
 
   test("one spacing scale exists, rather than one per feature", () => {
     for (const step of ["bw-1", "bw-2", "bw-3", "bw-4", "bw-5", "bw-6", "bw-8"]) {
-      assert.match(css, new RegExp(`--${step}\\s*:`), `--${step} is missing`);
+      assert.match(pageCss, new RegExp(`--${step}\\s*:`), `--${step} is missing`);
     }
   });
 
   test("a type scale for the workspace exists", () => {
     for (const t of ["bw-t-page", "bw-t-panel", "bw-t-metric", "bw-t-body", "bw-t-meta"]) {
-      assert.match(css, new RegExp(`--${t}\\s*:`));
+      assert.match(pageCss, new RegExp(`--${t}\\s*:`));
     }
   });
 
   test("nothing existing was deleted to make room", () => {
     // The old names must survive: removing them would break 1,382 call sites.
     for (const old of ["bg", "panel", "panel2", "line", "text", "muted", "lime"]) {
-      assert.match(css, new RegExp(`--${old}\\s*:`), `--${old} was removed`);
+      assert.match(pageCss, new RegExp(`--${old}\\s*:`), `--${old} was removed`);
     }
   });
 

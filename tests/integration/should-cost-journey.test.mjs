@@ -108,6 +108,46 @@ describe("the two views are one scenario", () => {
     assert.match(page, /data-do="scView" data-a="expert"/);
     assert.match(page, /Everything you have entered is kept when you switch/);
   });
+
+  test("the movable wrapper takes no layout, except where it is itself a panel", () => {
+    /* Each [data-sc-panel] is a handle to pick a panel up by. Given a box of
+       its own it would sit inside the column's flex gap *and* keep the panel's
+       own margin, spacing the approved layout twice as far apart. The one
+       exception is the opening question, which carries the handle directly
+       and would lose its border to the same rule. */
+    const css = readFileSync("studio-enhancements.css", "utf8");
+    assert.match(css, /\[data-sc-panel\]:not\(\.bw-panel\)\{display:contents\}/);
+    const both = page.match(/class="bw-panel"[^>]*data-sc-panel=|data-sc-panel="[a-z]+"[^>]*class="bw-panel"/g) || [];
+    assert.equal(both.length, 1,
+      `${both.length} elements are both a panel and a handle; the :not() exception covers one`);
+  });
+
+  test("the summary sits outside both hosts, so material risks survive a switch", () => {
+    /* Inside the guided host it would disappear the moment somebody switched
+       to the expert workspace, taking the unanswered fields and the stated
+       assumptions with it. Both are material risks and the brief requires
+       them in both views. */
+    const summary = page.indexOf('id="sc-guided-summary"');
+    const guided = page.indexOf('<div id="sc-guided" hidden>');
+    const expert = page.indexOf('id="sc-expert"');
+    assert.notEqual(summary, -1, "there is no summary");
+    assert.ok(summary < guided, "the summary is inside the guided host");
+    assert.ok(summary < expert, "the summary is inside the expert layout");
+  });
+
+  test("the summary is redrawn in whichever view is on screen", () => {
+    const bind = fnSource("scBind");
+    assert.doesNotMatch(bind, /_scView==="guided"\)scRenderSummary/,
+      "the summary only follows typing in the guided view, so an expert's risks go stale");
+    assert.match(bind, /scRenderSummary\(\)/);
+  });
+
+  test("the summary names what is unanswered and what is only assumed", () => {
+    const src = fnSource("scRenderSummary");
+    assert.match(src, /Unanswered on purpose/);
+    assert.match(src, /Nothing has been assumed in their place/);
+    assert.match(src, /Resting on/, "a stated assumption is not surfaced as a risk");
+  });
 });
 
 /* --------------------------------------------------- the optional model */

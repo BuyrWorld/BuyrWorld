@@ -38,3 +38,87 @@
 @media(min-width:1201px){.bw-studio-enhanced .bw-studio{grid-template-columns:minmax(0,28fr) minmax(0,42fr) minmax(0,30fr)}}
 @media(max-width:1200px) and (min-width:861px){.bw-studio-enhanced .bw-studio{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}}
 @media(max-width:600px){.bw-studio-enhanced .bw-studio-entry{grid-template-columns:1fr}.bw-studio-steps .bw-act{flex:1 1 40%;justify-content:flex-start}}
+
+
+/* ---- Guided and expert views over one scenario ----
+
+   These live here rather than in the page's own <style> block for the reason
+   the file exists: index.html is fragile and its stylesheet is already long.
+   Every colour and every space below comes from the same tokens the main
+   block defines — there is one design system, in one place, and this is a
+   second file of rules written against it rather than a second system.
+
+   The wrapper that makes a panel movable takes no layout of its own. Each
+   [data-sc-panel] is a handle for scView to pick a panel up by; given a box
+   of its own it would sit inside the column's flex gap *and* keep the
+   panel's own margin, spacing everything twice as far apart as the approved
+   layout has it. display:contents makes the panel itself the flex item in
+   whichever container it currently sits in, so both views lay out exactly as
+   they did before the wrappers existed.
+
+   :not(.bw-panel) because one element is both: the opening question is its own
+   panel and carries the handle directly rather than being wrapped in one.
+   Without the exclusion it would lose its border and padding and its contents
+   would spill into the stage. */
+[data-sc-panel]:not(.bw-panel){display:contents}
+
+.bw-viewswitch{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:var(--bw-4)}
+.bw-viewbtn{font:inherit;font-size:13px;font-weight:600;padding:9px 16px;cursor:pointer;
+  background:var(--bw-panel);border:1px solid var(--bw-line);border-radius:999px;color:var(--bw-muted)}
+.bw-viewbtn:hover{border-color:var(--bw-line-strong);color:var(--bw-text)}
+.bw-viewbtn:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
+.bw-viewbtn[aria-selected="true"]{background:var(--bw-raised);border-color:var(--bw-lime);color:var(--bw-text)}
+.bw-viewbtn[aria-selected="true"]::before{content:"● ";color:var(--bw-lime);font-size:10px}
+.bw-viewswitch-note{font-size:12px;color:var(--bw-muted);line-height:1.5}
+
+/* Worked examples, before any empty field. */
+.bw-examples{display:grid;gap:var(--bw-3);grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:var(--bw-5)}
+@media(max-width:760px){.bw-examples{grid-template-columns:minmax(0,1fr)}}
+.bw-example{display:flex;flex-direction:column;gap:6px;text-align:left;padding:var(--bw-4);cursor:pointer;
+  background:var(--bw-panel);border:1px solid var(--bw-line);border-radius:var(--bw-r-2);font:inherit;color:inherit}
+.bw-example:hover{border-color:var(--bw-line-strong)}
+.bw-example:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
+.bw-example-tag{display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--bw-muted)}
+.bw-example-title{font-weight:600;font-size:14.5px;color:var(--bw-text);line-height:1.4}
+.bw-example-note{font-size:12.5px;line-height:1.6;color:var(--bw-muted)}
+
+/* The guided stage: one coherent task at a time, with the summary above it. */
+.bw-guide-summary{margin-bottom:var(--bw-4)}
+.bw-guide-stage{display:flex;flex-direction:column;gap:var(--bw-4)}
+.bw-guide-nav{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:var(--bw-5);
+  padding-top:var(--bw-4);border-top:1px solid var(--bw-line)}
+.bw-guide-steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:var(--bw-4);padding:0;list-style:none}
+.bw-guide-step{font-size:11.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--bw-line);
+  color:var(--bw-muted);background:var(--bw-panel);cursor:pointer;font:inherit;font-size:11.5px}
+.bw-guide-step:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
+.bw-guide-step[aria-current="step"]{border-color:var(--bw-lime);color:var(--bw-text);background:var(--bw-raised)}
+.bw-guide-step[data-done="1"]::before{content:"✓ ";color:var(--bw-success)}
+.bw-guide-ask{border-left:2px solid var(--bw-lime);padding-left:12px;margin:var(--bw-3) 0 0}
+.bw-guide-q{font-size:15px;font-weight:600;color:var(--bw-text);line-height:1.5;margin:0 0 6px}
+.bw-guide-why{font-size:12.5px;color:var(--bw-muted);line-height:1.6;margin:0}
+
+/* The verdict: what can be concluded, before any table. */
+.bw-verdict{border:1px solid var(--bw-line-strong);border-radius:var(--bw-r-2);
+  background:var(--bw-raised);padding:var(--bw-4);margin-bottom:var(--bw-4)}
+.bw-verdict-head{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--bw-muted);margin-bottom:8px}
+.bw-verdict-line{font-size:15.5px;line-height:1.55;color:var(--bw-text);margin:0 0 10px;font-weight:600}
+.bw-verdict-sub{font-size:12.5px;line-height:1.65;color:var(--bw-body);margin:0 0 6px}
+.bw-verdict-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--bw-4)}
+
+/* A missing field, said usefully. */
+.bw-gapcard{border:1px solid var(--bw-line);border-left:2px solid var(--bw-warning);
+  border-radius:var(--bw-r-sm);padding:12px 14px;margin-bottom:10px;background:var(--bw-surface-2)}
+.bw-gapcard-q{font-size:13.5px;font-weight:600;color:var(--bw-text);line-height:1.5;margin:0 0 6px}
+.bw-gapcard-l{font-size:12px;color:var(--bw-muted);line-height:1.65;margin:0 0 4px}
+.bw-gapcard-l b{color:var(--bw-text);font-weight:600}
+.bw-gapcard-ask{font-size:12.5px;color:var(--bw-body);line-height:1.6;margin:8px 0 0;
+  padding:8px 10px;background:var(--bw-panel);border-radius:var(--bw-r-sm)}
+
+/* The optional model, and the capability table. */
+.bw-modelcall{border-style:dashed}
+.bw-caps > summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--bw-text);list-style:none}
+.bw-caps > summary::-webkit-details-marker{display:none}
+.bw-caps > summary::before{content:"▸ ";color:var(--bw-lime)}
+.bw-caps[open] > summary::before{content:"▾ ";color:var(--bw-lime)}
+.bw-caps > summary:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px;border-radius:2px}
