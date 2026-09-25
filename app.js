@@ -273,22 +273,38 @@ function engineBanner(detail) {
 
 /* After load, because a module runs after the document is parsed: checking any
    earlier would report a failure that has not happened yet. */
+/**
+ * The URL the page actually asked for, read off the tag that asked.
+ *
+ * The script srcs carry a cache-busting version, so "/mount.mjs" and
+ * "/mount.mjs?v=…" are two different URLs and two different cache entries.
+ * A diagnostic that fetched the bare path could report on a file the page
+ * never loaded — succeeding while the one that failed is still broken. Read
+ * from the DOM rather than written down, so it cannot drift from the markup.
+ */
+function engineUrl() {
+  var tag = document.querySelector('script[src*="mount.mjs"]');
+  var src = tag && tag.getAttribute ? tag.getAttribute("src") : null;
+  return src || "/mount.mjs";
+}
+
 window.addEventListener("load", function () {
   if (window.BW) return;
   engineBanner("");
   /* Which of the three it was. Same origin, so connect-src 'self' permits it. */
-  fetch("/mount.mjs", { cache: "no-store" }).then(function (r) {
+  var url = engineUrl();
+  fetch(url, { cache: "no-store" }).then(function (r) {
     var type = r.headers && r.headers.get ? (r.headers.get("content-type") || "") : "";
     if (!r.ok) {
-      engineBanner("/mount.mjs returned " + r.status + ". The engine is not deployed with this page.");
+      engineBanner(url + " returned " + r.status + ". The engine is not deployed with this page.");
     } else if (type && !/javascript/i.test(type)) {
-      engineBanner("/mount.mjs was served as " + type + " rather than JavaScript, so the browser refused to run it.");
+      engineBanner(url + " was served as " + type + " rather than JavaScript, so the browser refused to run it.");
     } else {
-      engineBanner("/mount.mjs was reached and did not run. Check the browser console: a content security "
+      engineBanner(url + " was reached and did not run. Check the browser console: a content security "
         + "policy or a syntax error will be named there.");
     }
   }).catch(function () {
-    engineBanner("/mount.mjs could not be fetched at all. The page is loaded but the engine is not reachable.");
+    engineBanner(url + " could not be fetched at all. The page is loaded but the engine is not reachable.");
   });
 });
 

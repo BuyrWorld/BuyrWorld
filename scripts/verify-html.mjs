@@ -37,8 +37,13 @@ const problems = [];
    the bottom are for. */
 const EXTERNAL = ["app.js", "mount.mjs"];
 for (const file of EXTERNAL) {
+  /* The src may carry a cache-busting version — src="/app.js?v=…" — so the
+     path is matched up to the quote or the query rather than as a whole
+     string. Without a version, fresh markup can run against a stale script
+     and every control the new markup names silently does nothing. */
+  const loaded = new RegExp(`src="/${file.replace(".", "\\.")}(\\?[^"]*)?"`).test(html);
   if (!existsSync(file)) problems.push(`index.html loads ${file}, which is not here`);
-  else if (!html.includes(`src="/${file}"`)) problems.push(`${file} exists but index.html does not load it`);
+  else if (!loaded) problems.push(`${file} exists but index.html does not load it`);
 }
 /* Markup plus the code it loads: what the browser ends up with. */
 const page = html + "\n" + EXTERNAL.filter(existsSync).map((file) => readFileSync(file, "utf8")).join("\n");

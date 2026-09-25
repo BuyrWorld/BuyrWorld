@@ -38,6 +38,13 @@ function engine({ hasBW = false, response = null, fetchFails = false } = {}) {
   const sandbox = {
     document: {
       body,
+      /* The script tag the page loaded the engine with. engineUrl() reads its
+         src so the diagnostic checks the same URL — version and all — that
+         the browser actually asked for, rather than a bare path that is a
+         different cache entry. */
+      querySelector: (sel) => (sel.includes("mount.mjs")
+        ? { getAttribute: (k) => (k === "src" ? "/mount.mjs?v=test" : null) }
+        : null),
       getElementById: (id) => made.find((e) => e.id === id) || null,
       createElement: () => {
         const el = { id: "", innerHTML: "", style: { cssText: "" }, setAttribute(k, v) { el[k] = v; } };
@@ -146,7 +153,10 @@ describe("which of the three failures it was", () => {
   test("the diagnostic asks for the file itself, uncached", async () => {
     const e = engine({ response: ok("text/javascript") });
     await e.load();
-    assert.equal(e.fetched.url, "/mount.mjs");
+    /* The versioned URL the stub's script tag carries, not the bare path:
+       they are different cache entries, and checking the wrong one would
+       report on a file the page never loaded. */
+    assert.equal(e.fetched.url, "/mount.mjs?v=test");
     assert.equal(e.fetched.opts.cache, "no-store", "a cached answer would describe the wrong deploy");
   });
 
@@ -210,13 +220,26 @@ describe("the page still loads it", () => {
   test("index.html asks for the mount the diagnostic checks for", () => {
     // markupOnly, not the spliced page: the helper inlines the script, which
     // is exactly the tag being asserted about.
-    assert.match(markupOnly(), /<script type="module" src="\/mount\.mjs"><\/script>/);
-    assert.match(app, /fetch\("\/mount\.mjs"/);
+    assert.match(markupOnly(), /<script type="module" src="\/mount\.mjs(\?[^"]*)?"><\/script>/);
   });
 
-  test("the path in the diagnostic is the path the page loads", () => {
-    const loaded = markupOnly().match(/src="(\/[\w.-]+\.mjs)"/)[1];
-    const checked = app.match(/fetch\("([^"]+\.mjs)"/)[1];
-    assert.equal(checked, loaded, "the diagnostic would report on a file the page does not use");
+  test("the diagnostic fetches the URL the page asked for, version and all", () => {
+    /* The srcs carry a cache-busting version, so "/mount.mjs" and
+       "/mount.mjs?v=…" are different URLs and different cache entries. A
+       diagnostic fetching the bare path could succeed against a file the page
+       never loaded, and report the engine as reachable while the one that
+       actually failed is still broken. So it reads the src off the tag. */
+    assert.match(app, /function engineUrl\(\)/,
+      "the diagnostic no longer derives its URL from the page");
+    assert.match(app, /querySelector\('script\[src\*="mount\.mjs"\]'\)/);
+    assert.match(app, /fetch\(url, \{ cache: "no-store" \}\)/,
+      "the diagnostic fetches something other than the URL it just derived");
+    assert.doesNotMatch(app, /fetch\("\/mount\.mjs"/,
+      "a hardcoded path is back, which ignores the version the page uses");
+  });
+
+  test("the file the page names is the file in the tree", () => {
+    const loaded = markupOnly().match(/src="\/([\w.-]+\.mjs)(\?[^"]*)?"/)[1];
+    assert.equal(loaded, "mount.mjs");
   });
 });

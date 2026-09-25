@@ -114,7 +114,7 @@ Every figure below came from the working tree on the date above.
 | Tracked files | 18 | 141 |
 | Modules under `src/` | 0 | 76 |
 | Test files | 0 | 127 |
-| Tests | 0 | 3,673, all passing |
+| Tests | 0 | 3,676, all passing |
 | Inline event handlers | — | 0 — `script-src` no longer allows inline script |
 | Verification steps | 0 | 7, all passing |
 

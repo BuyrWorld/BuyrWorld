@@ -2064,8 +2064,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
   </div>
 </footer>
 
-<script src="/app.js"></script>
-<script type="module" src="/mount.mjs"></script>
+<!-- Versioned for the same reason as the stylesheet: the page and its scripts
+     are separate requests with separate cache entries. Fresh markup against a
+     stale app.js is worse than a stale stylesheet, because the markup asks for
+     actions by name and an older table does not have them — every new control
+     silently does nothing when clicked. Bump `v` with each release. -->
+<script src="/app.js?v=20260925b"></script>
+<script type="module" src="/mount.mjs?v=20260925b"></script>
 </body>
 </html></body>
 </html>

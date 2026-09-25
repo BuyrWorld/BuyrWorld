@@ -15,9 +15,19 @@
 import { readFileSync, existsSync } from "node:fs";
 
 /** Where each external script is spliced back in. */
+/**
+ * The tags to replace, matched by pattern rather than by exact string.
+ *
+ * Each src carries a cache-busting version — `/app.js?v=…` — because the page
+ * and its scripts are separate requests with separate cache entries, and fresh
+ * markup against a stale script leaves every control the markup names doing
+ * nothing. Matching the literal tag would break on every version bump.
+ */
 const SCRIPTS = Object.freeze([
-  { tag: '<script src="/app.js"></script>', file: "app.js", open: "<script>", close: "</script>" },
-  { tag: '<script type="module" src="/mount.mjs"></script>', file: "mount.mjs", open: '<script type="module">', close: "</script>" },
+  { tag: /<script src="\/app\.js(\?[^"]*)?"><\/script>/, file: "app.js",
+    open: "<script>", close: "</script>" },
+  { tag: /<script type="module" src="\/mount\.mjs(\?[^"]*)?"><\/script>/, file: "mount.mjs",
+    open: '<script type="module">', close: "</script>" },
 ]);
 
 let cached = null;
@@ -33,7 +43,7 @@ export function pageSource() {
   let html = readFileSync("index.html", "utf8");
 
   for (const s of SCRIPTS) {
-    if (!html.includes(s.tag)) {
+    if (!s.tag.test(html)) {
       throw new Error(
         `index.html does not load ${s.file} the way this helper expects (${s.tag}). ` +
         `If the page changed how it loads its scripts, change this too — do not let it read ` +

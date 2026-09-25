@@ -490,6 +490,29 @@ describe("the studio stylesheet cannot go stale against the page", () => {
       "the stylesheet is requested without a version, so a stale copy can outlive a deploy");
   });
 
+  test("the scripts carry one too, for the same reason and a worse failure", () => {
+    /* A stale stylesheet renders the markup unstyled, which is obvious. A
+       stale app.js is quieter and worse: the markup asks for actions by name
+       and an older table does not have them, so every new control does
+       nothing at all when clicked — with no error the person can see. */
+    for (const file of ["app.js", "mount.mjs"]) {
+      const tag = markup.match(new RegExp(`<script[^>]+src="/${file.replace(".", "\\.")}[^"]*"`));
+      assert.ok(tag, `${file} is not loaded by the page`);
+      assert.match(tag[0], new RegExp(`${file.replace(".", "\\.")}\\?v=[A-Za-z0-9._-]+`),
+        `${file} is requested without a version, so a stale copy can outlive a deploy`);
+    }
+  });
+
+  test("every versioned asset is on the same version", () => {
+    /* One release, one version. Separate ones invite the state this is meant
+       to prevent: a page holding a new script and an old stylesheet. */
+    const versions = [...markup.matchAll(/(?:src|href)="\/[^"]+\?v=([A-Za-z0-9._-]+)"/g)]
+      .map((m) => m[1]);
+    assert.ok(versions.length >= 3, `only ${versions.length} versioned assets found`);
+    assert.equal(new Set(versions).size, 1,
+      `assets are on different versions: ${[...new Set(versions)].join(", ")}`);
+  });
+
   test("the file it names is the file in the tree", () => {
     /* A version bumped onto a path that does not exist would 404 silently and
        take every rule with it. */
