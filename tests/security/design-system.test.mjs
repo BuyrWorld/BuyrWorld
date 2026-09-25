@@ -397,3 +397,70 @@ describe("tables use the shared one", () => {
     assert.equal(/<th style="text-align:(left|right);padding-bottom/.test(appOnly), false);
   });
 });
+
+/* ------------------------------------------- a class that styles nothing */
+
+/**
+ * Every class the markup wears has a rule that will actually apply.
+ *
+ * Two ways a styling hook silently stops working, both of which shipped:
+ *
+ * `#studio-viewport` carried `bw-panel bw-viewport` and lost the `bw-panel`
+ * half in a refactor. `.bw-viewport` had no rule of its own — only
+ * `.bw-studio-enhanced .bw-viewport`, and that class is added by JavaScript
+ * at mount. So the element kept its content, which `initStudio()` fills with
+ * a heading, view buttons and three notes in near-white text, and lost the
+ * box that content sat in. It rendered as text overlaid on the page.
+ *
+ * `bw-caps-sum` was written onto two `<summary>` elements and never given a
+ * rule at all; they were styled by a `.bw-caps > summary` selector that
+ * happened to cover them. Harmless, and indistinguishable from the case
+ * above by reading the markup.
+ *
+ * So: a class used in markup must have at least one rule, and at least one
+ * of its rules must not depend on a class JavaScript adds at runtime.
+ */
+describe("styling hooks in the markup actually resolve", () => {
+  /* Added by initStudio() at mount. A rule behind it is a rule that does not
+     apply if that call throws, which mount.mjs wraps in a try/catch. */
+  const RUNTIME_ADDED = "bw-studio-enhanced";
+
+  test("every bw- class on an element has a rule, and one that always applies", () => {
+    /* index.html itself, not pageSource(): that inlines app.js, and a
+       class attribute built by string concatenation there —
+       `class="bw-status bw-status--'+(v?...` — is not a class name. Only
+       markup written as markup is checked here. */
+    const markup = readFileSync("index.html", "utf8");
+    const used = new Set();
+    for (const m of markup.matchAll(/class="([^"]*)"/g)) {
+      for (const c of m[1].split(/\s+/)) {
+        /* A real class name, not a fragment of an expression. */
+        if (/^bw-[a-z0-9-]+$/.test(c)) used.add(c);
+      }
+    }
+    assert.ok(used.size >= 40, `only ${used.size} classes found; the markup was not read`);
+
+    const noRule = [];
+    const onlyRuntime = [];
+    for (const c of used) {
+      const rules = [...css.matchAll(new RegExp(`([^{}]*\.${c}[^{}]*)\{`, "g"))].map((m) => m[1].trim());
+      if (!rules.length) { noRule.push(c); continue; }
+      if (!rules.some((r) => !r.includes(RUNTIME_ADDED))) onlyRuntime.push(c);
+    }
+
+    assert.deepEqual(noRule, [],
+      `these classes are worn by an element and styled by nothing:\n  ${noRule.join("\n  ")}`);
+    assert.deepEqual(onlyRuntime, [],
+      `these are styled only under .${RUNTIME_ADDED}, which JavaScript adds — `
+      + `if that never runs they render unstyled:\n  ${onlyRuntime.join("\n  ")}`);
+  });
+
+  test("the preview host keeps the box its injected content needs", () => {
+    /* Named directly as well as covered by the sweep above, because this is
+       the one that shipped and the sweep would pass again if the element kept
+       a class that merely exists. */
+    assert.match(readFileSync("index.html", "utf8"),
+      /id="studio-viewport" class="bw-panel bw-viewport"/,
+      "the preview host lost .bw-panel, so everything initStudio() writes into it loses its box");
+  });
+});

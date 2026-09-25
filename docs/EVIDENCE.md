@@ -28,7 +28,7 @@ rather than misleading a reader.
 | A part model survives being written and read | Write, read, write — identical byte for byte, including a dimension no float could hold. |
 | The page cannot ask the engine for something it does not have | `tests/security/engine-surface.test.mjs` compares all 254 names the page reads against the 364 the mount provides. A misspelling here is silent — every call site is guarded — so it is compared rather than trusted. |
 | Nothing is offered under a name it is not | `public-claims.test.mjs` reads every filename the product writes out and fails on a solid-model extension. |
-| 3,669 tests across 127 files, seven checks | `node scripts/verify.mjs`, on every push, Node 22 and 24. |
+| 3,671 tests across 127 files, seven checks | `node scripts/verify.mjs`, on every push, Node 22 and 24. |
 
 ## Not evidenced, and why
 

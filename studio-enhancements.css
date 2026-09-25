@@ -18,6 +18,13 @@
 .bw-feature-editor{border-top:1px solid var(--bw-border);margin-top:var(--bw-3);padding-top:var(--bw-2)}
 .bw-feature-editor>summary{cursor:pointer;font-size:12px;color:var(--bw-text);padding:var(--bw-2) 0}
 .bw-feature-editor .bw-fields{margin-top:var(--bw-2)}
+/* The preview host carries .bw-panel for its box, and this for its look. It
+   must stand on its own as well: initStudio() fills it with a heading, view
+   buttons, a canvas and three notes the moment the page loads, and those are
+   near-white text. Styled only through a descendant selector on a class that
+   JavaScript adds, any failure to add it leaves that content sitting on the
+   page background with no box around it. */
+.bw-viewport{overflow:hidden;background:var(--bw-surface)}
 .bw-studio-enhanced .bw-viewport{padding:var(--bw-4);overflow:hidden;border-color:var(--bw-border-strong);background:linear-gradient(135deg,var(--bw-surface-2),var(--bw-surface))}
 .bw-viewport-eyebrow{font-size:9px;letter-spacing:.16em;color:var(--bw-accent);margin-bottom:var(--bw-2)}
 .bw-preview-state{font-size:10px;color:var(--bw-muted);text-align:right}

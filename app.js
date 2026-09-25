@@ -6527,7 +6527,7 @@ function scPlanHTML(plan,u){
      "See the working". It is the detail somebody needs to defend the figure
      and not the thing they read first. */
   var route=steps?'<details id="sc-working" class="bw-caps" style="margin-top:var(--bw-5)">'
-    +'<summary class="bw-caps-sum">The working &mdash; every operation, and what it loses</summary>'
+    +'<summary>The working &mdash; every operation, and what it loses</summary>'
     +'<div class="bw-table-wrap" style="margin-top:var(--bw-3)"><table class="bw-table">'
     +'<thead><tr><th>Operation</th><th class="n">In</th><th class="n">Good out</th><th class="n">Lost to yield</th><th class="n">Setup / test</th><th>Taken</th></tr></thead>'
     +'<tbody>'+steps+'</tbody></table></div>'
