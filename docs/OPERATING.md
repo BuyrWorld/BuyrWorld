@@ -37,7 +37,7 @@ this uses.
 ## Running it locally
 
 ```
-node scripts/verify.mjs              # everything: 3,596 tests, 7 checks
+node scripts/verify.mjs              # everything: 3,645 tests, 7 checks
 node --test tests/unit/call.test.mjs # one file
 python -m http.server 8000           # serve the site, if Python is available
 npx serve .                          # or this, if it is not

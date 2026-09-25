@@ -40,7 +40,11 @@ test("a draft without a model never invents a model artifact",async()=>{
 test("the page export passes the live model and feature ids to the exporter",async()=>{
   const m=model(), values={"sc-grade":"Synthetic bracket","sc-unit":"in"};
   let sent;
+  /* The export carries the commercial basis too now. Nothing has been
+     calculated in this context, so it returns null — which is the honest
+     answer and the one the package prints as "no costing accompanies this". */
   const context={_scModel:m,_scReqs:[req()],_scPackage:null,
+    scCommercialBasis:()=>null,
     scVal:id=>values[id]||"",scErr:String,scRenderPackage(){},
     document:{getElementById:()=>({innerHTML:""})},
     window:{BW:{reviewSnapshot:input=>{sent=input;return snapshot(input);},buildReviewPackage:buildPackage}}};

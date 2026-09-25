@@ -84,11 +84,27 @@ function run(fields = {}, { stages, checked = false, costs = {}, amortise = fals
      arithmetic. The two variables it reads go in with it — this harness
      assembles functions rather than loading the file, so a new dependency has
      to be named here or it resolves to nothing. */
-  const src = ["scVal", "scInt", "scErr", "scRun", "scRow", "scPlanHTML", "scLayoutHTML",
-               "scCostEntries", "scCostHTML", "scAssumptionsHTML", "bcSaveHTML",
-               "scUnknownFields"].map(fnSource).join("\n")
+  /* scVerdictHTML leads the result now. It reads only the plan and the cost
+     the engine just returned — deliberately, so that what it says cannot
+     drift from the tables under it — plus two page-level variables it guards
+     for with `typeof`, which resolve to nothing here and must. */
+  const src = ["scVal", "scInt", "scErr", "scRun", "scRow", "scVerdictHTML", "scPlanHTML",
+               "scLayoutHTML", "scCostEntries", "scCostHTML", "scAssumptionsHTML", "bcSaveHTML",
+               "scUnknownFields", "scUnknownAdviceHTML", "scGapCardHTML",
+               "scStillAvailable"].map(fnSource).join("\n")
+    /* The stub table carries every key the gap card reads. A field somebody
+       could not answer now produces the question to ask and what is still
+       available without it, and a table with only a name would render those
+       as "undefined" — which the test would pass and a reader would not. */
     + `\nvar SC_FIELD_HELP=${JSON.stringify(
-        Object.fromEntries(Object.keys(unknown).map((id) => [id, { name: id }])))};`
+        Object.fromEntries(Object.keys(unknown).map((id) => [id, {
+          name: id, means: "what it is", where: "where to look",
+          why: "why it matters", ask: `What is ${id}?`, askWho: "the supplier",
+          blocks: ["plan"],
+        }])))};`
+    + `\nvar SC_OUTPUT_SAID={plan:"the quantity and stock plan",`
+    + `mass:"the purchased weight",cost:"the cost per part"};`
+    + `\nfunction scBlocksOf(id){var h=SC_FIELD_HELP[id];return h&&h.blocks?h.blocks:[];}`
     + `\nvar _scUnknown=${JSON.stringify(unknown)};`;
   vm.createContext(sandbox);
   new vm.Script(src + "\n;scRun();").runInContext(sandbox);
@@ -177,7 +193,11 @@ describe("what it produces", () => {
 
   test("the route is shown stage by stage, with where each piece went", () => {
     const o = out();
-    assert.match(o, /The route, worked backwards/);
+    /* Folded into "the working" rather than printed above the fold. The
+       content is unchanged — every operation with what it lost — but a
+       reader now meets the conclusion first and opens this to defend it. */
+    assert.match(o, /The working &mdash; every operation, and what it loses/);
+    assert.match(o, /<details id="sc-working"/);
     assert.match(o, /Laser cut/);
     assert.match(o, /Lost to yield/);
     assert.match(o, /from the input/);
@@ -289,10 +309,24 @@ describe("the page is honest about what this release is", () => {
   const page = html.slice(html.indexOf('id="page-shouldcost"'), html.indexOf("<!-- ============ WORKSPACE"));
 
   test("it distinguishes PDF text extraction from CAD reconstruction", () => {
-    assert.match(page, /read labelled text from a PDF/);
-    assert.match(page, /confirm each proposed value/);
+    assert.match(page, /Values listed with their page/);
+    assert.match(page, /by written rule, in this browser/);
     assert.match(page, /does not reconstruct CAD from a drawing/);
     assert.doesNotMatch(page, /There is no document extraction in this build/);
+  });
+
+  test("viewing, extracting and modelling are four capabilities, not one sentence", () => {
+    /* The four are named separately because they have genuinely different
+       answers. A single sentence covering all of them is how a product ends
+       up claiming to read a drawing it can only display. */
+    for (const kind of ["PDF with real text", "Scanned or photographed PDF page",
+                        "JPEG or PNG", "CAD files"]) {
+      assert.ok(page.includes(kind), `the capability table does not name ${kind}`);
+    }
+    assert.match(page, /there is no CAD reader here/,
+      "CAD is not named as unreadable, so a buyer would assume it is handled");
+    assert.match(page, /Reading a value is not agreeing with it/,
+      "extraction is not distinguished from confirmation");
   });
 
   test("all three releases are built, so nothing is described as coming", () => {
@@ -307,9 +341,22 @@ describe("the page is honest about what this release is", () => {
     }
   });
 
-  test("what is still absent is named, since that has not changed", () => {
-    assert.match(page, /Scanned images need manual entry/);
-    assert.match(page, /Studio processing is local to this browser/);
+  test("nothing claims to stay local that can be sent", () => {
+    /* The page used to say "Studio processing is local to this browser",
+       which was true of the costing and false of the one path that matters:
+       a scanned page can be sent to be read, and that is an upload. A blanket
+       local-only claim beside a feature that transmits is the kind of sentence
+       somebody relies on, so it is asserted absent rather than merely fixed. */
+    assert.doesNotMatch(page, /Studio processing is local to this browser/);
+    assert.doesNotMatch(page, /Scanned images need manual entry/,
+      "scanned pages can now be sent to be read, so this no longer describes the build");
+
+    /* What replaced it: the boundary named per path, and the transmission
+       named as one. */
+    assert.match(page, /Only if you choose to, and you are asked first/);
+    assert.match(page, /Nothing else on this page transmits anything/);
+    assert.match(page, /needs a reader configured for this deployment; if none is, you are told so/,
+      "the unconfigured-provider state is not described honestly");
   });
 
   test("nothing on the page claims a real supplier, price or certificate", () => {

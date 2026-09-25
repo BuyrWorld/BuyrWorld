@@ -70,6 +70,12 @@ function studio({ values = {}, reqs = [dim()] } = {}) {
     fnSource("scVal", app), fnSource("scExportReview", app),
     fnSource("scRenderPackage", app), fnSource("B_DRAFT_LABEL", app),
     fnSource("scSaveArtifact", app),
+    /* The export carries the commercial basis now. The real function goes in
+       rather than a stub, so its first guard is exercised: with nothing
+       calculated it returns null, and the package says it carries no costing
+       instead of carrying an empty one. */
+    fnSource("scCommercialBasis", app),
+    "var _scLast=null;",
   ].join("\n"), sandbox);
 
   return {

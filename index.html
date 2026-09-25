@@ -395,6 +395,69 @@
 .bw-entry-note{font-size:12.5px;line-height:1.6;color:var(--bw-muted)}
 @media(max-width:760px){.bw-grid-2,.bw-grid-3{grid-template-columns:minmax(0,1fr)}}
 
+/* ---- Guided and expert views over one scenario ---- */
+.bw-viewswitch{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:var(--bw-4)}
+.bw-viewbtn{font:inherit;font-size:13px;font-weight:600;padding:9px 16px;cursor:pointer;
+  background:var(--bw-panel);border:1px solid var(--bw-line);border-radius:999px;color:var(--bw-muted)}
+.bw-viewbtn:hover{border-color:var(--bw-line-strong);color:var(--bw-text)}
+.bw-viewbtn:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
+.bw-viewbtn[aria-selected="true"]{background:var(--bw-raised);border-color:var(--bw-lime);color:var(--bw-text)}
+.bw-viewbtn[aria-selected="true"]::before{content:"● ";color:var(--bw-lime);font-size:10px}
+.bw-viewswitch-note{font-size:12px;color:var(--bw-muted);line-height:1.5}
+
+/* Worked examples, before any empty field. */
+.bw-examples{display:grid;gap:var(--bw-3);grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:var(--bw-5)}
+@media(max-width:760px){.bw-examples{grid-template-columns:minmax(0,1fr)}}
+.bw-example{display:flex;flex-direction:column;gap:6px;text-align:left;padding:var(--bw-4);cursor:pointer;
+  background:var(--bw-panel);border:1px solid var(--bw-line);border-radius:var(--bw-r-2);font:inherit;color:inherit}
+.bw-example:hover{border-color:var(--bw-line-strong)}
+.bw-example:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
+.bw-example-tag{display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--bw-muted)}
+.bw-example-title{font-weight:600;font-size:14.5px;color:var(--bw-text);line-height:1.4}
+.bw-example-note{font-size:12.5px;line-height:1.6;color:var(--bw-muted)}
+
+/* The guided stage: one coherent task at a time, with the summary above it. */
+.bw-guide-summary{margin-bottom:var(--bw-4)}
+.bw-guide-stage{display:flex;flex-direction:column;gap:var(--bw-4)}
+.bw-guide-stage .bw-studio-result,.bw-guide-stage .bw-studio-col{display:contents}
+.bw-guide-nav{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:var(--bw-5);
+  padding-top:var(--bw-4);border-top:1px solid var(--bw-line)}
+.bw-guide-steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:var(--bw-4);padding:0;list-style:none}
+.bw-guide-step{font-size:11.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--bw-line);
+  color:var(--bw-muted);background:var(--bw-panel);cursor:pointer;font:inherit;font-size:11.5px}
+.bw-guide-step:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
+.bw-guide-step[aria-current="step"]{border-color:var(--bw-lime);color:var(--bw-text);background:var(--bw-raised)}
+.bw-guide-step[data-done="1"]::before{content:"✓ ";color:var(--bw-success)}
+.bw-guide-ask{border-left:2px solid var(--bw-lime);padding-left:12px;margin:var(--bw-3) 0 0}
+.bw-guide-q{font-size:15px;font-weight:600;color:var(--bw-text);line-height:1.5;margin:0 0 6px}
+.bw-guide-why{font-size:12.5px;color:var(--bw-muted);line-height:1.6;margin:0}
+
+/* The verdict: what can be concluded, before any table. */
+.bw-verdict{border:1px solid var(--bw-line-strong);border-radius:var(--bw-r-2);
+  background:var(--bw-raised);padding:var(--bw-4);margin-bottom:var(--bw-4)}
+.bw-verdict-head{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--bw-muted);margin-bottom:8px}
+.bw-verdict-line{font-size:15.5px;line-height:1.55;color:var(--bw-text);margin:0 0 10px;font-weight:600}
+.bw-verdict-sub{font-size:12.5px;line-height:1.65;color:var(--bw-body);margin:0 0 6px}
+.bw-verdict-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--bw-4)}
+
+/* A missing field, said usefully. */
+.bw-gapcard{border:1px solid var(--bw-line);border-left:2px solid var(--bw-warning);
+  border-radius:var(--bw-r-sm);padding:12px 14px;margin-bottom:10px;background:var(--bw-surface-2)}
+.bw-gapcard-q{font-size:13.5px;font-weight:600;color:var(--bw-text);line-height:1.5;margin:0 0 6px}
+.bw-gapcard-l{font-size:12px;color:var(--bw-muted);line-height:1.65;margin:0 0 4px}
+.bw-gapcard-l b{color:var(--bw-text);font-weight:600}
+.bw-gapcard-ask{font-size:12.5px;color:var(--bw-body);line-height:1.6;margin:8px 0 0;
+  padding:8px 10px;background:var(--bw-panel);border-radius:var(--bw-r-sm)}
+
+/* The optional model, and the capability table. */
+.bw-modelcall{border-style:dashed}
+.bw-caps > summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--bw-text);list-style:none}
+.bw-caps > summary::-webkit-details-marker{display:none}
+.bw-caps > summary::before{content:"▸ ";color:var(--bw-lime)}
+.bw-caps[open] > summary::before{content:"▾ ";color:var(--bw-lime)}
+.bw-caps > summary:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px;border-radius:2px}
+
 /* Focus stays visible on every new control, as it does on the old ones. */
 .bw-act:focus-visible,.bw-list-row:focus-visible{outline:3px solid var(--bw-accent);outline-offset:2px}
 
@@ -1295,11 +1358,29 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
     <h2 style="font-size:var(--bw-t-page);margin-bottom:4px">What should this part cost?</h2>
     <p class="bw-studio-intro">Describe the part. Understand the material and route. Give your technical reviewer a clear starting point.</p>
 
-    <div class="bw-panel" style="border-color:var(--bw-border-strong);margin-bottom:var(--bw-4)">
-      <div class="bw-panel-head"><div class="bw-panel-title">What this release does, and what it does not</div></div>
-      <p style="color:var(--bw-body);font-size:var(--bw-t-body);margin:0;line-height:1.6">Start manually or read labelled text from a PDF, then confirm each proposed value. Scanned images need manual entry. The optional part builder supports rectangular blocks, through-holes and pockets; it does not reconstruct CAD from a drawing.</p>
-      <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6">Studio processing is local to this browser. Save preserves the core scenario fields; download a review snapshot to keep the model and requirements.</p>
-    </div>
+    <!-- Four capabilities, kept apart on purpose. Viewing a file is not
+         extracting from it, extracting is not interpreting it, and none of the
+         three is modelling the part. One sentence covering all four is how a
+         product ends up claiming to read a drawing. -->
+    <details class="bw-panel bw-caps" style="border-color:var(--bw-border-strong);margin-bottom:var(--bw-4)">
+      <summary class="bw-caps-sum">What this release can read, and what it cannot</summary>
+      <div class="bw-table-wrap" style="margin-top:var(--bw-3)">
+        <table class="bw-table"><thead><tr>
+          <th>File</th><th>Shown here</th><th>Values read out</th><th>Leaves your computer</th>
+        </tr></thead><tbody>
+          <tr><td>PDF with real text</td><td>Values listed with their page</td>
+              <td>Yes &mdash; by written rule, in this browser</td><td>No</td></tr>
+          <tr><td>Scanned or photographed PDF page</td><td>Named as unreadable here</td>
+              <td>Only if you send that page to be read</td><td>Only if you choose to, and you are asked first</td></tr>
+          <tr><td>JPEG or PNG</td><td>Displayed large enough to read from</td>
+              <td>Only if you send it to be read</td><td>Only if you choose to, and you are asked first</td></tr>
+          <tr><td>CAD files (STEP, IGES, DWG, SLDPRT)</td><td>No</td>
+              <td>No &mdash; there is no CAD reader here</td><td>No</td></tr>
+        </tbody></table>
+      </div>
+      <p style="color:var(--bw-body);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6"><b style="color:var(--bw-text)">Reading a value is not agreeing with it.</b> Everything read from a document arrives as a proposal with the exact characters it was matched from, and nothing enters a calculation until you confirm it. Where a later document disagrees with what you typed, both are shown and you choose.</p>
+      <p style="color:var(--bw-muted);font-size:12.5px;margin:var(--bw-3) 0 0;line-height:1.6">Sending a page to be read needs a reader configured for this deployment; if none is, you are told so rather than shown an empty result. <b style="color:var(--bw-text)">Nothing else on this page transmits anything</b> &mdash; the costing, the requirements, the drafts and the review package are all worked out and stored in this browser. The optional visual model builds rectangular blocks, through-holes and pockets; it does not reconstruct CAD from a drawing and never produces a solid.</p>
+    </details>
 
     <div role="tablist" aria-label="What you are doing" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--bw-5)">
       <button class="bw-act bw-act-primary" id="sc-tab-material" role="tab" aria-selected="true" aria-controls="sc-mode-material" data-sc-mode="material">Estimate material and cost</button>
@@ -1309,9 +1390,69 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
     <div id="sc-mode-material" role="tabpanel" aria-labelledby="sc-tab-material">
 
+      <!-- Two views over one scenario. Not two products: the panels below are
+           moved between the two layouts rather than duplicated, so there is
+           one set of inputs, one engine and nothing to keep in step. -->
+      <div class="bw-viewswitch" role="tablist" aria-label="How much guidance do you want?">
+        <button type="button" class="bw-viewbtn" id="sc-view-guided" role="tab" aria-selected="false"
+                aria-controls="sc-mode-material" data-do="scView" data-a="guided">Guide me</button>
+        <button type="button" class="bw-viewbtn" id="sc-view-expert" role="tab" aria-selected="true"
+                aria-controls="sc-mode-material" data-do="scView" data-a="expert">Expert workspace</button>
+        <span class="bw-viewswitch-note" id="sc-view-note">Everything you have entered is kept when you switch.</span>
+      </div>
+
+      <!-- Before any form: two worked examples, so the first thing a person
+           meets is a finished piece of work rather than an empty field. -->
+      <div class="bw-examples" role="group" aria-label="Worked examples">
+        <button type="button" class="bw-example" data-do="scExample" data-a="complete">
+          <span class="bw-example-tag"><span class="bw-dot" style="background:var(--bw-success)"></span>Complete example</span>
+          <span class="bw-example-title">Bracket, 1,000 off, every cost element priced</span>
+          <span class="bw-example-note">A finished should-cost: material plan, full cost per part, and a review package you can inspect. Synthetic supplier, fictional grade.</span>
+        </button>
+        <button type="button" class="bw-example" data-do="scExample" data-a="incomplete">
+          <span class="bw-example-tag"><span class="bw-dot" style="background:var(--bw-warning)"></span>Example with a gap</span>
+          <span class="bw-example-title">The same bracket, with no manufacturing cost</span>
+          <span class="bw-example-note">Shows what survives a missing input: the material plan still stands, the cost per part is withheld, and the next action is the question to ask.</span>
+        </button>
+      </div>
+
+      <!-- Where guided mode assembles itself. Empty in expert mode, and the
+           panels it shows are the real ones, moved here and moved back. -->
+      <div id="sc-guided" hidden>
+        <div id="sc-guided-summary" class="bw-guide-summary" role="region" aria-label="Where this scenario stands"></div>
+        <div id="sc-guided-stage" class="bw-guide-stage"></div>
+        <div id="sc-guided-nav" class="bw-guide-nav"></div>
+
+        <!-- The opening question. It has no home in the expert layout, where
+             the answer is "all of it" and the three columns show exactly that. -->
+        <div id="sc-goal-panel" class="bw-panel" data-sc-panel="goal">
+          <div class="bw-panel-head"><div class="bw-panel-title">Pick where to start</div></div>
+          <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Nothing is switched off by this. It decides the order you are asked things in, and you can jump between steps at any point.</p>
+          <div class="bw-examples" style="margin-bottom:0">
+            <button type="button" class="bw-example" data-do="scGoal" data-a="quantity">
+              <span class="bw-example-title">How much material to buy</span>
+              <span class="bw-example-note">A quantity and stock plan. Needs the part size, the stock size and the route &mdash; no prices at all.</span>
+            </button>
+            <button type="button" class="bw-example" data-do="scGoal" data-a="cost">
+              <span class="bw-example-title">What the part should cost</span>
+              <span class="bw-example-note">The plan above, plus a density and the cost elements that apply. Any element left unpriced holds back the cost per part.</span>
+            </button>
+            <button type="button" class="bw-example" data-do="scGoal" data-a="review">
+              <span class="bw-example-title">Get it ready for technical review</span>
+              <span class="bw-example-note">Requirements, specifications and the questions an engineer needs to answer. This one does not need any costing at all.</span>
+            </button>
+            <button type="button" class="bw-example" data-do="scGoal" data-a="all">
+              <span class="bw-example-title">I am not sure yet</span>
+              <span class="bw-example-note">Go through it in order. Anything you cannot answer can be marked <b>I don't know</b> and picked up later.</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Two ways in, deliberately the same size and the same weight. The
            pack requires them to be equally clear: a drawing is one source of
            the same facts, not the way the tool is meant to be used. -->
+      <div data-sc-panel="entry" data-sc-step="know">
       <div class="bw-studio-entry" role="group" aria-label="How would you like to start?">
         <button type="button" class="bw-entry" id="sc-entry-manual" aria-pressed="true" data-do="scEntry" data-a="manual">
           <span class="bw-entry-title">No drawing &mdash; enter details manually</span>
@@ -1337,16 +1478,32 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
         </div>
         <div id="scx-out" style="margin-top:var(--bw-4)"></div>
       </div>
-    <div class="bw-studio">
+      </div><!-- /entry -->
+    <div class="bw-studio" id="sc-expert">
       <div class="bw-studio-col">
-        <!-- Saved work first: the opening question is whether you are starting
-             something or picking something up. At the bottom of a long form,
-             reopening is a thing you find by scrolling past the work you were
-             trying not to repeat. -->
-        <div class="bw-panel" style="margin-bottom:var(--bw-4)">
+        <!-- The visual model is optional and now says so by being absent until
+             it is asked for. It opened this column for months, which made a
+             drawing tool look like the first step of a costing job. Nothing
+             below it needs it. -->
+        <div data-sc-panel="model" data-sc-step="model">
+        <div class="bw-panel bw-modelcall" id="sc-model-call" style="margin-bottom:var(--bw-4)">
+          <div class="bw-panel-head">
+            <div class="bw-panel-title">A visual model</div>
+            <span class="bw-status bw-status--derived">optional</span>
+          </div>
+          <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">
+            A picture of the part, for explaining it to somebody. <b style="color:var(--bw-text)">Nothing
+            on this page needs one</b> &mdash; the costing, the requirements and the review package all
+            work without it, and no cost is ever derived from it.
+          </p>
+          <button type="button" class="bw-act bw-act-secondary" data-do="scShowBuilder" aria-expanded="false" aria-controls="sc-builder">Add a visual model</button>
+        </div>
+
+        <div class="bw-panel" id="sc-builder" hidden style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head">
             <div class="bw-panel-title">Build the part</div>
             <span class="bw-status bw-status--derived">optional</span>
+            <button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scHideBuilder">Put it away</button>
           </div>
           <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">
             A rectangular block with through-holes and pockets &mdash; enough to show somebody
@@ -1403,8 +1560,17 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           </label>
           <button type="button" class="bw-act bw-act-secondary bw-act--sm" data-do="scDescribeChange">Show me what that would do</button>
           <div id="ai-out" role="status" aria-live="polite" style="margin-top:var(--bw-3)"></div>
-        </div>
 
+          <!-- The preview lives with the thing that draws it. In its own
+               column it was an empty box at the top of the page, which read as
+               a feature that had failed rather than one nobody had asked for. -->
+          <div id="studio-viewport" class="bw-viewport" aria-label="Interactive part preview"></div>
+        </div>
+        </div><!-- /model -->
+
+        <!-- Saved work: the opening question is whether you are starting
+             something or picking something up. -->
+        <div data-sc-panel="drafts" data-sc-step="start">
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head"><div class="bw-panel-title">Your scenarios</div></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1415,7 +1581,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
              style="font-size:12px;margin:8px 0 0;line-height:1.6;min-height:1.2em"></p>
           <div id="sc-drafts"></div>
         </div>
+        </div><!-- /drafts -->
 
+        <div data-sc-panel="part" data-sc-step="part">
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head"><div class="bw-panel-title">1 &middot; The part</div></div>
           <div class="bw-fields" style="margin-bottom:var(--bw-3)">
@@ -1437,7 +1605,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           </div>
           <p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-2) 0 0;line-height:1.5">Leave these empty unless the part really is a plain rectangle. A net mass computed from a shape the part does not have is worse than no net mass.</p>
         </div>
+        </div><!-- /part -->
 
+        <div data-sc-panel="density" data-sc-step="material">
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head"><div class="bw-panel-title">2 &middot; Density</div></div>
           <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Mass and therefore material cost rest on this. It depends on grade, condition and specification revision &mdash; it is not implied by an alloy name, so <b style="color:var(--bw-text)">nothing here supplies one for you</b>.</p>
@@ -1447,7 +1617,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
             <label class="bw-field">Where it came from<input class="bwin" id="sc-ds" placeholder="Synthetic datasheet, revision B"></label>
           </div>
         </div>
+        </div><!-- /density -->
 
+        <div data-sc-panel="stock" data-sc-step="material">
         <div class="bw-panel">
           <div class="bw-panel-head"><div class="bw-panel-title">3 &middot; The stock you can buy</div></div>
           <div class="bw-fields" style="margin-bottom:var(--bw-3)">
@@ -1467,14 +1639,17 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           </label>
           <p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-2) 0 0;line-height:1.5">Leave that unticked where grain direction, finish or a drawing note fixes the orientation. Nothing here will turn a part you did not say could be turned.</p>
         </div>
+        </div><!-- /stock -->
         <!-- Decisions about a drawing that arrived after typing. Directly
              under the fields they concern: in the result column they would be
              three columns away from the value they are asking you to change. -->
+        <div data-sc-panel="compare" data-sc-step="know">
         <div id="sc-compare" role="region" aria-label="Differences between the drawing and what you entered"></div>
+        </div><!-- /compare -->
       </div>
 
       <div class="bw-studio-col">
-        <div id="studio-viewport" class="bw-panel bw-viewport" aria-label="Interactive part preview"></div>
+        <div data-sc-panel="route" data-sc-step="route">
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head"><div class="bw-panel-title">4 &middot; The route</div></div>
           <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">A yield is <b style="color:var(--bw-text)">accepted output divided by input</b>. It is not a scrap percentage added to demand: 100 parts at 95% yield needs 106 blanks, not 105, and across a route the difference compounds. Setup and test pieces must say which side of the yield they come from &mdash; that is the mistake that counts the same pieces twice.</p>
@@ -1483,7 +1658,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
             <button class="bw-act bw-act-secondary" data-sc-act="add-stage">+ Add an operation</button>
           </div>
         </div>
+        </div><!-- /route -->
 
+        <div data-sc-panel="requirements" data-sc-step="requirements">
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head">
             <div class="bw-panel-title">Engineering requirements</div>
@@ -1563,7 +1740,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
 
           <div id="req-list"></div>
         </div>
+        </div><!-- /requirements -->
 
+        <div data-sc-panel="cost" data-sc-step="cost">
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head"><div class="bw-panel-title">5 &middot; The cost</div>
             <label class="bw-field" style="display:flex;align-items:center;gap:6px;margin:0">Currency
@@ -1576,7 +1755,9 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
             <span>Spread tooling over this quantity instead of showing it separately</span>
           </label>
         </div>
+        </div><!-- /cost -->
 
+        <div data-sc-panel="contingency" data-sc-step="cost">
         <div class="bw-panel" style="margin-bottom:var(--bw-4)">
           <div class="bw-panel-head"><div class="bw-panel-title">6 &middot; Contingency</div></div>
           <p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-3);line-height:1.6">Extra blanks above what the route requires, kept as <b style="color:var(--bw-text)">a separate line with its own name</b>. Material quietly inflated to be safe cannot be told apart from material planning that is wrong, and neither can be defended.</p>
@@ -1584,12 +1765,16 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
             <label class="bw-field">Contingency %<input class="bwin" id="sc-cont" inputmode="decimal" placeholder="0"></label>
           </div>
         </div>
+        </div><!-- /contingency -->
 
+        <div data-sc-panel="run" data-sc-step="result">
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="bw-act bw-act-primary" data-sc-act="run">Work out the material &rarr;</button>
-          <button class="bw-act bw-act-secondary" data-sc-act="example">Load synthetic example</button>
+          <button class="bw-act bw-act-secondary" data-do="scAskQuestions">Prepare questions for what is missing</button>
           <button class="bw-act bw-act-text" data-sc-act="clear">Clear</button>
         </div>
+        <div id="sc-questions" role="region" aria-label="Questions to ask"></div>
+        </div><!-- /run -->
       </div>
 
       <!-- The result sits beside the work rather than below it, as the
@@ -1597,10 +1782,13 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
            figure you can still see. Sticky so it stays put down a long form,
            and only where there is height to spare for it. -->
       <div class="bw-studio-col bw-studio-result">
+        <div data-sc-panel="result" data-sc-step="result">
         <div id="sc-out"></div>
+        </div><!-- /result -->
 
         <!-- Below the result, because you look at what the part costs and then
              decide whether to send it to somebody. -->
+        <div data-sc-panel="review" data-sc-step="review">
         <div class="bw-panel">
           <div class="bw-panel-head">
             <div class="bw-panel-title">Send for technical review</div>
@@ -1617,6 +1805,7 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
           <button type="button" class="bw-act bw-act-secondary" data-do="scExportReview">Prepare review package</button>
           <div id="rev-out" style="margin-top:var(--bw-3)"></div>
         </div>
+        </div><!-- /review -->
       </div>
     </div>
     </div>

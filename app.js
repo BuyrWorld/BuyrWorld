@@ -4038,27 +4038,95 @@ function scRenderStages(){
 
    Only fields that reach a calculation are here. Annotating a free-text note
    with "where do I find this?" would be noise. */
+/**
+ * What a person needs in order to answer a field.
+ *
+ * Five things per field, and the last three are the point. `means` and `where`
+ * were already here and explain the field. `why` says what moves if the answer
+ * is wrong, `ask` is a sentence somebody can put in an email to the supplier
+ * or to engineering, and `blocks` names which outputs stop without it — so
+ * "I don't know" can be answered with what is still available rather than
+ * with a dead end.
+ *
+ * `blocks` is written against the same three outputs `readiness()` reports:
+ * "plan" (a quantity and stock plan), "mass" (a purchased weight) and "cost".
+ * A field that blocks the plan blocks the two that depend on it; that
+ * relationship lives in scenario.mjs and is not restated here.
+ */
 var SC_FIELD_HELP = {
   "sc-qty":   {name:"goodParts",      means:"How many finished parts you need to end up with, after everything that goes wrong along the way.",
-                                       where:"The order, the schedule or the annual forecast. If it is an annual figure, say so — a year is not one batch."},
+                                       where:"The order, the schedule or the annual forecast. If it is an annual figure, say so — a year is not one batch.",
+                                       why:"Everything here is worked backwards from it. Halve it and you do not halve the cost per part, because tooling and setup do not halve with it.",
+                                       ask:"How many of these do you need, and is that one delivery or a year's worth?",
+                                       askWho:"the person who raised the requirement",
+                                       blocks:["plan","mass","cost"]},
   "sc-grade": {name:"materialGrade",  means:"The material specification, as written on the drawing or the enquiry.",
-                                       where:"The drawing's title block, or the material note beside the part number."},
+                                       where:"The drawing's title block, or the material note beside the part number.",
+                                       why:"It does not enter the arithmetic, but it is what makes the density, the stock size and the whole estimate about a real material rather than an anonymous one.",
+                                       ask:"Which material specification and revision does this part call for?",
+                                       askWho:"engineering",
+                                       blocks:[]},
   "sc-bw":    {name:"blankWidth",isLength:true,     means:"The width of the piece released into production, before anything is cut away.",
-                                       where:"Bigger than the finished part: add whatever machining and handling allowance the process needs."},
+                                       where:"Bigger than the finished part: add whatever machining and handling allowance the process needs.",
+                                       why:"It decides how many blanks fit on a sheet, which is usually the largest single lever on material cost.",
+                                       ask:"What blank size do you cut this from, and what allowance is on it over the finished size?",
+                                       askWho:"the supplier or your own manufacturing engineer",
+                                       blocks:["plan"]},
   "sc-bl":    {name:"blankLength",isLength:true,    means:"The length of that same released piece.",
-                                       where:"The drawing, plus the same allowance you added to the width. Blank size and finished size are different numbers and must never be swapped."},
+                                       where:"The drawing, plus the same allowance you added to the width. Blank size and finished size are different numbers and must never be swapped.",
+                                       why:"Same as the width: it sets the nesting, and a few millimetres either way can change how many sheets you buy.",
+                                       ask:"What blank length do you cut this from, and what allowance is on it over the finished size?",
+                                       askWho:"the supplier or your own manufacturing engineer",
+                                       blocks:["plan"]},
   "sc-bt":    {name:"blankThickness",isLength:true, means:"The thickness of the stock the blank is cut from.",
-                                       where:"The plate or sheet you buy, not the finished part. Only needed for a weight or a cost — a piece count does not use it."},
+                                       where:"The plate or sheet you buy, not the finished part. Only needed for a weight or a cost — a piece count does not use it.",
+                                       why:"Weight is proportional to it, and material is usually bought by weight. The piece count does not need it, so a plan is still available without it.",
+                                       ask:"What plate or sheet thickness is this cut from?",
+                                       askWho:"the supplier",
+                                       blocks:["mass","cost"]},
   "sc-s1":    {name:"stockWidth",isLength:true,     means:"The width of the sheet, plate or bar your supplier actually sells.",
-                                       where:"The supplier's stock list. Use a size they hold, not a size you would like."},
+                                       where:"The supplier's stock list. Use a size they hold, not a size you would like.",
+                                       why:"A size nobody stocks makes the nesting look better than it will be. The offcut you cannot use is still material you paid for.",
+                                       ask:"Which stock sizes do you actually hold in this grade and thickness?",
+                                       askWho:"the supplier",
+                                       blocks:["plan"]},
   "sc-s2":    {name:"stockLength",isLength:true,    means:"The length of that same purchased piece.",
-                                       where:"The same line of the supplier's stock list as the width. Sheet is sold at set sizes, so use one they actually hold."},
+                                       where:"The same line of the supplier's stock list as the width. Sheet is sold at set sizes, so use one they actually hold.",
+                                       why:"Together with the width it fixes how much of each sheet is usable, and therefore how many you buy.",
+                                       ask:"Which stock sizes do you actually hold in this grade and thickness?",
+                                       askWho:"the supplier",
+                                       blocks:["plan"]},
   "sc-kerf":  {name:"kerf",isLength:true,           means:"How much width the cut itself destroys, between one blank and the next.",
-                                       where:"The process: a laser takes a fraction of a millimetre, a bandsaw takes a few. Zero is a real answer for a shear."},
+                                       where:"The process: a laser takes a fraction of a millimetre, a bandsaw takes a few. Zero is a real answer for a shear.",
+                                       why:"On a sheet of many small blanks the kerf adds up to a whole row. Zero is a legitimate answer, but it has to be a decision rather than a blank field.",
+                                       ask:"What process cuts these out, and what kerf should I allow between blanks?",
+                                       askWho:"the supplier",
+                                       blocks:["plan"]},
   "sc-edge":  {name:"edgeMargin",isLength:true,     means:"The strip around the edge of the sheet that cannot be used.",
-                                       where:"Whatever the machine has to clamp or cannot reach. Ask the person who runs it."},
+                                       where:"Whatever the machine has to clamp or cannot reach. Ask the person who runs it.",
+                                       why:"It removes a band from all four edges, so on a small sheet it can cost a whole row and column of blanks.",
+                                       ask:"How much edge margin does your machine need on a sheet this size?",
+                                       askWho:"the supplier",
+                                       blocks:["plan"]},
   "sc-dv":    {name:"density",        means:"How heavy the material is for its size. Needed to turn a volume into a weight.",
-                                       where:"The material datasheet. Do not guess it from a similar alloy — the whole purchased weight moves with it."}
+                                       where:"The material datasheet. Do not guess it from a similar alloy — the whole purchased weight moves with it.",
+                                       why:"The entire purchased weight, and therefore the entire material cost, scales with it. It depends on grade, condition and specification revision, so nothing here supplies one for you.",
+                                       ask:"What density does the datasheet give for this grade in this condition, and which revision is that from?",
+                                       askWho:"engineering or the material supplier",
+                                       blocks:["mass","cost"]}
+};
+
+/** Which outputs a named field stops. Empty means it stops none of them. */
+function scBlocksOf(id){
+  var h=SC_FIELD_HELP[id];
+  return h&&h.blocks?h.blocks:[];
+}
+
+/** Plain words for what is lost, and what survives, when a field is unanswered. */
+var SC_OUTPUT_SAID = {
+  plan:"the quantity and stock plan",
+  mass:"the purchased weight",
+  cost:"the cost per part"
 };
 
 /* Fields a person has said they cannot answer. Distinct from blank: blank is
@@ -4128,10 +4196,72 @@ function scAnnotate(){
     var where=document.createElement("div");
     where.className="bw-fieldwhere";
     where.textContent="Where do I find this? "+SC_FIELD_HELP[id].where;
-    help.appendChild(body); help.appendChild(where);
+    var why=document.createElement("div");
+    why.className="bw-fieldwhere";
+    why.textContent="Why it matters: "+SC_FIELD_HELP[id].why;
+    help.appendChild(body); help.appendChild(where); help.appendChild(why);
     label.appendChild(help);
+
+    /* Where the answer to "I don't know" goes. Built once and filled on every
+       render, so marking a field unknown produces a next step rather than a
+       disabled box. */
+    var gap=document.createElement("div");
+    gap.id="scgap-"+id;
+    label.appendChild(gap);
   }
   scRenderFieldStates();
+}
+
+/**
+ * What is still available when one field cannot be answered.
+ *
+ * Said from the field's own `blocks` list rather than from the readiness
+ * report, because this has to answer for this field alone: "what does not
+ * knowing *this* cost me". The readiness report answers the other question —
+ * what the scenario as a whole is still waiting on — and the summary shows it.
+ */
+function scStillAvailable(id){
+  var stops=scBlocksOf(id);
+  var all=["plan","mass","cost"];
+  /* The three outputs nest: no plan means no mass, and no mass means no cost.
+     Naming a survivor that depends on a blocked one would be a false promise. */
+  if(stops.indexOf("plan")>=0) stops=all;
+  else if(stops.indexOf("mass")>=0) stops=["mass","cost"];
+  var left=all.filter(function(o){return stops.indexOf(o)<0;});
+  if(!stops.length) return "Nothing here is blocked by it — every output is still available.";
+  if(!left.length) return "Nothing can be worked out until this is answered.";
+  return "Still available without it: "+left.map(function(o){return SC_OUTPUT_SAID[o];}).join(" and ")
+    +". Blocked: "+stops.map(function(o){return SC_OUTPUT_SAID[o];}).join(" and ")+".";
+}
+
+/**
+ * What to do about the fields that stopped a calculation.
+ *
+ * Kept out of scRun so that the refusal reads as one statement and one next
+ * step rather than as a wall: the refusal is the sentence, this is the
+ * remedy, and they are separately testable.
+ */
+function scUnknownAdviceHTML(){
+  var ids=Object.keys(_scUnknown).filter(function(k){return _scUnknown[k];});
+  if(!ids.length) return "";
+  return '<div class="bw-verdict"><div class="bw-verdict-head">What to do about it</div>'
+    + ids.map(scGapCardHTML).join("")
+    + '<div class="bw-verdict-acts">'
+    + '<button type="button" class="bw-act bw-act-secondary" data-do="scAskQuestions">Prepare the questions</button>'
+    + '</div></div>';
+}
+
+/** The card shown under a field somebody has said they cannot answer. */
+function scGapCardHTML(id){
+  var h=SC_FIELD_HELP[id];
+  if(!h) return "";
+  return '<div class="bw-gapcard">'
+    +'<p class="bw-gapcard-q">'+ciEsc(h.ask)+'</p>'
+    +'<p class="bw-gapcard-l"><b>Why it matters.</b> '+ciEsc(h.why)+'</p>'
+    +'<p class="bw-gapcard-l"><b>Where to look.</b> '+ciEsc(h.where)+'</p>'
+    +'<p class="bw-gapcard-l"><b>What this costs you.</b> '+ciEsc(scStillAvailable(id))+'</p>'
+    +'<p class="bw-gapcard-ask">Ask '+ciEsc(h.askWho)+': &ldquo;'+ciEsc(h.ask)+'&rdquo;</p>'
+    +'</div>';
 }
 
 /** Redraw every provenance row. Cheap enough to do on any change. */
@@ -4147,6 +4277,8 @@ function scRenderFieldStates(){
       + '<button type="button" class="bw-fieldunknown" data-do="scDontKnow" data-a="'+ciEsc(id)+'"'
       + ' aria-pressed="'+(unknown?"true":"false")+'">'
       + (unknown ? "I know this after all" : "I don&rsquo;t know") + '</button>';
+    var gap=document.getElementById("scgap-"+id);
+    if(gap) gap.innerHTML = unknown ? scGapCardHTML(id) : "";
     var input=document.getElementById(id);
     if(input){
       input.disabled=unknown;
@@ -4353,6 +4485,11 @@ function scClearSession(){
   /* The last calculated plan and cost. bcSave reads it, so leaving it behind
      lets the previous part's calculation be saved as this one's estimate. */
   _scLast=null;
+  /* Which worked example is on screen. It belongs to the scenario, not to the
+     session: left behind, somebody's own part would carry the banner saying
+     its figures are fictional — or, worse, stop carrying it when it should. */
+  _scExampleLoaded=null;
+  var qOut=document.getElementById("sc-questions"); if(qOut)qOut.innerHTML="";
   /* The blank worked out from the part, and the record of carrying it over.
      A proposal is about one part; leaving it would offer the previous part's
      blank against this one's model. */
@@ -4836,6 +4973,130 @@ function scRenderRequirements(){
 var _scPackage = null;
 
 /** Build the package and show what it contains — and what it does not. */
+/**
+ * The commercial half of the handover.
+ *
+ * Every figure in here is read back out of a result the engine has already
+ * produced and already formatted. Nothing is recomputed, combined or
+ * rounded on the way past — a package whose cost table disagrees with the
+ * screen it was exported from is worse than one that carries no cost at all.
+ *
+ * Returns null when nothing has been worked out, so the package says it
+ * carries no costing rather than carrying an empty one.
+ */
+function scCommercialBasis(){
+  var B=window.BW;
+  if(!B||!_scLast||!_scLast.plan) return null;
+  var plan=_scLast.plan,cost=_scLast.cost,M=B.moneyToDecimalString;
+  var a=scAssess();
+
+  var lines=cost&&cost.ok?cost.lines.map(function(l){
+    return {
+      label:l.label,
+      amount:l.amount?(l.credit?"−":"")+cost.currency+" "+M(l.amount):null,
+      quality:l.quality||null,
+      basis:l.basis||l.note||"",
+      oneTime:Boolean(l.oneTime),
+      credit:Boolean(l.credit)
+    };
+  }):[];
+
+  /* Switched off is a decision somebody made and belongs in the record as
+     one. Absent from the table entirely, it reads as an oversight. */
+  var excluded=[];
+  if(B.COST_ELEMENTS){
+    B.COST_ELEMENTS.forEach(function(def){
+      var c=_scCosts[def.id];
+      if(!c||!c.on)excluded.push(def.label);
+    });
+  }
+
+  var route=plan.route.steps.map(function(st){
+    return {
+      name:st.stage.name,
+      yield:B.formatPercent?B.formatPercent(st.stage.yield):String(st.stage.yield),
+      fixedPieces:String(st.stage.fixedPieces),
+      consumes:st.consumes,
+      requiredInput:String(st.requiredInput),
+      goodOutput:String(st.goodOutput),
+      lostToYield:String(st.lostToYield),
+      lostToFixed:String(st.lostToFixed)
+    };
+  });
+
+  var assumptions=(B.scAssumptions?B.scAssumptions(plan,cost):[]).map(function(r){
+    return {
+      what:r.what,
+      value:r.kind==="ratio"?B.formatPercent(r.value)
+        :r.kind==="pieces"?String(r.value)
+        :r.kind==="money"?(r.value.currency+" "+M(r.value)):"",
+      basis:r.basis, affects:r.affects
+    };
+  });
+
+  /* The open questions, from the same place the screen gets them, so the
+     package cannot ask something different from what it showed. */
+  var gaps=[];
+  a.unknownIds.forEach(function(id){
+    var h=SC_FIELD_HELP[id];
+    if(h)gaps.push({ask:h.ask,askWho:h.askWho,why:"The buyer marked this as not known."});
+  });
+  a.costGaps.forEach(function(label){
+    gaps.push({ask:"Can you break out "+label.toLowerCase()+" for this part, and say what it is based on?",
+      askWho:"the supplier",why:"Switched on with no amount."});
+  });
+
+  /* Only values a person actually accepted. A proposal nobody looked at is
+     not a source, and listing it as one would make the package look better
+     evidenced than it is. */
+  var sources=[];
+  if(typeof _exReview!=="undefined"&&_exReview.scx&&B.REVIEW_DISPOSITION){
+    _exReview.scx.forEach(function(it){
+      if(it.disposition!==B.REVIEW_DISPOSITION.CONFIRMED
+         &&it.disposition!==B.REVIEW_DISPOSITION.CORRECTED)return;
+      sources.push({
+        field:it.label||it.field,
+        value:it.value===null?null:String(it.value)+(it.unit?" "+it.unit:""),
+        document:it.document&&it.document.filename?it.document.filename:null,
+        page:it.evidence?it.evidence.page:null,
+        text:it.evidence?it.evidence.quote:null,
+        disposition:it.disposition
+      });
+    });
+  }
+
+  return {
+    units:scVal("sc-unit")||"mm",
+    currency:cost&&cost.ok?cost.currency:(scVal("sc-cur")||"GBP"),
+    demand:{
+      acceptedParts:String(plan.quantities.acceptedPartsRequired),
+      blanksToRelease:String(plan.quantities.blanksToRelease),
+      stockUnitsToBuy:String(plan.quantities.stockUnitsToBuy),
+      purchasedMass:plan.mass.grossPurchasedUg!==null
+        ? B.formatMass(plan.mass.grossPurchasedUg,"kg",2)+" kg" : null
+    },
+    route:route,
+    cost:cost&&cost.ok?{
+      complete:Boolean(cost.complete),
+      currency:cost.currency,
+      recurringSubtotal:M(cost.subtotal),
+      oneTime:cost.lines.some(function(l){return l.oneTime;})?M(cost.oneTime):null,
+      perAcceptedPart:cost.perAcceptedPart?M(cost.perAcceptedPart):null,
+      lines:lines,
+      excluded:excluded,
+      missing:cost.missing.map(function(m){return {label:m.label,needs:m.needs};})
+    }:null,
+    assumptions:assumptions,
+    /* The reviewer's words, not the model's. scUnknownFields returns the
+       scenario field names — "edgeMargin" — and scenario.mjs already owns the
+       mapping to what a person would call it. */
+    notKnown:a.unknowns.map(function(n){return B.scLabelOf?B.scLabelOf(n):n;}),
+    gaps:gaps,
+    sources:sources,
+    example:_scExampleLoaded||null
+  };
+}
+
 async function scExportReview(){
   var B=window.BW;
   var host=document.getElementById("rev-out");
@@ -4858,7 +5119,12 @@ async function scExportReview(){
       model:typeof _scModel!=="undefined" ? _scModel : null,
       modelRevision:typeof _scModel!=="undefined"&&_scModel ? _scModel.revision : null,
       material:{name:scVal("sc-grade")||null,density:scVal("sc-dv")||null,
-        densityUnit:scVal("sc-du")||null,source:scVal("sc-ds")||null}
+        densityUnit:scVal("sc-du")||null,source:scVal("sc-ds")||null},
+      /* The costing, the route and the open questions, so the engineer is
+         asked about the part that was actually priced rather than about a
+         schedule with no commercial context. Null when nothing has been
+         worked out — the package then says it carries no costing. */
+      scenario:scCommercialBasis()
     });
     _scPackage=await B.buildReviewPackage(snap);
     /* What it describes, so an export cannot hand over a package for a part
@@ -5561,8 +5827,27 @@ function scDiscardChange(){
 function scVal(id){var e=document.getElementById(id);return e?String(e.value).trim():"";}
 function scInt(id){var t=scVal(id).replace(/[^0-9]/g,"");return t===""?null:parseInt(t,10);}
 
-function scExample(){
+/**
+ * Two worked examples, both synthetic and both labelled as such.
+ *
+ * The complete one exists so that somebody can see a finished should-cost
+ * before deciding whether the form is worth filling in. The incomplete one
+ * exists because the more common situation is a quote with something
+ * missing from it, and the useful thing to demonstrate is what survives:
+ * the material plan stands, the cost per part is withheld, and the next
+ * action is a question rather than a guess.
+ *
+ * The two share every input except the manufacturing amount, so the
+ * difference on screen is attributable to that one gap and nothing else.
+ */
+function scExample(which){
+  var gap = which!=="complete";
   var set=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+
+  /* An example replaces what is on screen, so anything a person said they
+     could not answer is cleared with it — leaving those behind would block
+     the example for a reason belonging to the previous scenario. */
+  _scUnknown={};
   set("sc-qty","1000");set("sc-unit","mm");set("sc-grade","Fictional grade FG-300");
   set("sc-bw","200");set("sc-bl","100");set("sc-bt","5");
   set("sc-pw","180");set("sc-pl","80");set("sc-pt","5");
@@ -5574,11 +5859,27 @@ function scExample(){
   _scCosts={
     stock:{on:true,amount:"4620.00",basis:"quoted sheet price, synthetic supplier",quality:"quote-backed"},
     preparation:{on:true,amount:"880.00",basis:"setup plus cut time at the stated rate",quality:"user-reviewed"},
-    manufacturing:{on:true,amount:"",basis:"",quality:"assumed"},
+    /* The one difference between the two examples. Blank, never zero: a zero
+       here would read as manufacturing being free. */
+    manufacturing:gap
+      ? {on:true,amount:"",basis:"",quality:"assumed"}
+      : {on:true,amount:"6250.00",basis:"quoted operation setup and cycle rate, synthetic supplier",quality:"quote-backed"},
     tooling:{on:true,amount:"15000.00",basis:"quoted one-off, synthetic supplier",quality:"quote-backed"}
   };
-  scRenderStages();scRenderCosts();scFormLabels();
+  scRenderStages();scRenderCosts();scFormLabels();scRenderFieldStates();
+
+  var q=document.getElementById("sc-questions"); if(q)q.innerHTML="";
+  _scExampleLoaded = gap ? "incomplete" : "complete";
+  scRun();
+  scRenderSummary();
+  var out=document.getElementById("sc-out");
+  if(out&&typeof out.scrollIntoView==="function")out.scrollIntoView({block:"nearest"});
 }
+
+/* Which example is on screen, so the result can say so rather than letting a
+   fictional grade be mistaken for somebody's own part. Cleared by Clear and
+   by opening a saved draft. */
+var _scExampleLoaded=null;
 
 function scClear(){
   ["sc-qty","sc-grade","sc-bw","sc-bl","sc-bt","sc-pw","sc-pl","sc-pt","sc-dv","sc-ds",
@@ -5589,6 +5890,10 @@ function scClear(){
   var a=document.getElementById("sc-amort"); if(a)a.checked=false;
   _scCosts={}; scRenderCosts();
   var o=document.getElementById("sc-out"); if(o)o.innerHTML="";
+  var q=document.getElementById("sc-questions"); if(q)q.innerHTML="";
+  _scUnknown={}; _scExampleLoaded=null; _scLast=null;
+  scRenderFieldStates();
+  scRenderSummary();
 }
 
 /* A bar has one dimension and a trim, not two and a margin. */
@@ -5622,7 +5927,9 @@ function scRun(){
       "Waiting on "+unknown.join(", ")+". "
       + "You marked "+(unknown.length===1?"this":"these")+" as not known, so there is no purchase "
       + "quantity yet — a figure worked out around a gap would be a figure nobody could defend. "
-      + "The rest of what you have entered is kept, and you can save it as a draft.");
+      + "The rest of what you have entered is kept, and you can save it as a draft.")
+      + scUnknownAdviceHTML();
+    if(typeof scRenderSummary==="function")scRenderSummary();
     return;
   }
 
@@ -5693,7 +6000,105 @@ function scRun(){
      from the inside nothing is wrong. */
   _scLast={plan:plan,cost:cost,
     stamp:(window.BW&&window.BW.staleStamp)?window.BW.staleStamp(scDerivedFrom()):null};
-  out.innerHTML=scPlanHTML(plan,u)+scCostHTML(plan,cost)+scAssumptionsHTML(plan,cost);
+  out.innerHTML=scVerdictHTML(plan,cost)+scPlanHTML(plan,u)+scCostHTML(plan,cost)+scAssumptionsHTML(plan,cost);
+  if(typeof scRenderSummary==="function")scRenderSummary();
+}
+
+/**
+ * What can be concluded, what cannot, and the one thing worth doing next.
+ *
+ * Above the tables rather than under them. Every figure in it is read back
+ * out of the plan and the cost the engine has just returned — nothing here
+ * computes, rounds or combines anything, so this panel cannot disagree with
+ * the tables below it.
+ */
+function scVerdictHTML(plan,cost){
+  var B=window.BW,M=B.moneyToDecimalString;
+  var concluded=[],incomplete=[],next;
+
+  concluded.push("You need <b>"+plan.quantities.stockUnitsToBuy+"</b> stock unit(s) to end up with "
+    +plan.quantities.acceptedPartsRequired+" accepted parts, "
+    +"releasing "+plan.quantities.blanksToRelease+" blanks.");
+
+  if(plan.mass.grossPurchasedUg!==null){
+    concluded.push("That is <b>"+B.formatMass(plan.mass.grossPurchasedUg,"kg",2)+" kg</b> of material purchased.");
+  }else{
+    incomplete.push("No purchased weight: a density has not been supplied, and one is not implied by a grade name.");
+  }
+
+  if(cost&&cost.ok&&cost.complete&&cost.perAcceptedPart){
+    concluded.push("The recurring cost is <b>"+ciEsc(cost.currency)+" "+M(cost.subtotal)
+      +"</b>, which is <b>"+ciEsc(cost.currency)+" "+M(cost.perAcceptedPart)+"</b> per accepted part.");
+  }else if(cost&&cost.ok){
+    incomplete.push("The cost per part is withheld. "
+      +(cost.missing.length
+        ? "No amount yet for "+cost.missing.map(function(m){return m.label;}).join(", ")+"."
+        : "Not every element switched on has an amount.")
+      +" What is priced so far totals "+ciEsc(cost.currency)+" "+M(cost.subtotal)
+      +", which is a subtotal and not a should-cost.");
+  }
+
+  /* Read off the result, not off the form. This panel is the reading of one
+     calculation, and a next action that depended on the whole page would
+     make it disagree with the plan printed beneath it the moment somebody
+     typed. The summary rail answers the other question — where the whole
+     scenario stands — and it is redrawn on every keystroke for that reason. */
+  var reqs = typeof _scReqs!=="undefined" ? _scReqs.length : 0;
+  if(reqs===0){
+    incomplete.push("No engineering requirements are recorded, so a review package would carry cost and no specification.");
+  }
+
+  if(plan.mass.grossPurchasedUg===null){
+    next="Add the blank thickness and a density, and the purchased weight and material cost follow.";
+  }else if(cost&&cost.ok&&!cost.complete){
+    next=cost.missing.length
+      ? "Get an amount for "+cost.missing.map(function(m){return m.label;}).join(", ")
+        +" — each needs "+cost.missing[0].needs+". Until then the cost per part stays withheld."
+      : "Price every element that is switched on, or switch off the ones that do not apply.";
+  }else if(reqs===0){
+    next="Record what the part must satisfy. A cost with no requirements is not something an engineer can check.";
+  }else{
+    next="Prepare the package for technical review and send it to somebody who can confirm the route.";
+  }
+
+  var example = typeof _scExampleLoaded!=="undefined" && _scExampleLoaded
+    ? '<p class="bw-verdict-sub"><span class="bw-status bw-status--review">'
+      +'<span class="bw-dot" style="background:var(--bw-warning)"></span>synthetic example</span> '
+      +ciEsc(_scExampleLoaded==="complete"
+        ? "A fictional grade and a synthetic supplier. Every figure is made up; the arithmetic is real."
+        : "A fictional grade and a synthetic supplier, with the manufacturing cost deliberately left out.")
+      +'</p>'
+    : "";
+
+  return '<div class="bw-verdict">'
+    +'<div class="bw-verdict-head">What this tells you</div>'
+    +example
+    +'<p class="bw-verdict-line">'+concluded[0]+'</p>'
+    +concluded.slice(1).map(function(c){return '<p class="bw-verdict-sub">'+c+'</p>';}).join("")
+    +(incomplete.length
+      ? '<div class="bw-verdict-head" style="margin-top:var(--bw-4)">What is still open</div>'
+        +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+        +incomplete.map(function(i){return '<li>'+i+'</li>';}).join("")+'</ul>'
+      : '<p class="bw-verdict-sub" style="margin-top:var(--bw-3)">'
+        +'<b style="color:var(--bw-success)">Nothing is outstanding.</b> Every input this reads has an '
+        +'answer and every cost element switched on has an amount.</p>')
+    +'<div class="bw-verdict-head" style="margin-top:var(--bw-4)">The most useful next thing</div>'
+    +'<p class="bw-verdict-sub">'+ciEsc(next)+'</p>'
+    +'<div class="bw-verdict-acts">'
+    +'<button type="button" class="bw-act bw-act-secondary" data-do="scSeeWorking">See the working</button>'
+    +'<button type="button" class="bw-act bw-act-secondary" data-do="scAskQuestions">Prepare questions</button>'
+    +'<button type="button" class="bw-act bw-act-secondary" data-do="scExportReview">Prepare the review package</button>'
+    +'</div></div>';
+}
+
+/** Open the calculation trail and put the reader in it. */
+function scSeeWorking(){
+  var d=document.getElementById("sc-working");
+  if(!d)return;
+  d.open=true;
+  if(typeof d.scrollIntoView==="function")d.scrollIntoView({block:"nearest"});
+  var s=d.querySelector("summary");
+  if(s&&typeof s.focus==="function")s.focus();
 }
 
 /**
@@ -5764,10 +6169,16 @@ function scPlanHTML(plan,u){
       +'<td style="color:var(--bw-muted);font-size:12px">'+ciEsc(st.consumes==="output"?"from accepted output":"from the input")+'</td></tr>';
   }).join("");
 
-  var route=steps?'<div class="eyebrow" style="margin:var(--bw-5) 0 6px">The route, worked backwards</div>'
-    +'<div class="bw-table-wrap"><table class="bw-table">'
+  /* The operation-by-operation trail, folded away by default and opened by
+     "See the working". It is the detail somebody needs to defend the figure
+     and not the thing they read first. */
+  var route=steps?'<details id="sc-working" class="bw-caps" style="margin-top:var(--bw-5)">'
+    +'<summary class="bw-caps-sum">The working &mdash; every operation, and what it loses</summary>'
+    +'<div class="bw-table-wrap" style="margin-top:var(--bw-3)"><table class="bw-table">'
     +'<thead><tr><th>Operation</th><th class="n">In</th><th class="n">Good out</th><th class="n">Lost to yield</th><th class="n">Setup / test</th><th>Taken</th></tr></thead>'
-    +'<tbody>'+steps+'</tbody></table></div>':"";
+    +'<tbody>'+steps+'</tbody></table></div>'
+    +'<p style="font-size:11.5px;color:var(--bw-muted);margin:var(--bw-3) 0 0;line-height:1.5">Read from the last operation backwards: each row’s input is whatever the one after it needs. That is why a yield is accepted output divided by input, and not a scrap percentage added to demand.</p>'
+    +'</details>':"";
 
   return '<div class="bw-panel">'
     +'<div class="bw-panel-head"><div class="bw-panel-title">What to order</div>'
@@ -5894,6 +6305,491 @@ function scEntry(which){
      typing, and the typing has to survive it. */
 }
 
+/* ==================================================================
+   Two views over one scenario.
+
+   Guided and expert are not two implementations. Every panel exists once,
+   in the markup, and switching view *moves* those panels between the
+   three-column expert layout and the one-task-at-a-time guided stage. The
+   inputs a person filled in are the same DOM elements afterwards, so
+   nothing has to be copied, serialised or kept in step — which is the
+   failure mode a second implementation would have had, and the one the
+   brief is most explicit about.
+
+   Everything downstream — the engine, the drafts, the provenance, the
+   review package — reads the same ids it always did and does not know
+   which view is on screen.
+   ================================================================== */
+
+var _scView="expert";
+var _scStep="start";
+
+/* Where each panel lives in the expert layout, recorded once so it can be
+   put back exactly. Parent plus next sibling, because appending to the
+   parent would silently reorder the column. */
+var _scPanelHome=null;
+
+/**
+ * The guided sequence.
+ *
+ * `ask` is the question the step answers, in the words somebody would use
+ * about their own job rather than the words the form uses. `panels` names
+ * the real panels moved onto the stage for it.
+ */
+var SC_STEPS=[
+  {id:"start",   nav:"Start",        ask:"What do you want to establish?",
+   why:"This only decides what you are shown first. Nothing is switched off, and you can change it at any point.",
+   panels:["goal","drafts"]},
+  {id:"know",    nav:"What you have", ask:"What do you already know, and do you have a document?",
+   why:"A drawing is one source of these facts, not the only way in. Typing what you know is a first-class route and is often faster.",
+   panels:["entry","compare"]},
+  {id:"part",    nav:"The part",     ask:"What is the part, and how many are needed?",
+   why:"Everything else is worked backwards from the number of accepted parts and the size of the blank released into production.",
+   panels:["part"]},
+  {id:"material",nav:"Material",     ask:"What is it made of, and what stock can you buy?",
+   why:"The stock size decides how many blanks fit, which is usually the largest single lever on material cost. Density turns that into a weight.",
+   panels:["density","stock"]},
+  {id:"route",   nav:"The route",    ask:"How is it made, and what is lost along the way?",
+   why:"Yield losses compound backwards: 100 parts at 95% needs 106 blanks, not 105. Without a route the plan assumes nothing is lost.",
+   panels:["route"]},
+  {id:"cost",    nav:"The cost",     ask:"What do the cost elements come to?",
+   why:"Fill in what you have. A blank amount stays a declared gap rather than becoming a zero that reads as free.",
+   panels:["cost","contingency"]},
+  {id:"requirements",nav:"Requirements",ask:"What must the part satisfy?",
+   why:"Tolerances, finishes and specifications. None of this waits for a drawing or a model, and it is what a technical reviewer actually reads.",
+   panels:["requirements"]},
+  {id:"result",  nav:"The result",   ask:"What can be concluded so far?",
+   why:"Partial results are kept: a material plan can stand while a full cost is still blocked.",
+   panels:["run","result"]},
+  {id:"review",  nav:"Hand it over", ask:"Prepare the package for technical review",
+   why:"Files to hand to somebody technical. Nothing is sent and nothing is approved.",
+   panels:["review"]}
+];
+
+/* Reachable, and deliberately not in the sequence above. A visual model is
+   optional and costing never depends on one. */
+var SC_STEP_MODEL={id:"model",nav:"Visual model",ask:"A picture of the part, if it helps",
+  why:"Optional throughout. No cost or quantity is ever derived from it.",panels:["model"]};
+
+function scStepById(id){
+  if(id===SC_STEP_MODEL.id) return SC_STEP_MODEL;
+  for(var i=0;i<SC_STEPS.length;i++) if(SC_STEPS[i].id===id) return SC_STEPS[i];
+  return SC_STEPS[0];
+}
+
+/**
+ * Record where every panel sits, once, before anything is moved.
+ *
+ * The position is stored as a parent and an *index*, not as the sibling that
+ * followed it. A sibling reference is the obvious choice and it is wrong:
+ * adjacent panels move together, so by the time the first one is put back its
+ * recorded neighbour is often still on the guided stage — and `insertBefore`
+ * against a node that is no longer a child throws, in this shim and in a
+ * browser alike. An index survives its neighbours being elsewhere.
+ */
+function scCapturePanels(){
+  if(_scPanelHome) return;
+  _scPanelHome={};
+  var all=document.querySelectorAll("#page-shouldcost [data-sc-panel]");
+  for(var i=0;i<all.length;i++){
+    var el=all[i];
+    var parent=el.parentNode;
+    _scPanelHome[el.dataset.scPanel]={
+      el:el, parent:parent,
+      index:parent?Array.prototype.indexOf.call(parent.childNodes,el):0
+    };
+  }
+  /* The goal question has no expert-layout home: in the expert view the
+     answer is simply "everything", which is what that layout shows. */
+  var goal=document.getElementById("sc-goal-panel");
+  if(goal) _scPanelHome.goal={el:goal,parent:null,index:0};
+}
+
+/**
+ * Put every panel back exactly where the markup had it.
+ *
+ * Ascending by recorded index, which is what makes restoring by index exact
+ * rather than approximate: the earlier panels are already back by the time a
+ * later one asks for its position, so each index means what it meant in the
+ * original column. Comments and whitespace are children too and never move,
+ * so they hold the numbering steady.
+ */
+function scPanelsHome(){
+  if(!_scPanelHome) return;
+  var back=[];
+  for(var k in _scPanelHome){
+    var h=_scPanelHome[k];
+    /* No home: it belongs to the guided view only, so the expert view is
+       where it stops existing rather than where it goes. */
+    if(!h.parent){ if(h.el.parentNode) h.el.parentNode.removeChild(h.el); continue; }
+    back.push(h);
+  }
+  back.sort(function(a,b){ return a.index-b.index; });
+  for(var i=0;i<back.length;i++){
+    var g=back[i];
+    var ref=g.parent.childNodes[g.index]||null;
+    /* Already in place. Reinserting would be harmless but the guard keeps a
+       no-op switch genuinely free of DOM writes. */
+    if(ref===g.el) continue;
+    g.parent.insertBefore(g.el,ref);
+  }
+}
+
+/** Switch view. Nothing is cleared, read or recalculated by doing so. */
+function scView(which){
+  var next = which==="guided" ? "guided" : "expert";
+  _scView=next;
+  scCapturePanels();
+
+  var guided=document.getElementById("sc-guided");
+  var expert=document.getElementById("sc-expert");
+  var gb=document.getElementById("sc-view-guided");
+  var eb=document.getElementById("sc-view-expert");
+  if(gb)gb.setAttribute("aria-selected",String(next==="guided"));
+  if(eb)eb.setAttribute("aria-selected",String(next==="expert"));
+
+  if(next==="expert"){
+    scPanelsHome();
+    if(guided)guided.hidden=true;
+    if(expert)expert.hidden=false;
+  }else{
+    if(expert)expert.hidden=true;
+    if(guided)guided.hidden=false;
+    scRenderGuided();
+  }
+  var note=document.getElementById("sc-view-note");
+  if(note)note.textContent = next==="guided"
+    ? "One task at a time. Everything you enter is kept if you switch to the expert workspace."
+    : "Every field at once. Everything you enter is kept if you switch to the guided view.";
+}
+
+/** Move to a step and redraw. */
+function scGoStep(id){
+  _scStep=id;
+  if(_scView!=="guided") scView("guided");
+  else scRenderGuided();
+  var stage=document.getElementById("sc-guided-stage");
+  /* Focus the heading rather than scrolling to it, so the change of task is
+     announced and keyboard position follows the content. */
+  var h=stage?stage.querySelector("[data-guide-heading]"):null;
+  if(h&&typeof h.focus==="function")h.focus();
+}
+
+/* What the person said they were trying to establish. It orders the steps
+   and nothing else — no field is disabled by it, and every output stays
+   reachable, because a person who came for a quantity often leaves with a
+   cost question. */
+var _scGoal="all";
+
+function scGoal(which){
+  _scGoal = which==="quantity"||which==="cost"||which==="review" ? which : "all";
+  scGoStep(which==="review" ? "requirements" : which==="all" ? "know" : "part");
+}
+
+/** Assemble the current step onto the stage. */
+function scRenderGuided(){
+  scCapturePanels();
+  var stage=document.getElementById("sc-guided-stage");
+  var nav=document.getElementById("sc-guided-nav");
+  if(!stage)return;
+
+  var step=scStepById(_scStep);
+
+  /* Everything not wanted goes home first, so a panel is never in two
+     places and the expert layout stays intact underneath. */
+  scPanelsHome();
+
+  var head=document.createElement("div");
+  head.className="bw-guide-ask";
+  head.innerHTML='<h3 class="bw-guide-q" tabindex="-1" data-guide-heading>'+ciEsc(step.ask)+'</h3>'
+    +'<p class="bw-guide-why">'+ciEsc(step.why)+'</p>';
+
+  stage.innerHTML="";
+  stage.appendChild(scStepRailEl());
+  stage.appendChild(head);
+
+  for(var i=0;i<step.panels.length;i++){
+    var h=_scPanelHome[step.panels[i]];
+    if(h&&h.el) stage.appendChild(h.el);
+  }
+
+  /* The visual model is offered from every step, never imposed on one. */
+  if(step.id!=="model"&&_scPanelHome.model&&_scPanelHome.model.el
+     &&document.getElementById("sc-builder")&&!document.getElementById("sc-builder").hidden){
+    stage.appendChild(_scPanelHome.model.el);
+  }
+
+  if(nav) nav.innerHTML=scGuideNavHTML(step);
+  scRenderSummary();
+}
+
+/** The step rail: progress, and a way past it for somebody who knows. */
+function scStepRailEl(){
+  var ul=document.createElement("ul");
+  ul.className="bw-guide-steps";
+  ul.setAttribute("aria-label","Steps");
+  var a=scAssess();
+  for(var i=0;i<SC_STEPS.length;i++){
+    var s=SC_STEPS[i];
+    var li=document.createElement("li");
+    var b=document.createElement("button");
+    b.type="button";
+    b.className="bw-guide-step";
+    b.textContent=s.nav;
+    b.setAttribute("data-do","scGoStep");
+    b.setAttribute("data-a",s.id);
+    if(s.id===_scStep)b.setAttribute("aria-current","step");
+    if(scStepDone(s.id,a))b.setAttribute("data-done","1");
+    li.appendChild(b); ul.appendChild(li);
+  }
+  return ul;
+}
+
+/** Whether a step has been answered well enough to move past it. */
+function scStepDone(id,a){
+  if(id==="part")     return a.has("sc-qty")&&a.has("sc-bw")&&a.has("sc-bl");
+  if(id==="material") return a.has("sc-s1")&&a.has("sc-dv");
+  if(id==="route")    return a.stages>0;
+  if(id==="cost")     return a.costOn>0;
+  if(id==="requirements") return a.requirements>0;
+  if(id==="result")   return Boolean(a.ran);
+  return false;
+}
+
+/* Back, forward, and save. The neighbours are resolved before any markup is
+   built: a comparison written inline beside a string starting "<button"
+   reads, to anything scanning this file as text, like a tag whose name is
+   whatever follows the "<". The accessibility scanner is one such thing. */
+function scGuideNavHTML(step){
+  var idx=-1;
+  for(var i=0;i<SC_STEPS.length;i++) if(SC_STEPS[i].id===step.id) idx=i;
+  var last=SC_STEPS.length-1;
+  var prev=idx>0?SC_STEPS[idx-1]:null;
+  var nextStep=(idx>=0&&last>idx)?SC_STEPS[idx+1]:null;
+  var offSequence=(idx===-1);
+
+  var out="";
+  if(prev) out+='<button type="button" class="bw-act bw-act-text" data-do="scGoStep" data-a="'
+    +attrEsc(prev.id)+'">&larr; '+ciEsc(prev.nav)+'</button>';
+  if(nextStep) out+='<button type="button" class="bw-act bw-act-primary" data-do="scGoStep" data-a="'
+    +attrEsc(nextStep.id)+'">'+ciEsc(nextStep.nav)+' &rarr;</button>';
+  if(offSequence) out+='<button type="button" class="bw-act bw-act-secondary" data-do="scGoStep" data-a="start">Back to the steps</button>';
+  out+='<button type="button" class="bw-act bw-act-text" data-do="scSaveDraft">Save and come back to it</button>';
+  return out;
+}
+
+/* ---------------------------------------------------- where this stands */
+
+/**
+ * What the form can currently produce.
+ *
+ * `scReadiness()` in scenario.mjs owns this question for the fields the
+ * scenario model holds, and it is asked for those. It does not hold the
+ * route or the cost rows — the scenario carries a single pass rate where
+ * the form carries a multi-stage route, and those are genuinely different
+ * models — so those two are read from the form here rather than squeezed
+ * into a field that would misreport them.
+ */
+function scAssess(){
+  var B=window.BW;
+  var present={};
+  for(var id in SC_FIELD_HELP){
+    var el=document.getElementById(id);
+    present[id]=Boolean(el&&String(el.value).trim()!=="")&&!_scUnknown[id];
+  }
+
+  var stages=0;
+  for(var i=0;i<_scStages.length;i++){
+    if(String(_scStages[i][0]).trim()&&String(_scStages[i][1]).trim())stages++;
+  }
+
+  var costOn=0,costPriced=0,costGaps=[];
+  if(B&&B.COST_ELEMENTS){
+    B.COST_ELEMENTS.forEach(function(def){
+      var c=_scCosts[def.id];
+      if(!c||!c.on)return;
+      costOn++;
+      if(String(c.amount||"").trim()!=="")costPriced++;
+      else costGaps.push(def.label);
+    });
+  }
+
+  var need=function(ids){return ids.filter(function(x){return !present[x];});};
+  var planMissing=need(["sc-qty","sc-bw","sc-bl","sc-s1","sc-kerf","sc-edge"]);
+  if(scVal("sc-form")!=="bar"&&!present["sc-s2"])planMissing.push("sc-s2");
+  var massMissing=planMissing.concat(need(["sc-bt","sc-dv"]));
+
+  return {
+    has:function(id){return Boolean(present[id]);},
+    unknowns:scUnknownFields(),
+    unknownIds:Object.keys(_scUnknown).filter(function(k){return _scUnknown[k];}),
+    planMissing:planMissing,
+    massMissing:massMissing,
+    planReady:planMissing.length===0,
+    massReady:massMissing.length===0,
+    costReady:massMissing.length===0&&costOn>0&&costGaps.length===0,
+    costOn:costOn, costPriced:costPriced, costGaps:costGaps,
+    stages:stages,
+    requirements:(typeof _scReqs!=="undefined"?_scReqs.length:0),
+    ran:Boolean(_scLast&&_scLast.plan)
+  };
+}
+
+/** The single most useful thing to do next, and where it lives. */
+function scNextAction(a){
+  if(a.unknownIds.length) return {
+    say:"Get an answer to "+a.unknowns.join(", ")+". The question to ask is under the field.",
+    step:"part", label:"Prepare the questions", act:"scAskQuestions"};
+  if(!a.planReady) return {
+    say:"Fill in "+a.planMissing.map(function(id){return SC_FIELD_HELP[id]?scFieldLabel(id):id;}).join(", ")
+      +" and a material plan becomes available.",
+    step:a.planMissing[0]==="sc-qty"||a.planMissing[0]==="sc-bw"||a.planMissing[0]==="sc-bl"?"part":"material"};
+  if(!a.ran) return {say:"Everything a material plan needs is present. Work it out.",step:"result"};
+  if(!a.massReady) return {
+    say:"Add the blank thickness and a density and the purchased weight follows.",step:"material"};
+  if(a.costOn===0) return {say:"Switch on the cost elements that apply to this part.",step:"cost"};
+  if(a.costGaps.length) return {
+    say:"No amount yet for "+a.costGaps.join(", ")+". Until there is, the cost per part stays withheld.",
+    step:"cost", label:"Prepare the questions", act:"scAskQuestions"};
+  if(a.requirements===0) return {
+    say:"A complete cost. Recording the requirements makes the review package worth sending.",step:"requirements"};
+  return {say:"Complete. Prepare the package for technical review.",step:"review"};
+}
+
+function scFieldLabel(id){
+  var el=document.getElementById(id);
+  var lab=el&&el.closest?el.closest(".bw-field"):null;
+  if(!lab)return id;
+  var t=String(lab.textContent||"").split("\n")[0].trim();
+  return t?t.replace(/What does this mean\?[\s\S]*$/,"").trim():id;
+}
+
+/** The persistent summary. Same figures in both views; material risks always. */
+function scRenderSummary(){
+  var host=document.getElementById("sc-guided-summary");
+  if(!host)return;
+  var a=scAssess();
+  var n=scNextAction(a);
+
+  var chip=function(ok,label){
+    return '<span class="bw-status bw-status--'+(ok?"evidenced":"review")+'">'
+      +'<span class="bw-dot" style="background:'+(ok?"var(--bw-success)":"var(--bw-warning)")+'"></span>'
+      +ciEsc(label)+(ok?" available":" blocked")+'</span>';
+  };
+
+  var risks="";
+  if(a.unknownIds.length){
+    risks='<p class="bw-verdict-sub"><b style="color:var(--bw-warning)">Unanswered on purpose:</b> '
+      +ciEsc(a.unknowns.join(", "))+'. Nothing has been assumed in their place.</p>';
+  }
+
+  host.innerHTML='<div class="bw-verdict">'
+    +'<div class="bw-verdict-head">Where this stands</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+    +chip(a.planReady,"Material plan")+chip(a.massReady,"Purchased weight")+chip(a.costReady,"Cost per part")
+    +'</div>'
+    +risks
+    +'<p class="bw-verdict-sub"><b>Next:</b> '+ciEsc(n.say)+'</p>'
+    +'<div class="bw-verdict-acts">'
+    +(n.act?'<button type="button" class="bw-act bw-act-primary" data-do="'+attrEsc(n.act)+'">'+ciEsc(n.label)+'</button>':'')
+    +'<button type="button" class="bw-act bw-act-secondary" data-do="scGoStep" data-a="'+attrEsc(n.step)+'">Take me there</button>'
+    +'</div></div>';
+}
+
+/* ------------------------------------------------- the optional model */
+
+function scShowBuilder(){
+  var b=document.getElementById("sc-builder");
+  var call=document.getElementById("sc-model-call");
+  if(b)b.hidden=false;
+  if(call){
+    var btn=call.querySelector("[data-do=scShowBuilder]");
+    if(btn)btn.setAttribute("aria-expanded","true");
+  }
+  if(typeof scRenderBuilder==="function")scRenderBuilder();
+  /* In the guided view the stage is assembled per step, so revealing the
+     builder has to redraw it — otherwise the panel is un-hidden somewhere
+     the current step is not showing, and the button appears to do nothing. */
+  if(_scView==="guided")scRenderGuided();
+  if(b&&typeof b.scrollIntoView==="function")b.scrollIntoView({block:"nearest"});
+}
+
+function scHideBuilder(){
+  var b=document.getElementById("sc-builder");
+  var call=document.getElementById("sc-model-call");
+  if(b)b.hidden=true;
+  if(call){
+    var btn=call.querySelector("[data-do=scShowBuilder]");
+    /* Focus goes back to the control that opened it, rather than being left
+       on a button that has just been hidden. */
+    if(btn){btn.setAttribute("aria-expanded","false");if(typeof btn.focus==="function")btn.focus();}
+  }
+  if(_scView==="guided")scRenderGuided();
+}
+
+/* --------------------------------------------- questions for the gaps */
+
+/**
+ * Every open question this scenario has, in one place, ready to send.
+ *
+ * Assembled from what is actually unanswered — the fields somebody marked
+ * unknown, the fields still empty, and the cost elements switched on with
+ * no amount. Nothing is invented: each line is the question already written
+ * against that field, or the element's own stated basis requirement.
+ */
+function scAskQuestions(){
+  var host=document.getElementById("sc-questions");
+  if(!host)return;
+  var a=scAssess();
+  var lines=[];
+
+  a.unknownIds.forEach(function(id){
+    var h=SC_FIELD_HELP[id];
+    if(h)lines.push({who:h.askWho,q:h.ask,why:"You marked this as not known."});
+  });
+  a.planMissing.concat(a.massMissing).forEach(function(id){
+    if(a.unknownIds.indexOf(id)>=0)return;
+    var h=SC_FIELD_HELP[id];
+    if(h&&!lines.some(function(l){return l.q===h.ask;}))
+      lines.push({who:h.askWho,q:h.ask,why:"Still empty, and it blocks a result."});
+  });
+  a.costGaps.forEach(function(label){
+    lines.push({who:"the supplier",
+      q:"Can you break out "+label.toLowerCase()+" for this part, and say what it is based on?",
+      why:"Switched on with no amount, so the cost per part is withheld."});
+  });
+
+  if(!lines.length){
+    host.innerHTML='<div class="bw-gapcard" style="border-left-color:var(--bw-success)">'
+      +'<p class="bw-gapcard-q">Nothing is outstanding.</p>'
+      +'<p class="bw-gapcard-l">Every field this calculation reads has an answer, and every cost element '
+      +'switched on has an amount. Anything still uncertain is a matter of how good the answers are, '
+      +'which is a judgement rather than a gap.</p></div>';
+    return;
+  }
+
+  var byWho={};
+  lines.forEach(function(l){ (byWho[l.who]=byWho[l.who]||[]).push(l); });
+
+  var html='<div class="bw-panel" style="margin-top:var(--bw-4)">'
+    +'<div class="bw-panel-head"><div class="bw-panel-title">Questions to ask</div>'
+    +'<span class="bw-status bw-status--derived">'+lines.length+' open</span></div>'
+    +'<p style="color:var(--bw-muted);font-size:12.5px;margin:0 0 var(--bw-4);line-height:1.6">'
+    +'Nothing is sent from here. These are the questions this scenario is actually waiting on, '
+    +'grouped by who can answer them.</p>';
+  for(var who in byWho){
+    html+='<div class="eyebrow" style="margin:var(--bw-4) 0 6px">For '+ciEsc(who)+'</div>'
+      +'<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:var(--bw-body)">'
+      +byWho[who].map(function(l){
+        return '<li><b style="color:var(--bw-text)">'+ciEsc(l.q)+'</b><br>'
+          +'<span style="color:var(--bw-muted)">'+ciEsc(l.why)+'</span></li>';
+      }).join("")+'</ul>';
+  }
+  html+='</div>';
+  host.innerHTML=html;
+  if(typeof host.scrollIntoView==="function")host.scrollIntoView({block:"nearest"});
+}
+
 function scBind(){
   var page=document.getElementById("page-shouldcost");
   if(!page||page.dataset.scBound)return;
@@ -5905,6 +6801,10 @@ function scBind(){
   scRenderDrafts();
   scReqKindChanged();
   scRenderBuilder();
+  /* The panels' homes are recorded before anything can move them, so the
+     expert layout can always be restored exactly as the markup had it. */
+  scCapturePanels();
+  scRenderSummary();
   exBind(page);
   page.addEventListener("change",function(e){
     if(e.target&&e.target.id==="sc-form")scFormLabels();
@@ -5916,7 +6816,12 @@ function scBind(){
       scTouched(e.target.id);
       scRenderFieldStates();
     }
+    /* The summary answers "where does this stand", so it has to follow the
+       typing rather than the run — including the cost rows and the route,
+       which have no entry in SC_FIELD_HELP. */
+    if(_scView==="guided")scRenderSummary();
   });
+  page.addEventListener("change",function(){ if(_scView==="guided")scRenderSummary(); });
   page.addEventListener("click",function(e){
     var m=e.target&&e.target.closest?e.target.closest("[data-sc-mode]"):null;
     if(m){ctSwitch(m.dataset.scMode);return;}
@@ -5941,7 +6846,9 @@ function scBind(){
     if(!t)return;
     var act=t.dataset.scAct;
     if(act==="run")scRun();
-    else if(act==="example")scExample();
+    /* Named explicitly. There are two examples now, and a bare call would
+       silently pick whichever the default happened to be. */
+    else if(act==="example")scExample("complete");
     else if(act==="clear")scClear();
     else if(act==="add-stage"){_scStages.push(["","","0","input"]);scRenderStages();}
     else if(act==="save"){bcSave();}
@@ -10159,6 +11066,14 @@ async function send(id,text){
    `window[name]` lookup. */
 registerActions({
   scEntry: function (which) { scEntry(which); },
+  scView: function (which) { scView(which); },
+  scGoStep: function (id) { scGoStep(id); },
+  scGoal: function (which) { scGoal(which); },
+  scExample: function (which) { scExample(which); },
+  scShowBuilder: function () { scShowBuilder(); },
+  scHideBuilder: function () { scHideBuilder(); },
+  scAskQuestions: function () { scAskQuestions(); },
+  scSeeWorking: function () { scSeeWorking(); },
   scDontKnow: function (id) { scDontKnow(id); },
   scSaveDraft: function () { scSaveDraft(); },
   scNewDraft: function () { scNewDraft(); },

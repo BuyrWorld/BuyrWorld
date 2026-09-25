@@ -40,6 +40,16 @@ further down the page.
 | **v5 Phase 5** — a model written and read back exactly | built | `src/studio/model-io.mjs` |
 | The part carried into the costing form, deliberately | built | `src/studio/to-cost.mjs` |
 | Confirmed drawing dimensions reaching the builder | built | `src/studio/from-drawing.mjs` |
+| **v6 Phase 1** — guided and expert views over one scenario | built | `scView`, `SC_STEPS` in `app.js` |
+| Panels moved between layouts, never duplicated | built, executed in tests | `scCapturePanels`, `scPanelsHome` |
+| A missing answer that produces a question to ask | built | `SC_FIELD_HELP`, `scGapCardHTML` |
+| What each gap costs you, and what survives it | built | `scStillAvailable` |
+| Every open question in one place, grouped by who answers | built | `scAskQuestions` |
+| The result leading with what it establishes | built | `scVerdictHTML` |
+| Two worked examples, complete and with a gap | built | `scExample` |
+| The optional model behind an explicit action | built | `scShowBuilder` |
+| The commercial basis in the review package | built | `scCommercialBasis`, `review-export.mjs` |
+| Capability wording reconciled with what runs | built | the capability table in `index.html` |
 
 ## What does not exist
 
@@ -51,7 +61,7 @@ further down the page.
 | Working dictation | The machinery is built and tested; no recogniser is handed to it. The browser's own sends audio to the vendor, and this site says it sends nothing anywhere. Switching it on is a decision about that. |
 | A configured extraction service | `src/intake/extract-document.mjs` reads by rule, offline, and proposes unconfirmed candidates. |
 | Model-to-cost linkage, automatic | Still deliberate, and now built as the explicit transfer the audit asked for: allowances are typed, the blank is worked out, and a person carries it over with their name against it. Purchased mass never crosses — that follows from the layout and the stock actually bought. |
-| Any browser verification | See below. |
+| Any browser verification | See below. Still true after v6 Phase 1: the view switching is executed against a DOM shim in `tests/integration/should-cost-view-switch.test.mjs`, which found a real `insertBefore` fault that source-reading tests had passed over — but a shim is not a browser and says nothing about layout, focus order, touch or paint. |
 | Any real case | The corpus is zero. Every engine has only met synthetic fixtures. |
 
 ## What to do next

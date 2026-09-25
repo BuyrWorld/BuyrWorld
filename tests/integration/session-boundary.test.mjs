@@ -354,8 +354,17 @@ describe("everything per-scenario is cleared", () => {
     const clear = fnSource("scClearSession", app);
 
     /* Not per-scenario: the entry mode is a presentation preference, and the
-       field-help table is a constant. */
-    const exempt = new Set(["_scEntry", "_scStages", "_scCosts"]);
+       field-help table is a constant.
+
+       The four view variables are the same kind of thing. Which view somebody
+       prefers, which step they are on and which goal they picked describe the
+       person rather than the part, and clearing them would throw an expert
+       back into the guided view every time they started a new scenario.
+       `_scPanelHome` is a map of where the markup puts each panel — a fact
+       about the document, identical for every scenario, and clearing it would
+       strand the panels wherever they happened to be. */
+    const exempt = new Set(["_scEntry", "_scStages", "_scCosts",
+                            "_scView", "_scStep", "_scGoal", "_scPanelHome"]);
 
     const missing = declared.filter((v) => !exempt.has(v) && !clear.includes(v));
     assert.deepEqual(missing, [],

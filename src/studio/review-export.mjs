@@ -244,6 +244,10 @@ export function scheduleJson(snap) {
       awaitingModel: snap.schedule.waitingForGeometry,
       readyToRequestReview: snap.schedule.readyToRequestReview,
     },
+    /* The same commercial basis the notes carry, for a system reading this
+       rather than a person. Null when there is none — an empty object would
+       read as a costing that came to nothing. */
+    commercialBasis: snap.scenario ?? null,
     notIncluded: unavailable(),
   }, null, 2);
 }
@@ -297,7 +301,121 @@ export function reviewNotes(snap) {
         ...s.conflicts.map((c) => `- ${c.why}`), ""]
       : []),
     ...(s.nextQuestion ? ["## The first thing to settle", "", s.nextQuestion, ""] : []),
+    ...commercialNotes(snap.scenario),
   ].join("\n");
+}
+
+/**
+ * The commercial basis, for the engineer being asked to check it.
+ *
+ * A reviewer sent a requirement schedule with no costing does not know which
+ * of their answers is worth money, and a reviewer sent a cost with no
+ * provenance cannot tell a quoted figure from somebody's guess. So this
+ * section exists, and its first job is to say which of four things each
+ * number is.
+ *
+ * Nothing here calculates. Every figure arrives already worked out and
+ * already formatted by the engine that owns it — money is exact integer
+ * arithmetic on BigInt in `src/calc/`, and re-deriving any of it in a
+ * presentation module is precisely how two documents come to disagree.
+ */
+function commercialNotes(c) {
+  if (!c) return [];
+  const out = [
+    "## The commercial basis",
+    "",
+    "**How to read the figures below.** They are four different kinds of thing and",
+    "are labelled as such throughout:",
+    "",
+    "- **Calculated** — worked out by this tool from the inputs recorded here, by exact arithmetic.",
+    "- **Asserted** — typed in or accepted by the person named above. Their being confident is not evidence.",
+    "- **Assumed** — a stated stand-in, carried because nothing better was available. Never silently filled.",
+    "- **Illustration** — drawn to help somebody picture the part. Not geometry, not a tolerance, not a source of any figure.",
+    "",
+    /* Deliberately not the obvious wording. Saying nothing here "has been
+       approved" puts that word on the page, and FORBIDDEN refuses it for the
+       reason it was written: a reviewer skim-reading a heading should never
+       meet it on a draft, even inside a denial. */
+    "**Nobody technical has checked any of this yet.** That is what it is being",
+    "sent to ask for.",
+    "",
+  ];
+
+  if (c.demand) {
+    out.push("### Quantities — calculated", "",
+      `- Accepted parts required: ${c.demand.acceptedParts} *(asserted)*`,
+      `- Blanks released into production: ${c.demand.blanksToRelease} *(calculated)*`,
+      `- Stock units to buy: ${c.demand.stockUnitsToBuy} *(calculated)*`,
+      ...(c.demand.purchasedMass ? [`- Purchased mass: ${c.demand.purchasedMass} *(calculated from an asserted density)*`] : []),
+      "");
+  }
+
+  if (c.route && c.route.length) {
+    out.push("### The process route — proposed, not confirmed", "",
+      "This is the route as the buyer understands it. **Confirming or correcting it is",
+      "one of the things this package is asking for.**", "",
+      "| Operation | Yield | Setup / test pieces | In | Good out |",
+      "|---|---|---|---|---|",
+      ...c.route.map((r) =>
+        `| ${r.name} | ${r.yield} | ${r.fixedPieces} | ${r.requiredInput ?? "—"} | ${r.goodOutput ?? "—"} |`),
+      "");
+  }
+
+  if (c.cost) {
+    out.push(`### Cost — ${c.cost.complete ? "every element priced" : "incomplete"}`, "");
+    if (!c.cost.complete) {
+      out.push("**This is not a should-cost.** Elements below have no figure, so what is shown",
+        "is a subtotal of the ones that do and must not be quoted as a total.", "");
+    }
+    out.push("| Element | Amount | Basis | Where it came from |", "|---|---|---|---|",
+      ...c.cost.lines.map((l) =>
+        `| ${l.label}${l.oneTime ? " (one-time)" : ""}${l.credit ? " (credit)" : ""} `
+        + `| ${l.amount ?? "**no figure**"} | ${l.quality ?? "—"} | ${l.basis || "not recorded"} |`),
+      "",
+      `- Recurring ${c.cost.complete ? "total" : "subtotal so far"}: ${c.cost.currency} ${c.cost.recurringSubtotal}`,
+      ...(c.cost.oneTime ? [`- One-time charges, kept separate: ${c.cost.currency} ${c.cost.oneTime}`] : []),
+      `- Per accepted part: ${c.cost.perAcceptedPart
+        ? `${c.cost.currency} ${c.cost.perAcceptedPart}`
+        : "**withheld** while the estimate has gaps"}`,
+      "");
+    if (c.cost.excluded && c.cost.excluded.length) {
+      out.push("Switched off as not applying to this part, which is a decision rather than a gap:", "",
+        ...c.cost.excluded.map((e) => `- ${e}`), "");
+    }
+  }
+
+  if (c.assumptions && c.assumptions.length) {
+    out.push("### Assumptions this rests on", "",
+      "| What | Value | Basis | What it affects |", "|---|---|---|---|",
+      ...c.assumptions.map((a) => `| ${a.what} | ${a.value} | ${a.basis} | ${a.affects} |`),
+      "");
+  }
+
+  if (c.notKnown && c.notKnown.length) {
+    out.push("### Declared unknown", "",
+      "Somebody looked at these and could not answer them. **Nothing has been assumed in",
+      "their place**, which is why some figures above are withheld rather than estimated.", "",
+      ...c.notKnown.map((n) => `- ${n}`), "");
+  }
+
+  if (c.gaps && c.gaps.length) {
+    out.push("### Questions this package is asking", "",
+      ...c.gaps.map((g) => `- **${g.ask}**${g.askWho ? ` — for ${g.askWho}.` : ""}${g.why ? ` ${g.why}` : ""}`),
+      "");
+  }
+
+  if (c.sources && c.sources.length) {
+    out.push("### Where the read values came from", "",
+      "Each was matched from a document by written rule and then accepted by a person.",
+      "**A person accepting a value is not a check that it is technically right** — it",
+      "records that they read it and agreed it says what it says.", "",
+      "| Field | Value | Document | Page | Matched from |", "|---|---|---|---|---|",
+      ...c.sources.map((s) =>
+        `| ${s.field} | ${s.value ?? "—"} | ${s.document ?? "—"} | ${s.page ?? "—"} | \`${String(s.text ?? "").replace(/\|/g, "\\|")}\` |`),
+      "");
+  }
+
+  return out;
 }
 
 const unavailable = () => Object.entries(FORMATS)

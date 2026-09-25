@@ -82,14 +82,29 @@ function form({ values = {}, unknown = {} } = {}) {
 
   vm.createContext(sandbox);
   vm.runInContext(
-    [helpSource(), `var _scUnknown=${JSON.stringify(unknown)};`, "var _scSource={};",
+    [helpSource(),
       fnSource("scFieldName", app), fnSource("scFieldState", app), fnSource("scStateDot", app),
       fnSource("scAnnotate", app), fnSource("scRenderFieldStates", app),
       fnSource("scDontKnow", app), fnSource("scUnknownFields", app),
-      /* scDontKnow records the edit now, so a later extraction cannot quietly
+      /* "I don't know" now produces a next step rather than a disabled box:
+         the question to ask, who to ask it of, and what is still available
+         without the answer. Its two helpers go in with it. */
+      fnSource("scGapCardHTML", app), fnSource("scStillAvailable", app),
+      fnSource("scBlocksOf", app),
+      "function scTouched(id){ if(SC_FIELD_HELP[id]) _scEdited[id]=new Date().toISOString(); }",
+
+      /* The state variables go in *after* every extracted function, and that
+         ordering is load-bearing. fnSource slices from one `function` to the
+         next, so a helper that happens to be followed by top-level `var`
+         declarations carries them along — scBlocksOf is followed by exactly
+         these three. Declared first, they were silently reset to empty by the
+         slice, and every "I don't know" test read the field as merely Missing.
+         Declared last, the fixture wins. */
+      "var _scSource={};",
+      /* scDontKnow records the edit, so a later extraction cannot quietly
          overrule somebody saying they do not know. */
       "var _scEdited={};",
-      "function scTouched(id){ if(SC_FIELD_HELP[id]) _scEdited[id]=new Date().toISOString(); }",
+      `var _scUnknown=${JSON.stringify(unknown)};`,
     ].join("\n"),
     sandbox);
 
