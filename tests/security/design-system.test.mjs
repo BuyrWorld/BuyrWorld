@@ -13,7 +13,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 
 import { pageSource } from "../helpers/page.mjs";
 
@@ -462,5 +462,39 @@ describe("styling hooks in the markup actually resolve", () => {
     assert.match(readFileSync("index.html", "utf8"),
       /id="studio-viewport" class="bw-panel bw-viewport"/,
       "the preview host lost .bw-panel, so everything initStudio() writes into it loses its box");
+  });
+});
+
+/* ------------------------------------------- the stylesheet actually arrives */
+
+/**
+ * The studio stylesheet is versioned in the link that asks for it.
+ *
+ * index.html and studio-enhancements.css are two requests with two cache
+ * entries, and nothing ties them together. A browser holding fresh markup and
+ * a stale stylesheet renders every new class as unstyled text — which is
+ * exactly what shipped: the view switcher and the worked examples arrived as
+ * bare words running together, because the rules for them were in a file the
+ * browser thought it already had.
+ *
+ * A query string is enough. The new URL cannot be answered from the cache
+ * entry made for the old one, so markup and rules move together.
+ */
+describe("the studio stylesheet cannot go stale against the page", () => {
+  const markup = readFileSync("index.html", "utf8");
+
+  test("the link carries a version", () => {
+    const link = (markup.match(/<link[^>]+studio-enhancements\.css[^>]*>/) || [])[0];
+    assert.ok(link, "the studio stylesheet is not linked at all");
+    assert.match(link, /studio-enhancements\.css\?v=[A-Za-z0-9._-]+/,
+      "the stylesheet is requested without a version, so a stale copy can outlive a deploy");
+  });
+
+  test("the file it names is the file in the tree", () => {
+    /* A version bumped onto a path that does not exist would 404 silently and
+       take every rule with it. */
+    const href = (markup.match(/href="\/([^"?]+\.css)(\?[^"]*)?"/) || [])[1];
+    assert.ok(href, "no stylesheet href found");
+    assert.ok(existsSync(href), `the page links /${href}, which is not in the tree`);
   });
 });

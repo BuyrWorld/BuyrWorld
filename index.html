@@ -34,7 +34,12 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/studio-enhancements.css">
+<!-- Versioned deliberately. The page and this stylesheet are separate requests
+     with separate cache entries, so a browser can hold a fresh index.html and a
+     stale stylesheet — which renders the new markup with none of its rules, as
+     bare text. Bump `v` whenever this file changes; the new URL cannot be
+     served from a cache entry made for the old one. -->
+<link rel="stylesheet" href="/studio-enhancements.css?v=20260925b">
 <style>
 :root{
   /* ---- surfaces, darkest to lightest ---- */

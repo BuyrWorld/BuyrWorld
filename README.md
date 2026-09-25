@@ -54,7 +54,7 @@ The rules that matter, in `CLAUDE.md` and enforced by tests:
 - **Never log prompt content, document text or user input.** Metadata only.
 
 ```sh
-node scripts/verify.mjs      # 3,671 tests, 7 checks — run it before any deploy
+node scripts/verify.mjs      # 3,673 tests, 7 checks — run it before any deploy
 ```
 
 ## Where to look
