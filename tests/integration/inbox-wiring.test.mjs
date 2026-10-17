@@ -9,6 +9,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { realEscapers } from "../helpers/escapers.mjs";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -44,7 +45,7 @@ function run(text, { filename = "" } = {}) {
     go: (r) => routed.push(r),
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
-    attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+    attrEsc: realEscapers().attrEsc,
     FileReader: function () {},
     console,
     _els: els,

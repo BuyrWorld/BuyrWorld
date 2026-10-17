@@ -13,6 +13,7 @@
 
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { realEscapers } from "../helpers/escapers.mjs";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -40,7 +41,7 @@ function page({ scenarios = [] } = {}) {
     console,
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
-    attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+    attrEsc: realEscapers().attrEsc,
     go: (p) => went.push(p),
     scOpenDraft: (id) => opened.push(id),
     window: {
@@ -264,7 +265,7 @@ describe("since you were last here", () => {
       console,
       ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
         ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
-      attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+      attrEsc: realEscapers().attrEsc,
       localStorage: {
         getItem: (k) => (store.has(k) ? store.get(k) : null),
         setItem: (k, v) => store.set(k, String(v)),

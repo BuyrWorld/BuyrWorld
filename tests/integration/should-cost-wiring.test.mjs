@@ -15,6 +15,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { realEscapers } from "../helpers/escapers.mjs";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -74,7 +75,7 @@ function run(fields = {}, { stages, checked = false, costs = {}, amortise = fals
     },
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
-    attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+    attrEsc: realEscapers().attrEsc,
     console,
     _scStages: stages ?? [["Laser cut", "98", "0", "input"], ["Form", "95", "4", "input"]],
     _scCosts: costs,

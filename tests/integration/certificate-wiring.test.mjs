@@ -15,6 +15,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { realEscapers } from "../helpers/escapers.mjs";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -75,7 +76,7 @@ function run({ obs = EXAMPLE_OBS, reqs = EXAMPLE_REQS, header = {} } = {}) {
     },
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
-    attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+    attrEsc: realEscapers().attrEsc,
     console,
     _ctObs: obs.map((r) => [...r]),
     _ctReqs: reqs.map((r) => [...r]),

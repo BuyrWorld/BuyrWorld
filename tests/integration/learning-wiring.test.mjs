@@ -9,6 +9,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { realEscapers } from "../helpers/escapers.mjs";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -67,7 +68,7 @@ describe("the delegated listener", () => {
     const sandbox = {
       document: { getElementById: (id) => (id === "oc-args" ? host : null) },
       _ocArgs: rows,
-      attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+      attrEsc: realEscapers().attrEsc,
       console,
     };
     const src = html.slice(html.indexOf("function ocRenderArgs()"), html.indexOf("function ocMsg("));

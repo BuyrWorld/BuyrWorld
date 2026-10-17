@@ -17,6 +17,7 @@
 
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { realEscapers } from "../helpers/escapers.mjs";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -52,7 +53,7 @@ function studio({ values = {}, unknown = {}, edited = {},
     console,
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
-    attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+    attrEsc: realEscapers().attrEsc,
     window: {
       BW: {
         scenario, withField, scReadiness: readiness, scStarted, scLabelOf: labelOf,

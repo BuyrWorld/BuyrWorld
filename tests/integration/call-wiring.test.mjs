@@ -43,6 +43,7 @@ import {
 import { dictation, STATE as SPEECH_STATE, WHY_UNAVAILABLE as SPEECH_WHY }
   from "../../src/services/speech.mjs";
 import { saveCall, loadCalls, loadCall, newCallId } from "../../src/services/call-store.mjs";
+import { realEscapers, decodeAttr } from "../helpers/escapers.mjs";
 
 const app = readFileSync("app.js", "utf8");
 const p = (x) => ratioFromPercent(x);
@@ -69,7 +70,7 @@ function memory() {
   };
 }
 
-function page() {
+function page({ escapers } = {}) {
   const els = new Map();
   const store = memory();
   els.set("case-view", { id: "case-view", innerHTML: "" });
@@ -88,7 +89,8 @@ function page() {
     console,
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
-    attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+    attrEsc: realEscapers().attrEsc,
+    ...(escapers || {}),
     scVal: (id) => String((els.get(id) || {}).value || ""),
     window: {
       BW: {
@@ -226,6 +228,27 @@ describe("the sheet", () => {
     assert.match(v.block(), /Question 1 — yours/);
     v.render();
     assert.ok(v.block().includes("Which index did you actually use?"));
+  });
+
+  test("with the page's real escapers, & < > in a question come back exactly as typed", () => {
+    /* callSetQuestion redraws on every change and the box is then read back
+       from the field, so whatever the attribute decodes to is what gets kept.
+       Escaping it twice turned "&" into "&amp;", then "&amp;amp;", and so on. */
+    const real = page({ escapers: realEscapers() });
+    real.calculate(claim());
+    real.render();
+    real.open("before");
+    const typed = "Steel & energy <2025 base>, \"9%\"";
+    const fieldValue = () => {
+      const m = real.block().match(/value="([^"]*)"\s+placeholder="[^"]*"\s+aria-label="Question 1"/);
+      assert.ok(m, "the first question box was not found");
+      return decodeAttr(m[1]);
+    };
+    real.setQuestion(0, typed);
+    for (let redraw = 0; redraw < 3; redraw++) {
+      assert.equal(fieldValue(), typed, `changed after redraw ${redraw + 1}`);
+      real.setQuestion(0, fieldValue());
+    }
   });
 
   test("choosing a goal keeps it", () => {

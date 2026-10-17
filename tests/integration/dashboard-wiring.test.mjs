@@ -14,6 +14,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { realEscapers } from "../helpers/escapers.mjs";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -65,7 +66,7 @@ function render({ outcomes = [], cases = [] } = {}) {
     },
     ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
-    attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+    attrEsc: realEscapers().attrEsc,
     console,
   };
   // defPortfolio lives just above the dashboard and is what it reads from.
@@ -269,7 +270,7 @@ describe("the radar leads the workspace", () => {
       MI: {},
       ciEsc: (x) => String(x).replace(/[&<>"']/g, (c) =>
         ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
-      attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+      attrEsc: realEscapers().attrEsc,
       console,
     };
     const src = html.slice(html.indexOf("function defPortfolio(){"), html.indexOf("\nfunction defHistoryHTML(){"));

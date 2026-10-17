@@ -10,6 +10,7 @@
 
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { realEscapers } from "../helpers/escapers.mjs";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -75,7 +76,7 @@ function makeSandbox(store) {
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
     // The page escaper for attribute values; the case list writes ids into
     // data attributes and uses it exactly as the Inbox does.
-    attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+    attrEsc: realEscapers().attrEsc,
     console,
     _defRows: [],
     _defResult: null,

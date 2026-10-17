@@ -42,8 +42,9 @@ const ALLOWED = new Map([
     + "it is the module's own `why` sentence, and it goes through ciEsc"],
   ["rows", "saved-scenario rows this code built; the two values that come from "
     + "a person — the scenario name and its id — go through ciEsc in the text "
-    + "and attrEsc(ciEsc(…)) in every attribute, because attrEsc alone escapes "
-    + "only the quote and leaves raw angle brackets sitting in the attribute. "
+    + "and attrEsc, once, in every attribute; attrEsc escapes & < > \" and ', and "
+    + "a second escaper inside it doubled the ampersand "
+    + "(tests/security/attribute-roundtrip.test.mjs). "
     + "Everything else in the row is a literal or a count"],
 
   // Academy pathway content, hardcoded in this file.

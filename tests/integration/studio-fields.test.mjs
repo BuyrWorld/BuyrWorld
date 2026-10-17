@@ -17,6 +17,7 @@
 
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { realEscapers } from "../helpers/escapers.mjs";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -80,7 +81,7 @@ function form({ values = {}, unknown = {}, assumed = {}, source = {} } = {}) {
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
     /* The gap card carries the field id into a data- attribute, so the
        attribute escaper is a dependency of it as well. */
-    attrEsc: (x) => String(x).replace(/"/g, "&quot;"),
+    attrEsc: realEscapers().attrEsc,
   };
 
   vm.createContext(sandbox);

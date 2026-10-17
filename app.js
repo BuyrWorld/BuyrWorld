@@ -1715,13 +1715,13 @@ function practiceSetupHTML(){
 
   var goals = Object.keys(B.PRACTICE_GOAL).map(function(k){
     var g = B.PRACTICE_GOAL[k];
-    return '<option value="' + attrEsc(ciEsc(g)) + '">'
+    return '<option value="' + attrEsc(g) + '">'
       + ciEsc(B.CALL_GOAL_SAID[g] || g) + '</option>';
   }).join("");
 
   var levels = Object.keys(B.PRACTICE_DIFFICULTY).map(function(k){
     var d = B.PRACTICE_DIFFICULTY[k];
-    return '<option value="' + attrEsc(ciEsc(d)) + '"'
+    return '<option value="' + attrEsc(d) + '"'
       + (d === B.PRACTICE_DIFFICULTY.STEADY ? ' selected' : '') + '>'
       + ciEsc(d.charAt(0).toUpperCase() + d.slice(1) + " — " + B.PRACTICE_DIFFICULTY_SAID[d])
       + '</option>';
@@ -1766,7 +1766,7 @@ function practiceSessionHTML(){
   var moves = Object.keys(B.PRACTICE_MOVE).map(function(k){
     var m = B.PRACTICE_MOVE[k];
     return '<button class="bw-act bw-act-secondary" style="margin:0" data-do="practiceSay"'
-      + ' data-a="' + attrEsc(ciEsc(m)) + '">' + ciEsc(B.PRACTICE_MOVE_SAID[m]) + '</button>';
+      + ' data-a="' + attrEsc(m) + '">' + ciEsc(B.PRACTICE_MOVE_SAID[m]) + '</button>';
   }).join("");
 
   return '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">'
@@ -1783,7 +1783,7 @@ function practiceSessionHTML(){
 function practiceMovesHTML(moves){
   return '<label class="bw-field" style="margin:0 0 8px;max-width:52ch">'
     + 'In your own words (optional)'
-    + '<input class="bwin" id="practice-said" value="' + attrEsc(ciEsc(_practiceSaid))
+    + '<input class="bwin" id="practice-said" value="' + attrEsc(_practiceSaid)
     + '" placeholder="Which index, and from when?" aria-label="What you would say"'
     + ' data-inp="practiceSaid$self"></label>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap">' + moves + '</div>'
@@ -1930,7 +1930,7 @@ function callHTML(){
       var open = pair[0] === _callScreen;
       return '<button class="bw-act ' + (open ? "bw-act-primary" : "bw-act-secondary")
         + '" style="margin:0" aria-pressed="' + (open ? "true" : "false")
-        + '" data-do="callOpen" data-a="' + attrEsc(ciEsc(pair[0])) + '">'
+        + '" data-do="callOpen" data-a="' + attrEsc(pair[0]) + '">'
         + ciEsc(pair[1]) + '</button>';
     }).join("");
 
@@ -1957,16 +1957,16 @@ function callBeforeHTML(){
   if (!sheet) return "";
 
   var goals = B.CALL_GOALS.map(function(g){
-    return '<option value="' + attrEsc(ciEsc(g)) + '"' + (sheet.goal === g ? ' selected' : '')
+    return '<option value="' + attrEsc(g) + '"' + (sheet.goal === g ? ' selected' : '')
       + '>' + ciEsc(B.CALL_GOAL_SAID[g]) + '</option>';
   }).join("");
 
   var questions = sheet.questions.map(function(q, i){
     return '<label class="bw-field" style="margin:0 0 8px">'
       + ciEsc("Question " + (i + 1)) + (q.mine ? ciEsc(" — yours") : "")
-      + '<input class="bwin" value="' + attrEsc(ciEsc(q.said || ""))
-      + '" placeholder="' + attrEsc(ciEsc(q.said ? "" : "yours to write"))
-      + '" aria-label="' + attrEsc(ciEsc("Question " + (i + 1))) + '"'
+      + '<input class="bwin" value="' + attrEsc(q.said || "")
+      + '" placeholder="' + attrEsc(q.said ? "" : "yours to write")
+      + '" aria-label="' + attrEsc("Question " + (i + 1)) + '"'
       + ' data-chg="callSetQuestion$self" data-a="' + i + '"></label>'
       + (q.why
           ? '<p style="margin:-4px 0 10px;font-size:11px;color:var(--bw-muted);line-height:1.5">'
@@ -2109,10 +2109,10 @@ function callItemHTML(item, i){
   var controls = decided ? "" :
     '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-top:6px">'
     + '<label class="bw-field" style="margin:0">What was agreed'
-    + '<input class="bwin" id="call-what-' + i + '" value="' + attrEsc(ciEsc(item.what))
+    + '<input class="bwin" id="call-what-' + i + '" value="' + attrEsc(item.what)
     + '" aria-label="What was agreed"></label>'
     + '<label class="bw-field" style="margin:0">By when'
-    + '<input class="bwin" id="call-date-' + i + '" value="' + attrEsc(ciEsc(item.date || ""))
+    + '<input class="bwin" id="call-date-' + i + '" value="' + attrEsc(item.date || "")
     + '" placeholder="2026-10-12" aria-label="By when"></label>'
     + '<button class="bw-act bw-act-primary" style="margin:0" data-do="callConfirm" data-a="' + i
     + '">That is right</button>'
@@ -2460,7 +2460,7 @@ function caseSceneQuestionHTML(q){
       ? '<span style="color:var(--bw-subtle);margin-left:6px">confirmed</span>'
       : '<button class="bw-act bw-act-secondary"'
         + ' style="padding:1px 7px;font-size:10.5px;margin-left:6px"'
-        + ' data-do="caseConfirm" data-a="' + attrEsc(ciEsc(q.assumption))
+        + ' data-do="caseConfirm" data-a="' + attrEsc(q.assumption)
         + '">I have checked this</button>';
   }
 
@@ -2529,7 +2529,7 @@ function whatIfHTML(){
     var open = kind === _whatIfKind;
     return '<button class="bw-act ' + (open ? "bw-act-primary" : "bw-act-secondary")
       + '" style="margin:0" aria-pressed="' + (open ? "true" : "false")
-      + '" data-do="whatIfOpen" data-a="' + attrEsc(ciEsc(kind)) + '">'
+      + '" data-do="whatIfOpen" data-a="' + attrEsc(kind) + '">'
       + ciEsc(B.SCENARIO_TITLE[kind]) + '</button>';
   }).join("");
 
@@ -2551,14 +2551,17 @@ function whatIfPanelHTML(base, kind){
 
   var fields = B.SCENARIO_NEEDS[kind].map(function(need){
     var field = need[0], question = need[1];
-    /* attrEsc(ciEsc(…)), not attrEsc alone: attrEsc escapes the quote and
-       leaves raw angle brackets sitting in the attribute, which is how a
-       typed value becomes markup the moment anything moves it. */
+    /* attrEsc alone, exactly once. It escapes & < > " and ', which is
+       everything an attribute needs. Wrapping it round ciEsc escaped the
+       ampersand twice: the browser decodes an attribute once, so "Steel &
+       energy" came back as "Steel &amp; energy" and grew each time it was
+       read back and re-rendered. tests/security/attribute-roundtrip.test.mjs
+       holds this. */
     return '<label class="bw-field" style="margin:0">' + ciEsc(question)
       + '<input class="bwin" value="'
-      + attrEsc(ciEsc(String(typed[field] == null ? "" : typed[field])))
-      + '" aria-label="' + attrEsc(ciEsc(question)) + '"'
-      + ' data-inp="whatIfSet$self" data-a="' + attrEsc(ciEsc(field)) + '"></label>';
+      + attrEsc(String(typed[field] == null ? "" : typed[field]))
+      + '" aria-label="' + attrEsc(question) + '"'
+      + ' data-inp="whatIfSet$self" data-a="' + attrEsc(field) + '"></label>';
   }).join("");
 
   return '<div style="margin-top:var(--bw-4)">'
@@ -4727,14 +4730,14 @@ function scRenderDrafts(){
     var r=B.scReadiness(s);
     var open=s.id===_scScenarioId;
     return '<li class="bw-draft'+(open?" bw-draft--open":"")+'">'
-      +'<button type="button" class="bw-draft-open" data-do="scOpenDraft" data-a="'+attrEsc(ciEsc(s.id))+'">'
+      +'<button type="button" class="bw-draft-open" data-do="scOpenDraft" data-a="'+attrEsc(s.id)+'">'
       +ciEsc(s.name||s.id)+'</button>'
       +'<span class="bw-draft-state">'
       +(r.quantityPlan.ready?"Plan ready":"Draft")
       +(r.unknowns.length?" &middot; "+r.unknowns.length+" not known":"")
       +'</span>'
-      +'<button type="button" class="bw-draft-del" data-do="scDeleteDraft" data-a="'+attrEsc(ciEsc(s.id))+'"'
-      +' aria-label="Delete '+attrEsc(ciEsc(s.name||s.id))+'">Delete</button>'
+      +'<button type="button" class="bw-draft-del" data-do="scDeleteDraft" data-a="'+attrEsc(s.id)+'"'
+      +' aria-label="Delete '+attrEsc(s.name||s.id)+'">Delete</button>'
       +'</li>';
   }).join("");
 
@@ -4852,9 +4855,9 @@ function scCompareRow(item, kind){
     +(kind==="stale" ? '<div class="bw-cmp-note">You changed this while the drawing was being read, so it was left alone.</div>'
       : '<div class="bw-cmp-acts">'
         +'<button type="button" class="bw-act bw-act-secondary bw-act--sm" data-do="scAcceptOne" data-a="'
-        +attrEsc(ciEsc(item.name))+'">Use the drawing&rsquo;s</button>'
+        +attrEsc(item.name)+'">Use the drawing&rsquo;s</button>'
         +'<button type="button" class="bw-act bw-act-text bw-act--sm" data-do="scKeepOne" data-a="'
-        +attrEsc(ciEsc(item.name))+'">Keep mine</button></div>')
+        +attrEsc(item.name)+'">Keep mine</button></div>')
     +'</li>';
 }
 
@@ -5069,9 +5072,9 @@ function scReqKindChanged(){
        no author-visible association for anything reading the source, and a
        belt-and-braces name costs nothing on a control that is generated. */
     return '<label class="bw-field">'+ciEsc(f[1])
-      +'<input class="bwin" id="req-'+attrEsc(ciEsc(f[0]))+'"'
-      +' aria-label="'+attrEsc(ciEsc(f[1]))+'"'
-      +' placeholder="'+attrEsc(ciEsc(f[2]))+'"></label>';
+      +'<input class="bwin" id="req-'+attrEsc(f[0])+'"'
+      +' aria-label="'+attrEsc(f[1])+'"'
+      +' placeholder="'+attrEsc(f[2])+'"></label>';
   }).join("");
 }
 
@@ -5114,7 +5117,7 @@ function scRenderRequirements(){
       +(flags.length?'<div class="bw-req-flags">'+flags.map(function(f){
           return '<span class="bw-req-flag">'+ciEsc(f)+'</span>';}).join("")+'</div>':'')
       +'<button type="button" class="bw-req-del" data-do="scRemoveRequirement" data-a="'
-      +attrEsc(ciEsc(row.id))+'" aria-label="Remove '+attrEsc(ciEsc(row.label))+'">Remove</button>'
+      +attrEsc(row.id)+'" aria-label="Remove '+attrEsc(row.label)+'">Remove</button>'
       +'</li>';
   }).join("");
 
@@ -5340,7 +5343,7 @@ function scRenderPackage(){
   var files=m.files.map(function(f){
     return '<li class="bw-rev-file">'
       +'<button type="button" class="bw-rev-save" data-do="scSaveArtifact" data-a="'
-      +attrEsc(ciEsc(f.name))+'">'+ciEsc(f.name)+'</button>'
+      +attrEsc(f.name)+'">'+ciEsc(f.name)+'</button>'
       +'<span class="bw-rev-what">'+ciEsc(f.what||"")+'</span>'
       +'<code class="bw-rev-hash" title="SHA-256">'+ciEsc(f.sha256.slice(0,16))+'…</code>'
       +'</li>';
@@ -5580,7 +5583,7 @@ function scModelSvg(model){
     +" millimetres, with "+model.features.length+" feature(s)";
 
   return '<svg viewBox="0 0 '+vb+' '+(pad*2+L*k)+'" width="100%" role="img"'
-    +' aria-label="'+attrEsc(ciEsc(label))+'">'
+    +' aria-label="'+attrEsc(label)+'">'
     +'<rect x="'+pad+'" y="'+pad+'" width="'+(W*k)+'" height="'+(L*k)
     +'" fill="var(--bw-panel)" stroke="var(--bw-line-strong)" stroke-width="1"></rect>'
     +shapes
@@ -5642,9 +5645,9 @@ function toCostFieldsHTML(){
   return '<div class="bw-fields">' + Object.keys(B.BLANK_ALLOWANCES).map(function(name){
     return '<label class="bw-field" style="margin:0">' + ciEsc(B.BLANK_ALLOWANCES[name])
       + '<input class="bwin" inputmode="decimal" placeholder="mm"'
-      + ' value="' + attrEsc(ciEsc(_toCostAllowances[name] || ""))
-      + '" aria-label="' + attrEsc(ciEsc(B.BLANK_ALLOWANCES[name])) + '"'
-      + ' data-inp="toCostSet$self" data-a="' + attrEsc(ciEsc(name)) + '"></label>';
+      + ' value="' + attrEsc(_toCostAllowances[name] || "")
+      + '" aria-label="' + attrEsc(B.BLANK_ALLOWANCES[name]) + '"'
+      + ' data-inp="toCostSet$self" data-a="' + attrEsc(name) + '"></label>';
   }).join("") + '</div>';
 }
 
@@ -5831,8 +5834,8 @@ function scRenderBuilder(){
       ? "⌀"+scMm(f.diameterUm)+" at "+scMm(f.xUm)+", "+scMm(f.yUm)
       : scMm(f.widthUm)+" × "+scMm(f.lengthUm)+" × "+scMm(f.depthUm)+" deep at "+scMm(f.xUm)+", "+scMm(f.yUm);
     return '<li class="bw-pb-feature"><b>'+ciEsc(f.id)+'</b><span>'+ciEsc(what)+'</span>'
-      +'<button type="button" class="bw-pb-del" data-do="scRemoveFeature" data-a="'+attrEsc(ciEsc(f.id))+'"'
-      +' aria-label="Remove '+attrEsc(ciEsc(f.id))+'">Remove</button></li>';
+      +'<button type="button" class="bw-pb-del" data-do="scRemoveFeature" data-a="'+attrEsc(f.id)+'"'
+      +' aria-label="Remove '+attrEsc(f.id)+'">Remove</button></li>';
   }).join("");
 
   /* Volume and weight as a range when a round feature puts pi in the
