@@ -20,10 +20,12 @@ a supplier played by a table of rules.
 
 ## What it is not
 
-- **It has never been opened in a browser.** Everything is verified by
-  executing the code, including the served bytes under `node:vm`. That is blind
-  to layout, focus and touch. [`docs/BROWSER-CHECKS.md`](docs/BROWSER-CHECKS.md)
-  is the list of what that leaves unknown.
+- **It has not been checked systematically in a browser.** Everything is
+  verified by executing the code, including the served bytes under `node:vm`.
+  That is blind to layout, focus and touch — the three 25 September fixes were
+  all found by looking at the live page, which no check here could have done.
+  [`docs/BROWSER-CHECKS.md`](docs/BROWSER-CHECKS.md) is the list of what is
+  still unknown.
 - **Every case in it is synthetic.** No real supplier, no real drawing, no real
   price. No real case has been run end to end.
 - **It is not accurate at reading documents, and does not claim to be.** Values

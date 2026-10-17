@@ -458,7 +458,11 @@ describe("the evidence log's figures are the tree's figures", () => {
 
   test("and it still says the things that must not quietly improve", () => {
     /* Each of these is a sentence somebody would be glad to delete. */
-    assert.match(evidence, /has ever been opened in one/);
+    /* It used to pin "has ever been opened in one". That stopped being true
+       on 25 September, when three fixes came from somebody looking at the
+       live page. What is still true, and must not quietly improve, is that
+       none of the written browser checks has been run. */
+    assert.match(evidence, /none of the browser checks has been run/);
     assert.match(evidence, /BLOCKED/);
     assert.match(evidence, /No real case has been run end to end/);
     assert.match(evidence, /NOT RUN/);

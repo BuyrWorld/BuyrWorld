@@ -174,7 +174,12 @@ describe("the README says the same things the product does", () => {
   const readme = readFileSync("README.md", "utf8");
 
   test("it does not claim the browser pass has happened", () => {
-    assert.match(readme, /never been opened in a browser/);
+    /* Was "never been opened in a browser", which the 25 September fixes made
+       untrue. The claim that matters is the same: no systematic browser pass. */
+    assert.match(readme, /not been checked systematically in a browser/);
+    assert.equal(/checked (systematically )?in (a|every) browser\b(?! systematically)/.test(
+      readme.replace(/not been checked systematically in a browser/, "")), false,
+      "the README now claims a browser check that has not been done");
   });
 
   test("it says the data is synthetic, in the same words the site does", () => {

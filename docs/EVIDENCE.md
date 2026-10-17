@@ -28,13 +28,13 @@ rather than misleading a reader.
 | A part model survives being written and read | Write, read, write — identical byte for byte, including a dimension no float could hold. |
 | The page cannot ask the engine for something it does not have | `tests/security/engine-surface.test.mjs` compares all 254 names the page reads against the 364 the mount provides. A misspelling here is silent — every call site is guarded — so it is compared rather than trusted. |
 | Nothing is offered under a name it is not | `public-claims.test.mjs` reads every filename the product writes out and fails on a solid-model extension. |
-| 3,678 tests across 128 files, seven checks | `node scripts/verify.mjs`, on every push, Node 22 and 24. |
+| 3,678 tests across 128 files, seven checks | `node scripts/verify.mjs`, on every push, Node 22 and 24. Six more run only where the git-ignored `design-handoff/` pack is present, so they never run in CI. |
 
 ## Not evidenced, and why
 
 | Claim nobody should make | What is missing |
 |---|---|
-| **It works in a browser** | Nothing in this product has ever been opened in one. Every check above runs the served bytes under `node:vm`, which is blind to layout collisions, focus traps, controls unreachable by keyboard and text that clips at 200%. `docs/BROWSER-CHECKS.md` is 99 checks in the order worth doing them. |
+| **It works in a browser** | Not checked systematically. It has been looked at — the three 25 September fixes came from a person seeing the live page — but none of the browser checks has been run and recorded. Every check above runs the served bytes under `node:vm`, which is blind to layout collisions, focus traps, controls unreachable by keyboard and text that clips at 200%. `docs/BROWSER-CHECKS.md` is 99 checks in the order worth doing them. |
 | **The readings are accurate** | The corpus is two synthetic fixtures with recorded replies. `specs/03` is explicit that those test routing and evaluator behaviour only, and the production gate it describes — held-out real drawings at several quality levels — is BLOCKED. |
 | **The numbers are right about the real world** | Every engine has only met synthetic fixtures. No real case has been run end to end. One would teach more than the next feature. |
 | **A live provider behaves as the adapter expects** | No provider is configured. The vision reader, the edit proposer and the document worker each have an adapter, a tested unavailable state and no credential. The recorded replies prove what the pipeline does with an answer, not what a model would say today. |

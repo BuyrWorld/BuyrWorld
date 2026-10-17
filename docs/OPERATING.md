@@ -59,10 +59,17 @@ almost all of the behaviour lives.
 
 ## The two endpoints
 
-Both are POST-only, both refuse cross-origin requests, both rate-limit per warm
-instance, and neither logs any content. The per-instance limitation is stated
-rather than glossed: a distributed caller gets a bucket per instance, which
-raises the cost of casual abuse and is not a defence against a determined one.
+Both are POST-only, both refuse requests from other websites, both rate-limit
+per warm instance, and neither logs any content. Two limitations are stated
+rather than glossed. A request that sends no `Origin` or `Referer` — a script,
+`curl` — is accepted, so the origin check stops other websites, not scripts.
+And a distributed caller gets a bucket per instance, which raises the cost of
+casual abuse and is not a defence against a determined one.
+
+The real ceiling on spend is outside this repository: a monthly spend limit on
+the Anthropic workspace that holds `ANTHROPIC_API_KEY`, and a rate-limit rule
+for `/api/` in the Vercel Firewall. Neither is visible from the code; confirm
+both are set rather than assuming it.
 
 ### `POST /api/chat`
 

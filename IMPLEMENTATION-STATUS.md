@@ -72,8 +72,9 @@ further down the page.
 ## What to do next
 
 **`docs/BROWSER-CHECKS.md`** — 99 checks in the order worth doing them, each
-mapped to the pack acceptance line it closes. **Nothing here has been opened
-in a browser**, and v5 Phases 1 to 4 have added a reader, a case view, three
+mapped to the pack acceptance line it closes. **None of them has been run and
+recorded.** The page has been looked at — the 25 September fixes came from that
+— but not checked. v5 Phases 1 to 4 have added a reader, a case view, three
 what-ifs, a chain, three call screens and a practice room since that list was
 written. Sections 9, 10 and 11 cover them. Section 11 is the one to do first,
 and to do at 390px: a call happens on a phone.
@@ -109,6 +110,17 @@ to delete are held there by a test.
 production, and until now nothing said how to put it back. It also says what a
 rollback cannot reach — what is already in somebody's browser — which is the
 part worth reading before it is needed.
+
+**Page weight, proposed and not built.** Every visitor downloads about 1.6 MB
+of JavaScript before anything is interactive — `app.js` at 747 KB and the
+engine's 74 modules at 890 KB, roughly 490 KB gzipped across about 75
+requests — including somebody who came to read one blog post on a phone. The
+smallest change that fixes most of it is to stop loading `mount.mjs` from
+`index.html` and import it the first time a route that needs `window.BW` opens.
+It is not done here because it changes what `engineBanner()` means on every
+other page (the engine is now *not yet loaded*, not *missing*), touches the 34
+guarded controls, and can only be judged in a browser on a slow connection.
+The decision first, then the change, then the browser check.
 
 Then one real case end to end, which would teach more than the next feature.
 
