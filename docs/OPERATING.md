@@ -37,7 +37,7 @@ this uses.
 ## Running it locally
 
 ```
-node scripts/verify.mjs              # everything: 3,675 tests, 7 checks
+node scripts/verify.mjs              # everything: 3,678 tests, 7 checks
 node --test tests/unit/call.test.mjs # one file
 python -m http.server 8000           # serve the site, if Python is available
 npx serve .                          # or this, if it is not
@@ -171,6 +171,28 @@ design handoff out of the deployed surface. **`src/` must stay deployed**:
 page asks for actions by name through a table in `app.js`.
 
 To undo a deploy: `docs/ROLLBACK.md`.
+
+### The asset version
+
+`index.html` asks for `app.js`, `mount.mjs` and `studio-enhancements.css` with
+`?v=` set to a hash of those three files and everything under `src/`. After
+changing any of them, run `node scripts/bump-version.mjs`; until you do,
+`tests/security/design-system.test.mjs` fails and prints the command.
+
+**The engine's own imports are not versioned, and that is accepted.**
+`mount.mjs` imports about 70 files under `src/` by plain relative path, and
+they import each other the same way. Versioning only `mount.mjs`'s imports
+would load a module under two URLs — once from `mount.mjs`, once from a
+sibling — and a browser treats those as two modules with two copies of their
+state. Doing it properly needs an import map, which under this CSP means a
+hashed inline script plus a Vercel rewrite from a versioned path, and it needs
+checking in a real browser. It is not done because the risk it removes is
+small: every file here is served with `cache-control: public, max-age=0,
+must-revalidate` (checked on the production deployment, 18 October 2026), so a
+standards-following browser re-checks each module on every load, and the
+`mount.mjs` URL changes whenever any engine file does. If a stale module is
+ever actually observed — an export missing at load, with the engine banner
+showing — that observation is the trigger to build the import map.
 
 ## What would have to change for an unavailable thing to work
 

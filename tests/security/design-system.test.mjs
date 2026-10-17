@@ -16,6 +16,7 @@ import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 
 import { pageSource } from "../helpers/page.mjs";
+import { computeVersion, statedVersions, protectedFiles } from "../../scripts/bump-version.mjs";
 
 const html = pageSource();
 /** The page's own stylesheet: the rest of the file is markup and script. */
@@ -511,6 +512,28 @@ describe("the studio stylesheet cannot go stale against the page", () => {
     assert.ok(versions.length >= 3, `only ${versions.length} versioned assets found`);
     assert.equal(new Set(versions).size, 1,
       `assets are on different versions: ${[...new Set(versions)].join(", ")}`);
+  });
+
+  test("the version is the content of what it protects, not a typed date", () => {
+    /* Agreeing with each other was never enough: the next edit to app.js
+       without a bump would have kept all three tags in agreement and shipped
+       the 25 September failure again. The version is now a hash of app.js,
+       mount.mjs, the stylesheet and every file under src/, so a change to any
+       of them without running the bump script fails here. */
+    const want = computeVersion();
+    const have = statedVersions();
+    assert.equal(have.length, 3, "expected three versioned tags in index.html");
+    assert.deepEqual([...new Set(have)], [want],
+      `index.html asks for ?v=${[...new Set(have)].join(", ")} but the files are ${want}. `
+      + "Run: node scripts/bump-version.mjs");
+  });
+
+  test("the version moves when any protected file moves", () => {
+    const files = protectedFiles();
+    for (const must of ["app.js", "mount.mjs", "studio-enhancements.css"]) {
+      assert.ok(files.includes(must), `${must} is not covered by the version`);
+    }
+    assert.ok(files.some((f) => f.startsWith("src/calc/")), "the engine is not covered by the version");
   });
 
   test("the file it names is the file in the tree", () => {

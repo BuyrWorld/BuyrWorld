@@ -59,6 +59,12 @@ const SCRIPTS = [
     floor: /blocks === 0[\s\S]{0,400}goTargets\.length < 5/,
     why: "it once checked 0 scripts and 0 nav targets and called the page sound",
   },
+  {
+    file: "scripts/bump-version.mjs",
+    what: "the asset version",
+    floor: /if \(files\.length < FLOOR\)[\s\S]{0,200}throw new Error/,
+    why: "a hash of no files is a constant that never goes stale",
+  },
 ];
 
 describe("a check that has stopped looking fails", () => {

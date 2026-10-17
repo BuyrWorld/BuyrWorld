@@ -37,9 +37,10 @@
 <!-- Versioned deliberately. The page and this stylesheet are separate requests
      with separate cache entries, so a browser can hold a fresh index.html and a
      stale stylesheet — which renders the new markup with none of its rules, as
-     bare text. Bump `v` whenever this file changes; the new URL cannot be
-     served from a cache entry made for the old one. -->
-<link rel="stylesheet" href="/studio-enhancements.css?v=20261018a">
+     bare text. `v` is a hash of this file, both scripts and src/, written by
+     `node scripts/bump-version.mjs`; a test fails until it is current. The new
+     URL cannot be served from a cache entry made for the old one. -->
+<link rel="stylesheet" href="/studio-enhancements.css?v=17f91a1f">
 <style>
 :root{
   /* ---- surfaces, darkest to lightest ---- */
@@ -2068,9 +2069,10 @@ footer{border-top:1px solid var(--line);padding:40px 0;margin-top:24px}
      are separate requests with separate cache entries. Fresh markup against a
      stale app.js is worse than a stale stylesheet, because the markup asks for
      actions by name and an older table does not have them — every new control
-     silently does nothing when clicked. Bump `v` with each release. -->
-<script src="/app.js?v=20261018a"></script>
-<script type="module" src="/mount.mjs?v=20261018a"></script>
+     silently does nothing when clicked. Same `v` as the stylesheet, from the
+     same script. -->
+<script src="/app.js?v=17f91a1f"></script>
+<script type="module" src="/mount.mjs?v=17f91a1f"></script>
 </body>
 </html></body>
 </html>

@@ -85,7 +85,8 @@ Deploys are GitHub → Vercel. Pushing to `main` deploys production.
 ## Working style
 
 - One phase per session. Commit at the end of each.
-- Work on a branch; check the Vercel preview before merging to `main`.
+- Work on a branch; check the Vercel preview before merging to `main`. That includes small fixes: on 25 September three went straight to `main` within 15 minutes.
+- **After changing `app.js`, `mount.mjs`, `studio-enhancements.css` or anything under `src/`, run `node scripts/bump-version.mjs`.** The `?v=` on those three tags is a hash of their content; a test fails until it is current. `docs/OPERATING.md` says why the engine's own imports are deliberately not versioned.
 - **Verification:** trust the GitHub commit timestamp and an incognito window. Cached CDN responses have repeatedly shown stale content and sent us chasing bugs that were already fixed.
 - Show a diff and a plain-English summary of what changed before I deploy.
 - If a change touches more than ~200 lines of `index.html`, stop and propose the split first.
