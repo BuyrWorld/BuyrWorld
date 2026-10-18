@@ -5,6 +5,14 @@
 September 2026 Progress/
 *.pdf
 
+# Its successor, for the same two reasons and one more. It holds the flagship
+# implementation programme, a review brief and an internal audit — the same
+# class of material as the folder above — and also BuyrFlow, an unreleased
+# product with its own public/index.html. Committed here that page would be
+# served from buyrworld.com at its own path, which is not a decision anybody
+# would make on purpose. BuyrFlow keeps its own repository.
+October 2026 Implementations/
+
 # Local and editor noise
 .DS_Store
 Thumbs.db
