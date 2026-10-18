@@ -6,6 +6,8 @@ on:
       - buyrflow-capability-bridge
     paths:
       - scripts/apply-buyrflow-capability-bridge.py
+      - scripts/apply-buyrflow-capability-bridge.mjs
+      - .github/workflows/apply-buyrflow-capability-bridge.yml
 
 permissions:
   contents: write
@@ -27,7 +29,33 @@ jobs:
           node-version: 24
       - name: Insert external bridge module
         run: python3 scripts/apply-buyrflow-capability-bridge.py
-      - name: Run full BuyrWorld verification
+
+      # Branch-only diagnostics. These do not replace scripts/verify.mjs; they
+      # expose the exact failing gate in Actions step metadata when the combined
+      # log is too large to retrieve through the review tooling.
+      - name: Diagnostic — bridge unit tests
+        continue-on-error: true
+        run: node --test tests/unit/buyrflow-bridge.test.mjs
+      - name: Diagnostic — ProcureBench evaluation
+        continue-on-error: true
+        run: node scripts/eval.mjs
+      - name: Diagnostic — claim extraction
+        continue-on-error: true
+        run: node scripts/eval-extraction.mjs
+      - name: Diagnostic — drawing accuracy
+        continue-on-error: true
+        run: node scripts/eval-drawings.mjs
+      - name: Diagnostic — prohibited content
+        continue-on-error: true
+        run: node scripts/verify-content.mjs
+      - name: Diagnostic — serverless syntax
+        continue-on-error: true
+        run: node --check api/chat.js
+      - name: Diagnostic — index integrity
+        continue-on-error: true
+        run: node scripts/verify-html.mjs
+
+      - name: Run canonical full BuyrWorld verification
         run: node scripts/verify.mjs
       - name: Check patch integrity
         run: git diff --check
