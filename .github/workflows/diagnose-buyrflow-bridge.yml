@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Run canonical verifier quietly and print only failure context
+      - name: Run canonical verifier quietly and print exact assertion context
         shell: bash
         run: |
           set +e
@@ -27,10 +27,10 @@ jobs:
           status=$?
           set -e
           if [ "$status" -ne 0 ]; then
-            echo "Canonical verifier failed. Filtered failure context:"
-            grep -n -E 'not ok|FAIL|FAILED|AssertionError|ERR_|error:|Error:' /tmp/verify.log | tail -n 120 || true
-            echo "--- tail ---"
-            tail -n 120 /tmp/verify.log
+            echo "Canonical verifier failed. Assertion context:"
+            grep -n -B 10 -A 20 -E 'not ok|AssertionError \[ERR_ASSERTION\]' /tmp/verify.log | tail -n 420 || true
+            echo "--- verifier summary ---"
+            grep -n -E '^── |FAILED|checks FAILED|checks passed' /tmp/verify.log | tail -n 80 || true
             exit "$status"
           fi
           echo "Canonical verifier passed."
