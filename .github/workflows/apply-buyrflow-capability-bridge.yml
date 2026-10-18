@@ -36,6 +36,22 @@ jobs:
       - name: Diagnostic — bridge unit tests
         continue-on-error: true
         run: node --test tests/unit/buyrflow-bridge.test.mjs
+      - name: Diagnostic — complete unit suite
+        continue-on-error: true
+        shell: bash
+        run: find tests/unit -type f -name '*.test.mjs' -print0 | sort -z | xargs -0 -r node --test
+      - name: Diagnostic — integration suite
+        continue-on-error: true
+        shell: bash
+        run: find tests/integration -type f -name '*.test.mjs' -print0 | sort -z | xargs -0 -r node --test
+      - name: Diagnostic — security suite
+        continue-on-error: true
+        shell: bash
+        run: find tests/security -type f -name '*.test.mjs' -print0 | sort -z | xargs -0 -r node --test
+      - name: Diagnostic — python-facing suite
+        continue-on-error: true
+        shell: bash
+        run: find tests/python -type f -name '*.test.mjs' -print0 | sort -z | xargs -0 -r node --test
       - name: Diagnostic — ProcureBench evaluation
         continue-on-error: true
         run: node scripts/eval.mjs
